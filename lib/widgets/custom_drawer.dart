@@ -91,7 +91,7 @@ class CustomDrawer extends StatelessWidget {
                     '/shopping'),
                 const Divider(),
                 _buildItem(
-                    context, 9, "Paramètres", Icons.settings, '/settings'),
+                    context, 9, "Paramètres", Icons.settings, '/parametres'),
                 _buildItem(context, 10, "Archives", Icons.archive, '/archives'),
               ],
             ),

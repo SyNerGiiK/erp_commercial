@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import '../../config/theme.dart';
+import '../../utils/format_utils.dart';
 
 enum TransformationType { standard, acompte, situation, solde }
 
@@ -55,27 +56,53 @@ class _TransformationDialogState extends State<TransformationDialog> {
             if (_selectedType == TransformationType.acompte)
               Padding(
                 padding: const EdgeInsets.only(left: 40, bottom: 10),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: 80,
-                      child: TextField(
-                        controller: _valueCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: "Valeur",
-                          isDense: true,
-                          border: OutlineInputBorder(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _valueCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: "Pourcentage (%)",
+                              suffixText: "%",
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) {
+                              setState(() {});
+                            },
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ToggleButtons(
-                      isSelected: [_isPercent, !_isPercent],
-                      onPressed: (idx) => setState(() => _isPercent = idx == 0),
-                      constraints:
-                          const BoxConstraints(minHeight: 30, minWidth: 40),
-                      children: const [Text("%"), Text("€")],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Montant calculé :",
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.grey)),
+                                Text(
+                                  FormatUtils.currency(_calculateAmount()),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -147,17 +174,28 @@ class _TransformationDialogState extends State<TransformationDialog> {
     );
   }
 
+  Decimal _calculateAmount() {
+    if (_selectedType != TransformationType.acompte) return Decimal.zero;
+    final percent =
+        Decimal.tryParse(_valueCtrl.text.replaceAll(',', '.')) ?? Decimal.zero;
+    // Calcul sur le TTC global (car l'acompte est souvent perçu sur le total)
+    // Mais pour la facture d'acompte (qui est une facture), on raisonne souvent en HT + TVA.
+    // LE USer a dit "Montant de l'acompte".
+    // Si on a le totalTTC du devis, on applique le % au TTC pour savoir combien le client paie.
+    // MAIS la facture d'acompte générée sera en HT.
+    // Ma méthode prepareFacture prend un %, calcule le HT.
+    // Ici on affiche le montant TTC ou HT ?
+    // Affichons simplement le % du TotalTTC pour info client.
+    return ((widget.totalTTC * percent) / Decimal.fromInt(100)).toDecimal();
+  }
+
   void _submit() {
     Decimal val = Decimal.zero;
     if (_selectedType == TransformationType.acompte) {
       val = Decimal.tryParse(_valueCtrl.text.replaceAll(',', '.')) ??
           Decimal.zero;
-      // Si c'est en Euros, on renvoie le montant, sinon le pourcentage.
-      // Le récepteur devra gérer le booléen.
-      // Pour simplifier ici, on pourrait tout convertir en %, mais gardons la valeur brute.
-      // Hack: Si c'est des euros, on renvoie une valeur négative (convention temporaire)
-      // ou on change la structure de retour.
-      // Changeons TransformationResult pour inclure isPercent.
+      // Toujours en pourcentage désormais
+      _isPercent = true;
     }
     Navigator.pop(
         context, TransformationResultWrapper(_selectedType, val, _isPercent));

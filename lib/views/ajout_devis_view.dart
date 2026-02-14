@@ -62,7 +62,11 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
 
   // Totaux & Options
   Decimal _remiseTaux = Decimal.zero;
-  Decimal _acompteMontant = Decimal.zero;
+  // _acompteMontant est maintenant calculé dynamiquement
+  Decimal get _acompteMontant =>
+      ((_netCommercial * _acomptePercentage) / Decimal.fromInt(100))
+          .toDecimal();
+  Decimal _acomptePercentage = Decimal.zero; // Nouveau state pour le %
 
   bool _isLoading = false;
 
@@ -84,7 +88,18 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       _lignes = List.from(d.lignes);
       _chiffrage = List.from(d.chiffrage);
       _remiseTaux = d.remiseTaux;
-      _acompteMontant = d.acompteMontant;
+      // _acompteMontant is now computed, so we don't assign it.
+      // We calculate percentage from d.acompteMontant and d.totalHt
+      // Reverse calc percentage
+      if (d.totalHt > Decimal.zero) {
+        // On base le % sur le Net Commercial (HT - Remise)
+        final net = d.totalHt -
+            ((d.totalHt * d.remiseTaux) / Decimal.fromInt(100)).toDecimal();
+        if (net > Decimal.zero) {
+          _acomptePercentage =
+              CalculationsUtils.calculateTauxFromMontant(net, _acompteMontant);
+        }
+      }
 
       // Charger le client si on a l'ID
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -599,29 +614,85 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
                     // ACOMPTE
                     AppCard(
                       title: const Text("Acompte demandé"),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextFormField(
-                              initialValue: _acompteMontant.toString(),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: "Montant (€)"),
-                              onChanged: (v) {
-                                setState(() {
-                                  _acompteMontant =
-                                      Decimal.tryParse(v) ?? Decimal.zero;
-                                });
-                              },
-                            ),
+                          const Text("Pourcentage de l'acompte :",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            children: [10, 20, 30, 40, 50].map((p) {
+                              final isSelected =
+                                  _acomptePercentage == Decimal.fromInt(p);
+                              return ChoiceChip(
+                                label: Text("$p%"),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      _acomptePercentage = Decimal.fromInt(p);
+                                    });
+                                  }
+                                },
+                              );
+                            }).toList(),
                           ),
-                          const SizedBox(width: 20),
-                          // Helper rapide : calculer %
-                          Text(
-                              "${CalculationsUtils.calculateTauxFromMontant(_netCommercial, _acompteMontant).toDouble().toStringAsFixed(1)} %",
-                              style: const TextStyle(color: Colors.grey))
+                          const SizedBox(height: 15),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  key: ValueKey(_acomptePercentage.toString()),
+                                  initialValue: _acomptePercentage.toString(),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: "Autre (%)",
+                                    suffixText: "%",
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                  ),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _acomptePercentage =
+                                          Decimal.tryParse(v) ?? Decimal.zero;
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border:
+                                        Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text("Montant calculé :",
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey)),
+                                      Text(
+                                        FormatUtils.currency(_acompteMontant),
+                                        style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.primary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),

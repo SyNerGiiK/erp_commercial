@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../repositories/planning_repository.dart';
 import '../models/planning_model.dart';
-import '../models/facture_model.dart'; // Import nécessaire
-import '../models/devis_model.dart'; // Import nécessaire
 
 class PlanningViewModel extends ChangeNotifier {
   final IPlanningRepository _repository = PlanningRepository();
@@ -46,48 +44,50 @@ class PlanningViewModel extends ChangeNotifier {
     _applyFilters();
   }
 
-  // MÉTHODE AJOUTÉE (CORRECTION ERREUR)
-  Future<void> fetchEvents(List<Facture> factures, List<Devis> devis) async {
+  Future<void> fetchEvents(dynamic factures, dynamic devis) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       _allEvents.clear();
 
-      // 1. Récupération des événements manuels depuis la base
+      // 1. Manuels (DB)
       final manualEvents = await _repository.getManualEvents();
       _allEvents.addAll(manualEvents);
 
-      // 2. Génération des événements depuis les Factures (Échéances)
-      for (var f in factures) {
-        if (f.statut != 'payee' &&
-            f.statut != 'brouillon' &&
-            f.dateEcheance != null) {
-          _allEvents.add(PlanningEvent(
-            id: f.id,
-            titre: "Échéance Fac. ${f.numeroFacture}",
-            dateDebut: f.dateEcheance!,
-            dateFin: f.dateEcheance!,
-            type: 'facture_echeance',
-            isManual: false,
-            clientId: f.clientId,
-            description: "Montant: ${f.totalHt} € HT",
-          ));
+      // 2. Factures (Echéances)
+      // On suppose que "factures" est une List<Facture>
+      if (factures is List) {
+        for (var f in factures) {
+          if (f.statut == 'envoyee' || f.statut == 'partielle') {
+            // dateEcheance est non-nullable dans le modèle, pas besoin de check
+            _allEvents.add(PlanningEvent(
+              id: f.id,
+              titre: "Échéance Facture ${f.numeroFacture}",
+              dateDebut: f.dateEcheance,
+              dateFin: f.dateEcheance,
+              type: 'facture_echeance',
+              isManual: false,
+              clientId: f.clientId,
+            ));
+          }
         }
       }
 
-      // 3. Génération des événements depuis les Devis (Validité)
-      for (var d in devis) {
-        if (d.statut == 'envoye') {
-          _allEvents.add(PlanningEvent(
-            id: d.id,
-            titre: "Exp. Devis ${d.numeroDevis}",
-            dateDebut: d.dateValidite,
-            dateFin: d.dateValidite,
-            type: 'devis_fin',
-            isManual: false,
-            clientId: d.clientId,
-          ));
+      // 3. Devis (Validité)
+      // On suppose que "devis" est une List<Devis>
+      if (devis is List) {
+        for (var d in devis) {
+          if (d.statut == 'envoye') {
+            _allEvents.add(PlanningEvent(
+              id: d.id,
+              titre: "Exp. Devis ${d.numeroDevis}",
+              dateDebut: d.dateValidite,
+              dateFin: d.dateValidite,
+              type: 'devis_fin',
+              isManual: false,
+              clientId: d.clientId,
+            ));
+          }
         }
       }
 
@@ -117,9 +117,23 @@ class PlanningViewModel extends ChangeNotifier {
 
   Future<bool> addEvent(PlanningEvent event) async {
     try {
-      await _repository.addEvent(event);
+      // Pour un ajout, on s'assure que l'ID est null (géré par Supabase)
+      await _repository.addEvent(event.copyWith(id: null));
+      // On ne refetch pas tout, on demande à la vue de rafraîchir
       return true;
     } catch (e) {
+      debugPrint("Erreur addEvent: $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateEvent(PlanningEvent event) async {
+    if (event.id == null) return false; // ID requis pour update
+    try {
+      await _repository.updateEvent(event);
+      return true;
+    } catch (e) {
+      debugPrint("Erreur updateEvent: $e");
       return false;
     }
   }
@@ -127,8 +141,6 @@ class PlanningViewModel extends ChangeNotifier {
   Future<void> deleteEvent(String id) async {
     try {
       await _repository.deleteEvent(id);
-      _allEvents.removeWhere((e) => e.id == id);
-      _applyFilters();
     } catch (e) {
       debugPrint("Erreur deleteEvent: $e");
     }

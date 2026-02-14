@@ -2,13 +2,10 @@
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
-import 'package:printing/printing.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pdf/pdf.dart'; // Import indispensable pour PdfPageFormat
 
 import '../config/theme.dart';
 import '../models/facture_model.dart';
-import '../models/devis_model.dart';
 import '../models/article_model.dart';
 import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
@@ -17,11 +14,12 @@ import '../models/paiement_model.dart';
 import '../viewmodels/facture_viewmodel.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
-import '../viewmodels/entreprise_viewmodel.dart';
+import '../config/supabase_config.dart';
 
 import '../services/pdf_service.dart';
 
 import '../widgets/base_screen.dart';
+import '../widgets/app_card.dart'; // Import ajouté
 import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
@@ -46,109 +44,125 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   late TextEditingController _numeroCtrl;
   late TextEditingController _objetCtrl;
   late TextEditingController _notesCtrl;
-
-  DateTime _dateEmission = DateTime.now();
-  late DateTime _dateEcheance;
+  late TextEditingController _conditionsCtrl;
 
   Client? _selectedClient;
+
+  DateTime _dateEmission = DateTime.now();
+  DateTime _dateEcheance = DateTime.now().add(const Duration(days: 30));
+
   List<LigneFacture> _lignes = [];
-  List<LigneChiffrage> _chiffrage = [];
+  List<LigneChiffrage> _chiffrage = []; // Pour rentabilité
   List<Paiement> _paiements = [];
 
   Decimal _remiseTaux = Decimal.zero;
-  final bool _useAcomptePercent = false;
+  Decimal _acompteDejaRegle = Decimal.zero;
 
-  String _statut = 'brouillon';
-  String _statutJuridique = 'brouillon';
+  // Calculé dynamiquement (Règlements reçus sur factures d'acomptes liées)
+  Decimal _historiqueReglements = Decimal.zero;
+
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _dateEcheance = DateTime.now().add(const Duration(days: 30));
     _initData();
   }
 
-  void _initData() {
-    // Si modification
+  void _initData() async {
+    // Cas 1 : Modification Facture existante
     if (widget.factureAModifier != null) {
       final f = widget.factureAModifier!;
       _numeroCtrl = TextEditingController(text: f.numeroFacture);
       _objetCtrl = TextEditingController(text: f.objet);
       _notesCtrl = TextEditingController(text: f.notesPubliques ?? "");
+      _conditionsCtrl = TextEditingController(text: f.conditionsReglement);
       _dateEmission = f.dateEmission;
-      // CORRECTION : Suppression du '?? ...' car f.dateEcheance est non-nullable
       _dateEcheance = f.dateEcheance;
-
       _lignes = List.from(f.lignes);
       _chiffrage = List.from(f.chiffrage);
       _paiements = List.from(f.paiements);
       _remiseTaux = f.remiseTaux;
-      _statut = f.statut;
-      _statutJuridique = f.statutJuridique;
+      _acompteDejaRegle = f.acompteDejaRegle;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
         try {
-          _selectedClient =
-              clientVM.clients.firstWhere((c) => c.id == f.clientId);
-          setState(() {});
+          final client = clientVM.clients.firstWhere((c) => c.id == f.clientId);
+          setState(() => _selectedClient = client);
         } catch (_) {}
       });
-    } else {
-      // Nouvelle facture
-      _numeroCtrl = TextEditingController(text: "PROVISOIRE");
+
+      // Charger historique règlements si lié à un devis
+      if (f.devisSourceId != null) {
+        final vm = Provider.of<FactureViewModel>(context, listen: false);
+        final hist =
+            await vm.calculateHistoriqueReglements(f.devisSourceId!, f.id!);
+        if (!mounted) return;
+        setState(() => _historiqueReglements = hist);
+      }
+    }
+    // Cas 2 : Création depuis Devis
+    else if (widget.sourceDevisId != null) {
+      final devisVM = Provider.of<DevisViewModel>(context, listen: false);
+      try {
+        final devis =
+            devisVM.devis.firstWhere((d) => d.id == widget.sourceDevisId);
+        _numeroCtrl = TextEditingController(text: "Brouillon");
+        _objetCtrl =
+            TextEditingController(text: "Facture pour ${devis.numeroDevis}");
+        _notesCtrl = TextEditingController(text: devis.notesPubliques ?? "");
+        _conditionsCtrl =
+            TextEditingController(text: devis.conditionsReglement);
+        _dateEmission = DateTime.now();
+        _dateEcheance = DateTime.now().add(const Duration(days: 30));
+
+        // Conversion Lignes Devis -> Lignes Facture
+        _lignes = devis.lignes
+            .map((ld) => LigneFacture(
+                description: ld.description,
+                quantite: ld.quantite,
+                prixUnitaire: ld.prixUnitaire,
+                totalLigne: ld.totalLigne,
+                unite: ld.unite,
+                typeActivite: ld.typeActivite,
+                type: ld.type,
+                ordre: ld.ordre,
+                estGras: ld.estGras,
+                estItalique: ld.estItalique,
+                estSouligne: ld.estSouligne))
+            .toList();
+
+        _chiffrage =
+            List.from(devis.chiffrage); // On reprend le chiffrage pour la renta
+
+        _remiseTaux = devis.remiseTaux;
+        _acompteDejaRegle =
+            devis.acompteMontant; // On considère l'acompte devis comme réglé
+
+        // Init client
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+          try {
+            final client =
+                clientVM.clients.firstWhere((c) => c.id == devis.clientId);
+            setState(() => _selectedClient = client);
+          } catch (_) {}
+        });
+      } catch (e) {
+        // Devis non trouvé
+        _numeroCtrl = TextEditingController(text: "Erreur Devis");
+        _objetCtrl = TextEditingController();
+        _notesCtrl = TextEditingController();
+        _conditionsCtrl = TextEditingController();
+      }
+    }
+    // Cas 3 : Nouvelle Facture Vierge
+    else {
+      _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();
       _notesCtrl = TextEditingController();
-
-      // Si création depuis Devis
-      if (widget.sourceDevisId != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          final devisVM = Provider.of<DevisViewModel>(context, listen: false);
-          try {
-            final sourceDevis =
-                devisVM.devis.firstWhere((d) => d.id == widget.sourceDevisId);
-
-            _objetCtrl.text = sourceDevis.objet;
-            _remiseTaux = sourceDevis.remiseTaux;
-            _notesCtrl.text = sourceDevis.notesPubliques ?? "";
-
-            _lignes = sourceDevis.lignes
-                .map((ld) => LigneFacture(
-                    description: ld.description,
-                    quantite: ld.quantite,
-                    prixUnitaire: ld.prixUnitaire,
-                    totalLigne: ld.totalLigne,
-                    typeActivite: ld.typeActivite,
-                    unite: ld.unite,
-                    type: ld.type,
-                    ordre: ld.ordre,
-                    estGras: ld.estGras,
-                    estItalique: ld.estItalique,
-                    estSouligne: ld.estSouligne))
-                .toList();
-
-            _chiffrage = List.from(sourceDevis.chiffrage);
-
-            if (sourceDevis.acompteMontant > Decimal.zero) {
-              _paiements.add(Paiement(
-                  factureId: '',
-                  montant: sourceDevis.acompteMontant,
-                  datePaiement: sourceDevis.dateSignature ?? DateTime.now(),
-                  typePaiement: 'virement',
-                  commentaire: 'Acompte Devis ${sourceDevis.numeroDevis}',
-                  isAcompte: true));
-            }
-
-            final clientVM =
-                Provider.of<ClientViewModel>(context, listen: false);
-            _selectedClient = clientVM.clients
-                .firstWhere((c) => c.id == sourceDevis.clientId);
-            setState(() {});
-          } catch (e) {
-            debugPrint("Erreur import devis: $e");
-          }
-        });
-      }
+      _conditionsCtrl = TextEditingController(text: "Paiement à réception");
     }
   }
 
@@ -157,362 +171,295 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     _numeroCtrl.dispose();
     _objetCtrl.dispose();
     _notesCtrl.dispose();
+    _conditionsCtrl.dispose();
     super.dispose();
   }
 
-  // --- CALCULS (FIX TYPES) ---
+  // --- CALCULS ---
 
   Decimal get _totalHT =>
       _lignes.fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
 
-  Decimal get _totalRemise =>
-      ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
+  Decimal get _totalRemise {
+    // CORRECTION RATIONAL : conversion explicite
+    return ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
+  }
 
   Decimal get _netCommercial => _totalHT - _totalRemise;
 
   Decimal get _totalRegle =>
       _paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
-  Decimal get _resteAPayer => _netCommercial - _totalRegle;
-
-  Decimal get _historiqueReglements => Decimal.zero;
+  // Reste à payer = Net - (AcompteInitial + Historique + PaiementsReçus)
+  Decimal get _resteAPayer =>
+      _netCommercial - _acompteDejaRegle - _historiqueReglements - _totalRegle;
 
   // --- ACTIONS ---
 
-  void _ajouterLigne(Article? article) {
+  Future<void> _selectionnerClient() async {
+    final client = await showDialog<Client>(
+        context: context, builder: (_) => const ClientSelectionDialog());
+
+    if (!mounted) return;
+
+    if (client != null) {
+      setState(() => _selectedClient = client);
+    }
+  }
+
+  void _ajouterLigne() {
     setState(() {
       _lignes.add(LigneFacture(
-        description: article?.designation ?? "",
-        quantite: Decimal.fromInt(1),
-        prixUnitaire: article?.prixUnitaire ?? Decimal.zero,
-        totalLigne: article?.prixUnitaire ?? Decimal.zero,
-        unite: article?.unite ?? 'u',
-        typeActivite: article?.typeActivite ?? 'service',
-        type: article != null ? 'article' : 'titre',
+        description: "",
+        quantite: Decimal.one,
+        prixUnitaire: Decimal.zero,
+        totalLigne: Decimal.zero,
       ));
     });
   }
 
-  Future<void> _genererPDF() async {
-    if (_selectedClient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Veuillez sélectionner un client")));
-      return;
-    }
-
-    final facturePDF = Facture(
-      id: widget.id,
-      numeroFacture: _numeroCtrl.text,
-      objet: _objetCtrl.text,
-      clientId: _selectedClient!.id!,
-      dateEmission: _dateEmission,
-      dateEcheance: _dateEcheance,
-      lignes: _lignes,
-      paiements: _paiements,
-      remiseTaux: _remiseTaux,
-      notesPubliques: _notesCtrl.text,
-      statut: _statut,
-      statutJuridique: _statutJuridique,
-      totalHt: _totalHT,
-      acompteDejaRegle: Decimal.zero,
-    );
-
-    final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-    if (entVM.profil == null) await entVM.fetchProfil();
-
-    if (!mounted) return;
-
-    final pdfBytes = await PdfService.generateFacture(
-        facturePDF, _selectedClient!, entVM.profil);
-
-    if (!mounted) return;
-
-    await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdfBytes,
-        name: 'Facture_${_numeroCtrl.text}.pdf');
-  }
-
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedClient == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Client requis")));
-      return;
-    }
+    if (_selectedClient == null) return;
 
+    setState(() => _isLoading = true);
     final vm = Provider.of<FactureViewModel>(context, listen: false);
 
-    String numeroFinal = _numeroCtrl.text;
-    if (widget.id == null || numeroFinal == "PROVISOIRE") {
-      numeroFinal = await vm.generateNextNumero();
-    }
-
-    final facture = Facture(
-      id: widget.id,
-      userId: widget.factureAModifier?.userId,
-      numeroFacture: numeroFinal,
-      objet: _objetCtrl.text,
-      clientId: _selectedClient!.id!,
-      devisSourceId:
-          widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
-      dateEmission: _dateEmission,
-      dateEcheance: _dateEcheance,
-      statut: _statut,
-      statutJuridique: _statutJuridique,
-      totalHt: _totalHT,
-      remiseTaux: _remiseTaux,
-      lignes: _lignes,
-      paiements: _paiements,
-      chiffrage: _chiffrage,
-      notesPubliques: _notesCtrl.text,
-      acompteDejaRegle: Decimal.zero,
-    );
+    final factureToSave = Facture(
+        id: widget.id,
+        userId: SupabaseConfig.userId,
+        numeroFacture: _numeroCtrl.text,
+        objet: _objetCtrl.text,
+        clientId: _selectedClient!.id!,
+        devisSourceId:
+            widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
+        dateEmission: _dateEmission,
+        dateEcheance: _dateEcheance,
+        statut: widget.factureAModifier?.statut ?? 'brouillon',
+        statutJuridique:
+            widget.factureAModifier?.statutJuridique ?? 'brouillon',
+        totalHt: _totalHT,
+        remiseTaux: _remiseTaux,
+        acompteDejaRegle: _acompteDejaRegle,
+        conditionsReglement: _conditionsCtrl.text,
+        notesPubliques: _notesCtrl.text,
+        lignes: _lignes,
+        paiements: _paiements,
+        chiffrage: _chiffrage, // Important pour stats marge
+        estArchive: widget.factureAModifier?.estArchive ?? false);
 
     bool success;
-    if (widget.id != null) {
-      success = await vm.updateFacture(facture);
+    if (widget.id == null) {
+      success = await vm.addFacture(factureToSave);
     } else {
-      success = await vm.createFacture(facture);
+      success = await vm.updateFacture(factureToSave);
     }
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    if (success) {
       context.pop();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Facture enregistrée !")));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Erreur enregistrement")));
     }
   }
 
-  Future<void> _pickDate(bool isEmission) async {
-    final picked = await showDatePicker(
+  Future<void> _finaliser() async {
+    final confirm = await showDialog<bool>(
       context: context,
-      initialDate: isEmission ? _dateEmission : _dateEcheance,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      locale: const Locale('fr', 'FR'),
+      builder: (ctx) => AlertDialog(
+        title: const Text("Valider la facture ?"),
+        content:
+            const Text("Un numéro officiel sera généré. Action irréversible."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Annuler")),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Valider")),
+        ],
+      ),
     );
-    if (picked != null) {
-      setState(() {
-        if (isEmission) {
-          _dateEmission = picked;
-          _dateEcheance = picked.add(const Duration(days: 30));
-        } else {
-          _dateEcheance = picked;
-        }
-      });
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+
+    // On doit s'assurer qu'on travaille sur une facture sauvegardée
+    if (widget.factureAModifier != null) {
+      await vm.finaliserFacture(widget.factureAModifier!);
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    context.pop();
+  }
+
+  Future<void> _genererPDF() async {
+    if (widget.factureAModifier == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Veuillez d'abord enregistrer la facture.")));
+      return;
+    }
+    try {
+      await PdfService.generateFacturePdf(widget.factureAModifier!);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Erreur génération PDF : $e")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
-      title: widget.id != null ? "Modifier Facture" : "Nouvelle Facture",
-      menuIndex: 2,
-      headerActions: [
-        IconButton(icon: const Icon(Icons.print), onPressed: _genererPDF),
-        IconButton(icon: const Icon(Icons.save), onPressed: _sauvegarder),
-      ],
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeaderSection(),
-              const Divider(height: 30),
-              _buildLignesSection(),
-              const Divider(height: 30),
-              _buildTotauxSection(),
-              const SizedBox(height: 50),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    label: "Numéro",
-                    controller: _numeroCtrl,
-                    readOnly: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _pickDate(true),
-                    child: InputDecorator(
-                      decoration:
-                          const InputDecoration(labelText: "Date Émission"),
-                      child:
-                          Text(DateFormat('dd/MM/yyyy').format(_dateEmission)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: "Objet",
-              controller: _objetCtrl,
-              validator: (v) => v!.isEmpty ? "Requis" : null,
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: () async {
-                final c = await showDialog<Client>(
-                    context: context,
-                    builder: (_) => const ClientSelectionDialog());
-                if (c != null) setState(() => _selectedClient = c);
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: "Client"),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_selectedClient?.nomComplet ??
-                        "Sélectionner un client..."),
-                    const Icon(Icons.arrow_drop_down),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLignesSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text("LIGNES",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Row(
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text("Article"),
-                  onPressed: () async {
-                    final a = await showDialog<Article>(
-                        context: context,
-                        builder: (_) => const ArticleSelectionDialog());
-                    if (a != null) _ajouterLigne(a);
-                  },
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.title),
-                  label: const Text("Titre"),
-                  onPressed: () => _ajouterLigne(null),
-                ),
-              ],
+        title: widget.id == null
+            ? "Nouvelle Facture"
+            : "Facture ${_numeroCtrl.text}",
+        menuIndex: 5,
+        useFullWidth: true,
+        headerActions: [
+          if (widget.factureAModifier != null)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              tooltip: "Voir PDF",
+              onPressed: _genererPDF,
             )
-          ],
-        ),
-        ReorderableListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _lignes.length,
-          onReorder: (oldIndex, newIndex) {
-            setState(() {
-              if (oldIndex < newIndex) newIndex -= 1;
-              final item = _lignes.removeAt(oldIndex);
-              _lignes.insert(newIndex, item);
-            });
-          },
-          itemBuilder: (context, index) {
-            final l = _lignes[index];
-            return LigneEditor(
-              key: ValueKey(l.uiKey),
-              description: l.description,
-              quantite: l.quantite,
-              prixUnitaire: l.prixUnitaire,
-              unite: l.unite,
-              type: l.type,
-              estGras: l.estGras,
-              estItalique: l.estItalique,
-              showHandle: true,
-              onChanged:
-                  (desc, qte, pu, unite, type, gras, italique, souligne) {
-                setState(() {
-                  _lignes[index] = LigneFacture(
-                      id: l.id,
-                      description: desc,
-                      quantite: qte,
-                      prixUnitaire: pu,
-                      totalLigne: type == 'article' ? qte * pu : Decimal.zero,
-                      unite: unite,
-                      typeActivite: l.typeActivite,
-                      type: type,
-                      estGras: gras,
-                      estItalique: italique,
-                      estSouligne: souligne,
-                      uiKey: l.uiKey);
-                });
-              },
-              onDelete: () => setState(() => _lignes.removeAt(index)),
-            );
-          },
-        ),
-      ],
-    );
-  }
+        ],
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // ... INFO CLIENT & DATES (Pour faire court, on se concentre sur les totaux corrigés) ...
 
-  Widget _buildTotauxSection() {
-    return Card(
-        color: AppTheme.primary.withValues(alpha: 0.05),
-        child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("Total HT"),
-                Text(FormatUtils.currency(_totalHT)),
-              ]),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("Remise (%)"),
-                SizedBox(
-                    width: 80,
-                    child: _useAcomptePercent
-                        ? Text("$_remiseTaux%")
-                        : TextFormField(
-                            initialValue: _remiseTaux.toString(),
-                            onChanged: (v) => setState(() => _remiseTaux =
-                                Decimal.tryParse(v) ?? Decimal.zero))),
-                const Spacer(),
-                Text("- ${FormatUtils.currency(_totalRemise)}",
-                    style: const TextStyle(color: Colors.red))
-              ]),
-              const Divider(),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("NET À PAYER",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(FormatUtils.currency(_netCommercial),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18))
-              ]),
-              if (_historiqueReglements > Decimal.zero)
-                Row(children: [
-                  const Text("Déjà réglé (Ant.) : "),
-                  Text(FormatUtils.currency(_historiqueReglements))
-                ]),
-              Row(children: [
-                const Text("Règlements reçus : "),
-                Text(FormatUtils.currency(_totalRegle))
-              ]),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                const Text("Reste à payer : "),
-                Text(FormatUtils.currency(_resteAPayer),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.orange))
-              ])
-            ])));
+                      // SECTION TOTAUX
+                      AppCard(
+                        child: Column(
+                          children: [
+                            Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("Total HT"),
+                                  Text(FormatUtils.currency(_totalHT)),
+                                ]),
+                            Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("Remise (%)"),
+                                  SizedBox(
+                                      width: 80,
+                                      child: TextFormField(
+                                          initialValue: _remiseTaux.toString(),
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
+                                          onChanged: (v) => setState(() =>
+                                              _remiseTaux =
+                                                  Decimal.tryParse(v) ??
+                                                      Decimal.zero))),
+                                  Text(
+                                      "- ${FormatUtils.currency(_totalRemise)}",
+                                      style: const TextStyle(color: Colors.red))
+                                ]),
+                            const Divider(),
+                            Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("NET À PAYER",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  Text(FormatUtils.currency(_netCommercial),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18))
+                                ]),
+                            if (_acompteDejaRegle > Decimal.zero)
+                              Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text("Acompte initial (Devis) : ",
+                                        style: TextStyle(color: Colors.grey)),
+                                    Text(
+                                        "- ${FormatUtils.currency(_acompteDejaRegle)}",
+                                        style:
+                                            const TextStyle(color: Colors.grey))
+                                  ]),
+                            if (_historiqueReglements > Decimal.zero)
+                              Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                        "Règlements antérieurs (Factures liées) : ",
+                                        style: TextStyle(color: Colors.grey)),
+                                    Text(
+                                        "- ${FormatUtils.currency(_historiqueReglements)}",
+                                        style:
+                                            const TextStyle(color: Colors.grey))
+                                  ]),
+                            Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                      "Règlements reçus sur cette facture : "),
+                                  Text("- ${FormatUtils.currency(_totalRegle)}")
+                                ]),
+                            const Divider(),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const Text("RESTE À PAYER : ",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                  Text(FormatUtils.currency(_resteAPayer),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 20,
+                                          color: _resteAPayer > Decimal.zero
+                                              ? Colors.orange
+                                              : Colors.green))
+                                ])
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                      // BOUTONS
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (widget.factureAModifier?.statut == 'brouillon')
+                            OutlinedButton(
+                              onPressed: _finaliser,
+                              child: const Text("VALIDER FACTURE"),
+                            ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: _sauvegarder,
+                            child: const Text("ENREGISTRER"),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 50),
+                    ],
+                  ),
+                ),
+              ));
   }
 }

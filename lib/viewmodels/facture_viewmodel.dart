@@ -38,8 +38,7 @@ class FactureViewModel extends ChangeNotifier {
 
   // --- CRUD BASE ---
 
-  // AJOUTÉ: Méthode manquante
-  Future<bool> createFacture(Facture facture) async {
+  Future<bool> addFacture(Facture facture) async {
     return await _executeOperation(() async {
       await _repository.createFacture(facture);
       await fetchFactures();
@@ -53,8 +52,7 @@ class FactureViewModel extends ChangeNotifier {
     });
   }
 
-  // AJOUTÉ: Gestion signature conforme repo (id)
-  Future<void> deleteFacture(String id, [String? statutJuridique]) async {
+  Future<void> deleteFacture(String id) async {
     await _executeOperation(() async {
       await _repository.deleteFacture(id);
       await fetchFactures();
@@ -70,31 +68,44 @@ class FactureViewModel extends ChangeNotifier {
     });
   }
 
-  // --- LOGIQUE MÉTIER ---
+  Future<bool> finaliserFacture(Facture facture) async {
+    if (facture.id == null) return false;
+    return await _executeOperation(() async {
+      // Génération Numéro
+      final annee = DateTime.now().year;
+      final newNumero = await _repository.generateNextNumero(annee);
 
-  // AJOUTÉ: Méthode manquante pour générer numéros
-  Future<String> generateNextNumero() async {
-    final annee = DateTime.now().year;
-    return await _repository.generateNextNumero(annee);
+      // Update local temporaire pour éviter re-fetch immédiat (Optimistic)
+      final updated = facture.copyWith(
+        numeroFacture: newNumero,
+        statut: 'validee',
+        statutJuridique: 'validee',
+        dateValidation: DateTime.now(),
+      );
+
+      await _repository.updateFacture(updated);
+      await fetchFactures();
+    });
   }
 
-  /// Calcule le montant déjà réglé (via d'autres factures) pour un Devis donné.
-  /// Utile pour les factures d'avancement.
-  Future<Decimal> getMontantDejaReglePourDevis(String devisId,
-      {String? excludeFactureId}) async {
+  // --- LOGIQUE MÉTIER ---
+
+  /// Calcule le total déjà réglé sur les factures liées au même devis (acomptes)
+  Future<Decimal> calculateHistoriqueReglements(
+      String devisSourceId, String excludeFactureId) async {
     try {
+      final userId = SupabaseConfig.userId;
+
       // On récupère toutes les factures liées à ce devis
       final response = await _client
           .from('factures')
           .select('*, paiements(*)')
-          .eq('devis_source_id', devisId)
-          .neq('statut', 'brouillon'); // Seules les factures validées comptent
+          .eq('user_id', userId)
+          .eq('devis_source_id', devisSourceId)
+          .neq('id', excludeFactureId); // On exclut la facture courante
 
-      final List<Facture> linkedFactures = (response as List)
-          .map((e) => Facture.fromMap(e))
-          .where(
-              (f) => f.id != excludeFactureId) // On exclut la facture courante
-          .toList();
+      final linkedFactures =
+          (response as List).map((e) => Facture.fromMap(e)).toList();
 
       Decimal total = Decimal.zero;
       for (var f in linkedFactures) {
@@ -147,13 +158,14 @@ class FactureViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setError(dynamic e) {
-    _errorMessage = e.toString();
-    developer.log("Erreur ViewModel", error: e);
+  void _setError(dynamic error) {
+    _errorMessage = error.toString();
+    developer.log("FactureViewModel Error", error: error);
     notifyListeners();
   }
 
   void _clearError() {
     _errorMessage = null;
+    notifyListeners();
   }
 }

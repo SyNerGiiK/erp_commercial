@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/theme.dart';
 import '../config/supabase_config.dart';
@@ -13,15 +12,21 @@ import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
+
+// Services
 import '../services/pdf_service.dart';
 
+// Widgets
 import '../widgets/base_screen.dart';
+import '../widgets/app_card.dart'; // Import ajouté
 import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
+
+// Utils
 import '../utils/format_utils.dart';
-import 'signature_view.dart';
+import '../utils/calculations_utils.dart';
 
 class AjoutDevisView extends StatefulWidget {
   final String? id;
@@ -36,56 +41,65 @@ class AjoutDevisView extends StatefulWidget {
 class _AjoutDevisViewState extends State<AjoutDevisView> {
   final _formKey = GlobalKey<FormState>();
 
+  // Champs Infos Générales
   late TextEditingController _numeroCtrl;
   late TextEditingController _objetCtrl;
   late TextEditingController _notesCtrl;
+  late TextEditingController _conditionsCtrl;
 
-  DateTime _dateEmission = DateTime.now();
-  late DateTime _dateValidite;
-
+  // Client
   Client? _selectedClient;
+
+  // Dates
+  DateTime _dateEmission = DateTime.now();
+  DateTime _dateValidite = DateTime.now().add(const Duration(days: 30));
+
+  // Listes
   List<LigneDevis> _lignes = [];
   List<LigneChiffrage> _chiffrage = [];
 
+  // Totaux & Options
   Decimal _remiseTaux = Decimal.zero;
   Decimal _acompteMontant = Decimal.zero;
-  final bool _useAcomptePercent = false;
 
-  String _statut = 'brouillon';
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _dateValidite = DateTime.now().add(const Duration(days: 30));
     _initData();
   }
 
   void _initData() {
-    if (widget.devisAModifier != null) {
-      final d = widget.devisAModifier!;
+    final d = widget.devisAModifier;
+    if (d != null) {
       _numeroCtrl = TextEditingController(text: d.numeroDevis);
       _objetCtrl = TextEditingController(text: d.objet);
       _notesCtrl = TextEditingController(text: d.notesPubliques ?? "");
+      _conditionsCtrl = TextEditingController(text: d.conditionsReglement);
       _dateEmission = d.dateEmission;
       _dateValidite = d.dateValidite;
       _lignes = List.from(d.lignes);
       _chiffrage = List.from(d.chiffrage);
       _remiseTaux = d.remiseTaux;
       _acompteMontant = d.acompteMontant;
-      _statut = d.statut;
 
+      // Charger le client si on a l'ID
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
         try {
-          _selectedClient =
-              clientVM.clients.firstWhere((c) => c.id == d.clientId);
-          setState(() {});
-        } catch (_) {}
+          final client = clientVM.clients.firstWhere((c) => c.id == d.clientId);
+          setState(() => _selectedClient = client);
+        } catch (_) {
+          // Client non trouvé (peut-être supprimé ou liste non chargée)
+          // On ne fait rien, l'utilisateur devra resélectionner si besoin
+        }
       });
     } else {
-      _numeroCtrl = TextEditingController(text: "PROVISOIRE");
+      _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();
       _notesCtrl = TextEditingController();
+      _conditionsCtrl = TextEditingController(text: "Paiement à réception");
     }
   }
 
@@ -94,293 +108,498 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     _numeroCtrl.dispose();
     _objetCtrl.dispose();
     _notesCtrl.dispose();
+    _conditionsCtrl.dispose();
     super.dispose();
   }
 
-  // --- CALCULS (FIX TYPES) ---
+  // --- CALCULS ---
 
   Decimal get _totalHT =>
       _lignes.fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
-  Decimal get _totalRemise =>
-      ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
+
+  Decimal get _totalRemise {
+    // CORRECTION RATIONAL : .toDecimal() obligatoire après une division
+    return ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
+  }
+
   Decimal get _netCommercial => _totalHT - _totalRemise;
 
   // --- ACTIONS ---
 
-  void _ajouterLigne(Article? article) {
+  Future<void> _selectionnerClient() async {
+    final client = await showDialog<Client>(
+        context: context, builder: (_) => const ClientSelectionDialog());
+
+    // Async Safety
+    if (!mounted) return;
+
+    if (client != null) {
+      setState(() => _selectedClient = client);
+    }
+  }
+
+  void _ajouterLigne() {
     setState(() {
       _lignes.add(LigneDevis(
-        description: article?.designation ?? "",
-        quantite: Decimal.fromInt(1),
-        prixUnitaire: article?.prixUnitaire ?? Decimal.zero,
-        totalLigne: article?.prixUnitaire ?? Decimal.zero,
-        unite: article?.unite ?? 'u',
-        typeActivite: article?.typeActivite ?? 'service',
-        type: article != null ? 'article' : 'titre',
+        description: "",
+        quantite: Decimal.one,
+        prixUnitaire: Decimal.zero,
+        totalLigne: Decimal.zero,
       ));
     });
   }
 
+  Future<void> _importerArticle() async {
+    final article = await showDialog<Article>(
+        context: context, builder: (_) => const ArticleSelectionDialog());
+
+    if (!mounted) return;
+
+    if (article != null) {
+      setState(() {
+        _lignes.add(LigneDevis(
+          description: article.designation,
+          quantite: Decimal.one,
+          prixUnitaire: article.prixUnitaire,
+          totalLigne: article.prixUnitaire, // 1 * PU
+          unite: article.unite,
+          typeActivite: article.typeActivite,
+        ));
+        // Ajout auto au chiffrage pour rentabilité
+        _chiffrage.add(LigneChiffrage(
+          designation: article.designation,
+          quantite: Decimal.one,
+          prixAchatUnitaire: article.prixAchat,
+          prixVenteUnitaire: article.prixUnitaire,
+          unite: article.unite,
+        ));
+      });
+    }
+  }
+
   Future<void> _sauvegarder() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Veuillez remplir les champs obligatoires")));
+      return;
+    }
     if (_selectedClient == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Client requis")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Veuillez sélectionner un client")));
       return;
     }
 
+    setState(() => _isLoading = true);
+
     final vm = Provider.of<DevisViewModel>(context, listen: false);
 
-    // GESTION NUMÉROTATION
-    String numeroFinal = _numeroCtrl.text;
-    if (widget.id == null || numeroFinal == "PROVISOIRE") {
-      // Pour un devis, on peut laisser PROVISOIRE ou générer.
-      // Ici on suppose que le repo gère si nécessaire, ou on laisse l'utilisateur valider plus tard.
-      // Pour l'exemple simple, on laisse PROVISOIRE.
-    }
-
-    final devis = Devis(
-      id: widget.id,
-      userId: widget.devisAModifier?.userId,
-      numeroDevis: numeroFinal,
+    final devisToSave = Devis(
+      id: widget.id, // Null si création
+      userId: SupabaseConfig.userId, // Sera géré par le Repo
+      numeroDevis: _numeroCtrl.text,
       objet: _objetCtrl.text,
       clientId: _selectedClient!.id!,
       dateEmission: _dateEmission,
       dateValidite: _dateValidite,
-      statut: _statut,
+      statut: widget.devisAModifier?.statut ?? 'brouillon',
       totalHt: _totalHT,
       remiseTaux: _remiseTaux,
       acompteMontant: _acompteMontant,
+      conditionsReglement: _conditionsCtrl.text,
+      notesPubliques: _notesCtrl.text,
       lignes: _lignes,
       chiffrage: _chiffrage,
-      notesPubliques: _notesCtrl.text,
+      // On conserve les champs non éditables ici
+      signatureUrl: widget.devisAModifier?.signatureUrl,
+      dateSignature: widget.devisAModifier?.dateSignature,
+      estTransforme: widget.devisAModifier?.estTransforme ?? false,
+      estArchive: widget.devisAModifier?.estArchive ?? false,
     );
 
     bool success;
-    if (widget.id != null) {
-      success = await vm.updateDevis(devis);
+    if (widget.id == null) {
+      success = await vm.addDevis(devisToSave);
     } else {
-      success = await vm.addDevis(devis);
+      success = await vm.updateDevis(devisToSave);
     }
 
-    if (success && mounted) {
+    // Async Safety
+    if (!mounted) return;
+
+    setState(() => _isLoading = false);
+
+    if (success) {
       context.pop();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
     }
   }
 
-  Future<void> _pickDate(bool isEmission) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: isEmission ? _dateEmission : _dateValidite,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      locale: const Locale('fr', 'FR'),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isEmission) {
-          _dateEmission = picked;
-          _dateValidite = picked.add(const Duration(days: 30));
-        } else {
-          _dateValidite = picked;
-        }
-      });
+  Future<void> _genererPDF() async {
+    if (widget.devisAModifier == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Veuillez d'abord enregistrer le devis.")));
+      return;
     }
+
+    try {
+      // Appel au service PDF (implémenté dans pdf_service.dart)
+      await PdfService.generateDevisPdf(widget.devisAModifier!);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Erreur génération PDF : $e")));
+    }
+  }
+
+  Future<void> _finaliser() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Finaliser le devis ?"),
+        content: const Text(
+            "Un numéro définitif sera attribué. Le devis ne sera plus modifiable."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Non")),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Oui")),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
+
+    if (widget.devisAModifier != null) {
+      await vm.finaliserDevis(widget.devisAModifier!);
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    context.pop(); // Retour liste
   }
 
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
-      menuIndex: 1, // CORRECTION: Index Devis
-      title: widget.id != null ? "Modifier Devis" : "Nouveau Devis",
+      title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
+      menuIndex: 4,
+      useFullWidth: true,
       headerActions: [
-        IconButton(icon: const Icon(Icons.save), onPressed: _sauvegarder),
+        if (widget.devisAModifier != null)
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: "Voir PDF",
+            onPressed: _genererPDF,
+          )
       ],
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeaderSection(),
-              const Divider(height: 30),
-              _buildLignesSection(),
-              const Divider(height: 30),
-              _buildTotauxSection(),
-              const SizedBox(height: 50),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: CustomTextField(
-                    label: "Numéro",
-                    controller: _numeroCtrl,
-                    readOnly: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => _pickDate(true),
-                    child: InputDecorator(
-                      decoration:
-                          const InputDecoration(labelText: "Date Émission"),
-                      child:
-                          Text(DateFormat('dd/MM/yyyy').format(_dateEmission)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: "Objet",
-              controller: _objetCtrl,
-              validator: (v) => v!.isEmpty ? "Requis" : null,
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: () async {
-                final c = await showDialog<Client>(
-                    context: context,
-                    builder: (_) => const ClientSelectionDialog());
-                if (c != null) setState(() => _selectedClient = c);
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: "Client"),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_selectedClient?.nomComplet ??
-                        "Sélectionner un client..."),
-                    const Icon(Icons.arrow_drop_down),
+                    // EN-TÊTE
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: AppCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomTextField(
+                                  label: "Objet du devis",
+                                  controller: _objetCtrl,
+                                  validator: (v) =>
+                                      v!.isEmpty ? "Requis" : null,
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(
+                                              context: context,
+                                              initialDate: _dateEmission,
+                                              firstDate: DateTime(2020),
+                                              lastDate: DateTime(2030));
+                                          if (d != null && mounted) {
+                                            setState(() => _dateEmission = d);
+                                          }
+                                        },
+                                        child: InputDecorator(
+                                          decoration: const InputDecoration(
+                                              labelText: "Date émission",
+                                              border: OutlineInputBorder(),
+                                              filled: true,
+                                              fillColor: Colors.white),
+                                          child: Text(DateFormat('dd/MM/yyyy')
+                                              .format(_dateEmission)),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(
+                                              context: context,
+                                              initialDate: _dateValidite,
+                                              firstDate: DateTime(2020),
+                                              lastDate: DateTime(2030));
+                                          if (d != null && mounted) {
+                                            setState(() => _dateValidite = d);
+                                          }
+                                        },
+                                        child: InputDecorator(
+                                          decoration: const InputDecoration(
+                                              labelText: "Validité",
+                                              border: OutlineInputBorder(),
+                                              filled: true,
+                                              fillColor: Colors.white),
+                                          child: Text(DateFormat('dd/MM/yyyy')
+                                              .format(_dateValidite)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: AppCard(
+                            onTap: _selectionnerClient,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("CLIENT",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey)),
+                                const SizedBox(height: 8),
+                                if (_selectedClient != null) ...[
+                                  Text(_selectedClient!.nomComplet,
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold)),
+                                  Text(_selectedClient!.ville),
+                                ] else
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.add_circle,
+                                          color: AppTheme.primary),
+                                      SizedBox(width: 8),
+                                      Text("Sélectionner...",
+                                          style: TextStyle(
+                                              color: AppTheme.primary)),
+                                    ],
+                                  )
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // LIGNES DEVIS
+                    const Text("LIGNES DU DEVIS",
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary)),
+                    const SizedBox(height: 10),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _lignes.length,
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) newIndex -= 1;
+                          final item = _lignes.removeAt(oldIndex);
+                          _lignes.insert(newIndex, item);
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        final ligne = _lignes[index];
+                        return Card(
+                          key: ValueKey(ligne.uiKey), // Utilisation UiKey
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: LigneEditor(
+                            description: ligne.description,
+                            quantite: ligne.quantite,
+                            prixUnitaire: ligne.prixUnitaire,
+                            unite: ligne.unite,
+                            type: ligne.type,
+                            estGras: ligne.estGras,
+                            estItalique: ligne.estItalique,
+                            estSouligne: ligne.estSouligne,
+                            showHandle: true,
+                            onChanged:
+                                (desc, qte, pu, unite, type, gras, ital, soul) {
+                              setState(() {
+                                _lignes[index] = ligne.copyWith(
+                                  description: desc,
+                                  quantite: qte,
+                                  prixUnitaire: pu,
+                                  totalLigne:
+                                      CalculationsUtils.calculateTotalLigne(
+                                          qte, pu),
+                                  unite: unite,
+                                  type: type,
+                                  estGras: gras,
+                                  estItalique: ital,
+                                  estSouligne: soul,
+                                );
+                              });
+                            },
+                            onDelete: () {
+                              setState(() {
+                                _lignes.removeAt(index);
+                              });
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _ajouterLigne,
+                          icon: const Icon(Icons.add),
+                          label: const Text("Ajouter ligne vide"),
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: _importerArticle,
+                          icon: const Icon(Icons.library_books),
+                          label: const Text("Importer Article"),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // TOTAUX
+                    AppCard(
+                      child: Column(
+                        children: [
+                          _rowTotal("Total HT", _totalHT),
+                          const Divider(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Remise (%)"),
+                              SizedBox(
+                                width: 100,
+                                child: TextFormField(
+                                  initialValue: _remiseTaux.toString(),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration:
+                                      const InputDecoration(suffixText: "%"),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _remiseTaux =
+                                          Decimal.tryParse(v) ?? Decimal.zero;
+                                    });
+                                  },
+                                ),
+                              ),
+                              Text("- ${FormatUtils.currency(_totalRemise)}",
+                                  style: const TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                          const Divider(),
+                          _rowTotal("NET COMMERCIAL", _netCommercial,
+                              isBig: true),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ACOMPTE
+                    AppCard(
+                      title: const Text("Acompte demandé"),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: _acompteMontant.toString(),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              decoration: const InputDecoration(
+                                  labelText: "Montant (€)"),
+                              onChanged: (v) {
+                                setState(() {
+                                  _acompteMontant =
+                                      Decimal.tryParse(v) ?? Decimal.zero;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // Helper rapide : calculer %
+                          Text(
+                              "${CalculationsUtils.calculateTauxFromMontant(_netCommercial, _acompteMontant).toDouble().toStringAsFixed(1)} %",
+                              style: const TextStyle(color: Colors.grey))
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+                    // ACTIONS BAS DE PAGE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (widget.devisAModifier?.statut == 'brouillon')
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: OutlinedButton(
+                              onPressed: _finaliser,
+                              style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.green),
+                              child: const Text("FINALISER (Figer)"),
+                            ),
+                          ),
+                        ElevatedButton(
+                          onPressed: _sauvegarder,
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 30, vertical: 15)),
+                          child: const Text("ENREGISTRER",
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 50),
                   ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLignesSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text("LIGNES",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Row(
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text("Article"),
-                  onPressed: () async {
-                    final a = await showDialog<Article>(
-                        context: context,
-                        builder: (_) => const ArticleSelectionDialog());
-                    if (a != null) _ajouterLigne(a);
-                  },
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.title),
-                  label: const Text("Titre"),
-                  onPressed: () => _ajouterLigne(null),
-                ),
-              ],
-            )
-          ],
-        ),
-        ReorderableListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _lignes.length,
-          onReorder: (oldIndex, newIndex) {
-            setState(() {
-              if (oldIndex < newIndex) newIndex -= 1;
-              final item = _lignes.removeAt(oldIndex);
-              _lignes.insert(newIndex, item);
-            });
-          },
-          itemBuilder: (context, index) {
-            final l = _lignes[index];
-            return LigneEditor(
-              key: ValueKey(l.uiKey),
-              description: l.description,
-              quantite: l.quantite,
-              prixUnitaire: l.prixUnitaire,
-              unite: l.unite,
-              type: l.type,
-              estGras: l.estGras,
-              estItalique: l.estItalique,
-              showHandle: true,
-              onChanged:
-                  (desc, qte, pu, unite, type, gras, italique, souligne) {
-                setState(() {
-                  _lignes[index] = LigneDevis(
-                      id: l.id,
-                      description: desc,
-                      quantite: qte,
-                      prixUnitaire: pu,
-                      totalLigne: type == 'article' ? qte * pu : Decimal.zero,
-                      unite: unite,
-                      typeActivite: l.typeActivite,
-                      type: type,
-                      estGras: gras,
-                      estItalique: italique,
-                      estSouligne: souligne,
-                      uiKey: l.uiKey);
-                });
-              },
-              onDelete: () => setState(() => _lignes.removeAt(index)),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTotauxSection() {
-    return Card(
-      color: AppTheme.primary.withValues(alpha: 0.05),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text("Total HT"),
-              Text(FormatUtils.currency(_totalHT)),
-            ]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text("Remise (%)"),
-              SizedBox(
-                  width: 80,
-                  child: TextFormField(
-                      initialValue: _remiseTaux.toString(),
-                      onChanged: (v) => setState(() =>
-                          _remiseTaux = Decimal.tryParse(v) ?? Decimal.zero))),
-              const Spacer(),
-              Text("- ${FormatUtils.currency(_totalRemise)}",
-                  style: const TextStyle(color: Colors.red))
-            ]),
-            const Divider(),
-            _rowTotal("NET COMMERCIAL", _netCommercial, isBig: true),
-          ],
-        ),
-      ),
     );
   }
 

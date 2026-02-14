@@ -23,19 +23,21 @@ class CalculationsUtils {
     return qte * pu;
   }
 
-  /// Calcule un montant d'acompte selon un taux
+  /// Calcule un montant d'acompte selon un taux (Decimal)
   static Decimal calculateAcompteFromTaux(
-      Decimal totalTTC, double tauxPercent) {
-    final t = Decimal.parse(tauxPercent.toString());
-    final val = (totalTTC * t) / Decimal.fromInt(100);
+      Decimal totalTTC, Decimal tauxPercent) {
+    if (totalTTC == Decimal.zero || tauxPercent == Decimal.zero) {
+      return Decimal.zero;
+    }
+    final val = (totalTTC * tauxPercent) / Decimal.fromInt(100);
     return val.toDecimal();
   }
 
-  /// Calcule un taux d'acompte selon un montant
-  static double calculateTauxFromMontant(
+  /// Calcule un taux d'acompte selon un montant (Retourne Decimal)
+  static Decimal calculateTauxFromMontant(
       Decimal totalTTC, Decimal montantAcompte) {
-    if (totalTTC == Decimal.zero) return 0.0;
-    final ratio = (montantAcompte / totalTTC).toDouble();
-    return ratio * 100;
+    if (totalTTC == Decimal.zero) return Decimal.zero;
+    final ratio = (montantAcompte / totalTTC).toDecimal();
+    return ratio * Decimal.fromInt(100);
   }
 }

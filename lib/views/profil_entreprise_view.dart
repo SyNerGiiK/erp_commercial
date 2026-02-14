@@ -1,5 +1,4 @@
-﻿import 'dart:io';
-import 'package:flutter/foundation.dart'; // Pour kIsWeb
+﻿import 'package:flutter/foundation.dart'; // Pour kIsWeb
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,13 +39,16 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _chargerProfilExistants();
+      _chargerProfil();
     });
   }
 
-  void _chargerProfilExistants() async {
+  void _chargerProfil() async {
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
     await vm.fetchProfil();
+
+    if (!mounted) return;
+
     final p = vm.profil;
     if (p != null) {
       _nomEntController.text = p.nomEntreprise;
@@ -87,51 +89,61 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
 
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
 
-    final p = ProfilEntreprise(
-      id: vm.profil?.id,
-      userId: vm.profil?.userId,
-      nomEntreprise: _nomEntController.text,
-      nomGerant: _nomGerantController.text,
-      adresse: _adresseController.text,
-      codePostal: _cpController.text,
-      ville: _villeController.text,
-      siret: _siretController.text,
-      email: _emailController.text,
-      telephone: _telController.text,
-      iban: _ibanController.text,
-      bic: _bicController.text,
+    final existingId = vm.profil?.id;
+    final existingLogo = vm.profil?.logoUrl;
+    final existingSignature = vm.profil?.signatureUrl;
+
+    final profilToSave = ProfilEntreprise(
+      id: existingId,
+      // userId géré par le Repo
+      nomEntreprise: _nomEntController.text.trim(),
+      nomGerant: _nomGerantController.text.trim(),
+      adresse: _adresseController.text.trim(),
+      codePostal: _cpController.text.trim(),
+      ville: _villeController.text.trim(),
+      siret: _siretController.text.trim(),
+      email: _emailController.text.trim(),
+      telephone: _telController.text.trim(),
+      iban: _ibanController.text.trim(),
+      bic: _bicController.text.trim(),
       frequenceCotisation: _frequenceCotisation,
-      mentionsLegales: _mentionsController.text,
-      logoUrl: vm.profil?.logoUrl, // On garde l'existant
-      signatureUrl: vm.profil?.signatureUrl, // On garde l'existant
+      mentionsLegales: _mentionsController.text.trim(),
+      logoUrl: existingLogo,
+      signatureUrl: existingSignature,
     );
 
-    final success = await vm.saveProfil(p);
-    if (success && mounted) {
+    final success = await vm.saveProfil(profilToSave);
+
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profil mis à jour avec succès")),
-      );
-      context.pop();
+          const SnackBar(content: Text("Profil enregistré avec succès !")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
     }
   }
 
   Future<void> _pickAndUpload(String type) async {
-    final XFile? image =
-        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image != null && mounted) {
-      final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
+    // 1. Sélection image (XFile, compatible Web)
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
 
-      // On sauvegarde d'abord le formulaire textuel pour ne pas perdre les données si l'ID n'existe pas encore
-      if (vm.profil == null) {
-        await _sauvegarder();
-      }
+    if (!mounted) return;
 
-      final success = await vm.uploadImage(image, type);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$type mis à jour !")),
-        );
-      }
+    // 2. Upload via ViewModel
+    final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
+    final success = await vm.uploadImage(image, type);
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Image mise à jour !")));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Erreur upload")));
     }
   }
 
@@ -145,13 +157,14 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       title: "Mon Entreprise",
       child: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // LOGO ZONE
                     Center(
                       child: GestureDetector(
                         onTap: () => _pickAndUpload('logo'),
@@ -168,82 +181,102 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     const Center(
-                        child: Text("Appuyer pour modifier le logo",
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.grey))),
-                    const SizedBox(height: 20),
-                    const Text("Informations Générales",
+                      child: Text("Logo Entreprise",
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                    const SizedBox(height: 30),
+
+                    // CHAMPS PRINCIPAUX
+                    const Text("Identité",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            color: AppTheme.primary)),
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 15),
+                    CustomTextField(
+                        label: "Nom de l'entreprise (Raison Sociale)",
+                        controller: _nomEntController,
+                        validator: (v) => v!.isEmpty ? "Nom requis" : null),
                     const SizedBox(height: 10),
                     CustomTextField(
-                      label: "Nom commercial / Raison Sociale",
-                      controller: _nomEntController,
-                      validator: (v) => v!.isEmpty ? "Requis" : null,
-                    ),
+                        label: "Nom du Gérant",
+                        controller: _nomGerantController,
+                        validator: (v) => v!.isEmpty ? "Nom requis" : null),
                     const SizedBox(height: 10),
                     CustomTextField(
-                      label: "Nom du Gérant",
-                      controller: _nomGerantController,
-                      validator: (v) => v!.isEmpty ? "Requis" : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(children: [
-                      Expanded(
-                          child: CustomTextField(
                         label: "SIRET",
                         controller: _siretController,
-                        validator: (v) => v!.isEmpty ? "Requis" : null,
-                      )),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: CustomTextField(
-                              label: "Email Pro",
-                              controller: _emailController)),
-                    ]),
-                    const SizedBox(height: 20),
-                    const Text("Coordonnées",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: AppTheme.primary)),
+                        validator: (v) => v!.isEmpty ? "SIRET requis" : null),
                     const SizedBox(height: 10),
                     CustomTextField(
-                        label: "Adresse", controller: _adresseController),
+                        label: "Email contact",
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => v!.isEmpty ? "Email requis" : null),
                     const SizedBox(height: 10),
-                    Row(children: [
-                      Expanded(
+                    CustomTextField(
+                        label: "Téléphone",
+                        controller: _telController,
+                        keyboardType: TextInputType.phone),
+
+                    const SizedBox(height: 30),
+                    const Text("Adresse",
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 15),
+                    CustomTextField(
+                        label: "Adresse complète",
+                        controller: _adresseController,
+                        validator: (v) => v!.isEmpty ? "Requis" : null),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
                           flex: 1,
                           child: CustomTextField(
-                              label: "Code Postal", controller: _cpController)),
-                      const SizedBox(width: 10),
-                      Expanded(
+                              label: "Code Postal",
+                              controller: _cpController,
+                              keyboardType: TextInputType.number,
+                              validator: (v) => v!.isEmpty ? "Requis" : null),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
                           flex: 2,
                           child: CustomTextField(
-                              label: "Ville", controller: _villeController)),
-                    ]),
-                    const SizedBox(height: 10),
-                    CustomTextField(
-                        label: "Téléphone", controller: _telController),
-                    const SizedBox(height: 20),
-                    const Text("Bancaire & Administratif",
+                              label: "Ville",
+                              controller: _villeController,
+                              validator: (v) => v!.isEmpty ? "Requis" : null),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+                    const Text("Facturation & Bancaire",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            color: AppTheme.primary)),
-                    const SizedBox(height: 10),
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 15),
                     CustomTextField(label: "IBAN", controller: _ibanController),
                     const SizedBox(height: 10),
                     CustomTextField(label: "BIC", controller: _bicController),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
+
+                    // CORRECTION DROPDOWN: Utilisation Key+InitialValue
                     DropdownButtonFormField<String>(
-                      initialValue: _frequenceCotisation,
-                      decoration:
-                          const InputDecoration(labelText: "Cotisation URSSAF"),
+                      key: ValueKey(_frequenceCotisation), // Key Stable
+                      value: _frequenceCotisation, // Value car state tracké
+                      decoration: InputDecoration(
+                        labelText: "Fréquence déclaration URSSAF",
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
                       items: const [
                         DropdownMenuItem(
                             value: 'mois', child: Text("Mensuelle")),
@@ -253,42 +286,56 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                       onChanged: (v) =>
                           setState(() => _frequenceCotisation = v!),
                     ),
-                    const SizedBox(height: 20),
-                    const Text("Mentions Légales (Bas de page PDF)",
+
+                    const SizedBox(height: 30),
+                    const Text("Mentions Légales (Pied de page)",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 5),
+                            fontSize: 18,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 15),
                     CustomTextField(
-                      label: "Ex: Dispensé d'immatriculation...",
+                      label: "Texte libre (Ex: TVA non applicable...)",
                       controller: _mentionsController,
-                      maxLines: 2,
+                      maxLines: 3,
                     ),
-                    const SizedBox(height: 20),
+
+                    const SizedBox(height: 30),
+                    const Text("Signature / Tampon",
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
                     Center(
                       child: Column(
                         children: [
-                          const Text("Signature / Cachet (Pour PDF)",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: () => _pickAndUpload('signature'),
-                            child: Container(
+                          if (profil?.signatureUrl != null)
+                            Container(
                               height: 100,
                               width: 200,
+                              margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  color: Colors.grey.shade100),
-                              child: (profil?.signatureUrl != null)
-                                  ? Image.network(profil!.signatureUrl!,
-                                      fit: BoxFit.contain)
-                                  : const Center(
-                                      child: Icon(Icons.add_a_photo)),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                  color: Colors.white),
+                              child: Image.network(profil!.signatureUrl!,
+                                  fit: BoxFit.contain),
                             ),
+                          ElevatedButton.icon(
+                            onPressed: () => _pickAndUpload('signature'),
+                            icon: const Icon(Icons.upload),
+                            label: const Text("Uploader Signature / Tampon"),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppTheme.textDark,
+                                side: const BorderSide(color: Colors.grey)),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 30),
+
+                    const SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
                       height: 50,

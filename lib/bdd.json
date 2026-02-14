@@ -1,0 +1,1304 @@
+[
+  {
+    "table_name": "articles",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "articles",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "articles",
+    "column_name": "designation",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "articles",
+    "column_name": "prix_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "articles",
+    "column_name": "prix_achat",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "articles",
+    "column_name": "type_activite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "articles",
+    "column_name": "unite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "articles",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "clients",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "clients",
+    "column_name": "nom_complet",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "type_client",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "siret",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "tva_intra",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "nom_contact",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "adresse",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "code_postal",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "ville",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "telephone",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "email",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "notes_privees",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "clients",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "UNIQUE"
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "annee",
+    "data_type": "integer",
+    "is_nullable": "NO",
+    "key_type": "UNIQUE"
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "type_document",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": "UNIQUE"
+  },
+  {
+    "table_name": "compteurs_documents",
+    "column_name": "valeur_actuelle",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "designation",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "quantite",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "prix_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "unite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "est_achete",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "courses",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "titre",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "montant",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "date",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "categorie",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "fournisseur",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "devis_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "depenses",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "devis",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "devis",
+    "column_name": "numero_devis",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "objet",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "client_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "devis",
+    "column_name": "date_emission",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "date_validite",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "statut",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "est_transforme",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "est_archive",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "total_ht",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "remise_taux",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "acompte_montant",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "conditions_reglement",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "notes_publiques",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "signature_url",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "date_signature",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "tva_intra",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "devis",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "nom_entreprise",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "nom_gerant",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "adresse",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "code_postal",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "ville",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "siret",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "email",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "telephone",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "iban",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "bic",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "frequence_cotisation",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "logo_base64",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "signature_base64",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "mentions_legales",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "factures",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "factures",
+    "column_name": "numero_facture",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "objet",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "client_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "factures",
+    "column_name": "date_emission",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "date_echeance",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "date_validation",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "statut",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "statut_juridique",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "est_archive",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "total_ht",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "remise_taux",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "acompte_deja_regle",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "conditions_reglement",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "notes_publiques",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "devis_source_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "parent_document_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "type_document",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "tva_intra",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "devis_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "facture_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "designation",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "quantite",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "unite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "prix_achat_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "prix_vente_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_chiffrages",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "devis_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "quantite",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "prix_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "total_ligne",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "type_activite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "unite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "est_gras",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "est_italique",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "ordre",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_devis",
+    "column_name": "est_souligne",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "facture_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "quantite",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "prix_unitaire",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "total_ligne",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "type_activite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "unite",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "est_gras",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "est_italique",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "ordre",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "est_souligne",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "facture_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "montant",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "date_paiement",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "type_paiement",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "commentaire",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "is_acompte",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "paiements",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "photos",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "photos",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "photos",
+    "column_name": "client_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "photos",
+    "column_name": "url",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "photos",
+    "column_name": "commentaire",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "photos",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "titre",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "date_debut",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "date_fin",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "client_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "plannings",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "client_id",
+    "data_type": "uuid",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "titre",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "date_debut",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "date_fin",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "rendez_vous",
+    "column_name": "est_fait",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "PRIMARY KEY"
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "user_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "key_type": "FOREIGN KEY"
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "accre_active",
+    "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "type_entreprise",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_prestation",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_impot_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_impot_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_tfc_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_tfc_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "plafond_ca_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "plafond_ca_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "seuil_tva_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "seuil_tva_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  }
+]

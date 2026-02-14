@@ -1,0 +1,101 @@
+Structure du dossier
+Le numéro de série du volume est BCA8-18F3
+C:\DEV\ERP_COMMERCIAL\LIB
+|   arborescence.txt
+|   bdd.json
+|   main.dart
+|
++---config
+|       dependency_injection.dart
+|       router.dart
+|       supabase_config.dart
+|       theme.dart
+|
++---core
++---models
+|       article_model.dart
+|       chiffrage_model.dart
+|       client_model.dart
+|       depense_model.dart
+|       devis_model.dart
+|       entreprise_model.dart
+|       facture_model.dart
+|       paiement_model.dart
+|       photo_model.dart
+|       planning_model.dart
+|       shopping_model.dart
+|       urssaf_model.dart
+|
++---repositories
+|       article_repository.dart
+|       auth_repository.dart
+|       client_repository.dart
+|       dashboard_repository.dart
+|       depense_repository.dart
+|       devis_repository.dart
+|       entreprise_repository.dart
+|       facture_repository.dart
+|       global_search_repository.dart
+|       planning_repository.dart
+|       shopping_repository.dart
+|       urssaf_repository.dart
+|
++---services
+|       export_service.dart
+|       pdf_service.dart
+|
++---utils
+|       calculations_utils.dart
+|       format_utils.dart
+|
++---viewmodels
+|       article_viewmodel.dart
+|       auth_viewmodel.dart
+|       client_viewmodel.dart
+|       dashboard_viewmodel.dart
+|       depense_viewmodel.dart
+|       devis_viewmodel.dart
+|       entreprise_viewmodel.dart
+|       facture_viewmodel.dart
+|       global_search_viewmodel.dart
+|       planning_viewmodel.dart
+|       shopping_viewmodel.dart
+|       urssaf_viewmodel.dart
+|
++---views
+|       ajout_client_view.dart
+|       ajout_depense_view.dart
+|       ajout_devis_view.dart
+|       ajout_event_dialog.dart
+|       ajout_facture_view.dart
+|       archives_view.dart
+|       bibliotheque_prix_view.dart
+|       detail_client_view.dart
+|       global_search_view.dart
+|       liste_clients_view.dart
+|       liste_depenses_view.dart
+|       liste_devis_view.dart
+|       liste_factures_view.dart
+|       login_view.dart
+|       parametres_view.dart
+|       planning_view.dart
+|       profil_entreprise_view.dart
+|       settings_root_view.dart
+|       shopping_list_view.dart
+|       signature_view.dart
+|       splash_view.dart
+|       tableau_de_bord_view.dart
+|
+\---widgets
+        ajout_event_dialog.dart
+        app_card.dart
+        article_selection_dialog.dart
+        base_screen.dart
+        chiffrage_editor.dart
+        client_selection_dialog.dart
+        custom_app_bar.dart
+        custom_drawer.dart
+        custom_text_field.dart
+        ligne_editor.dart
+        rentabilite_card.dart
+        statut_badge.dart

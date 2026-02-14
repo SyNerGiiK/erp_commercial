@@ -1,0 +1,59 @@
+name: erp_commercial
+description: "ERP Artisan 3.0 - Web First SaaS"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # --- UI & UX ---
+  google_fonts: ^6.1.0 # Version stable recommandée
+  fl_chart: ^0.66.0    # Attention aux breaking changes fréquents sur fl_chart
+  table_calendar: ^3.1.0
+  signature: ^5.4.0    # Downgrade léger pour stabilité web parfois nécessaire, sinon garder latest
+  
+  # --- ROUTING (CRUCIAL WEB) ---
+  go_router: ^13.0.0   # INDISPENSABLE pour la gestion des URLs
+  
+  # --- LOCALIZATION ---
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.2        # Version standard stable
+  
+  # --- DATA & BACKEND ---
+  supabase_flutter: ^2.3.0
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  
+  # --- MATHS & LOGIC ---
+  decimal: ^2.3.0
+  rational: ^2.2.3
+  uuid: ^4.3.3
+  
+  # --- FILES & EXPORT ---
+  pdf: ^3.10.0
+  printing: ^5.11.1
+  csv: ^6.0.0
+  
+  # --- WEB SPECIFIC & UTILS ---
+  url_launcher: ^6.2.4
+  cross_file: ^0.3.3
+  file_saver: ^0.2.0   # REMPLAÇANT de path_provider pour le téléchargement
+  image_picker: ^1.0.7
+  http: ^1.6.0
+  
+  # --- OPTIONAL (Si compatibilité mobile maintenue) ---
+  # path_provider: ^2.1.2 
+  # share_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1 # Suffisant, la v6 est très agressive
+
+flutter:
+  uses-material-design: true

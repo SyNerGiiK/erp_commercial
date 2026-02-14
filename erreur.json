@@ -1,0 +1,115 @@
+[{
+	"resource": "/C:/Dev/erp_commercial/lib/views/archives_view.dart",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "undefined_named_parameter",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/undefined_named_parameter",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 8,
+	"message": "The named parameter 'bottom' isn't defined.\nTry correcting the name to an existing named parameter's name, or defining a named parameter with the name 'bottom'.",
+	"source": "dart",
+	"startLineNumber": 81,
+	"startColumn": 7,
+	"endLineNumber": 81,
+	"endColumn": 13,
+	"modelVersionId": 3,
+	"origin": "extHost1"
+},{
+	"resource": "/C:/Dev/erp_commercial/lib/views/bibliotheque_prix_view.dart",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "deprecated_member_use",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/deprecated_member_use",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 2,
+	"message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre.\nTry replacing the use of the deprecated member with the replacement.",
+	"source": "dart",
+	"startLineNumber": 63,
+	"startColumn": 19,
+	"endLineNumber": 63,
+	"endColumn": 24,
+	"modelVersionId": 1,
+	"tags": [
+		2
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/C:/Dev/erp_commercial/lib/views/bibliotheque_prix_view.dart",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "deprecated_member_use",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/deprecated_member_use",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 2,
+	"message": "'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre.\nTry replacing the use of the deprecated member with the replacement.",
+	"source": "dart",
+	"startLineNumber": 73,
+	"startColumn": 19,
+	"endLineNumber": 73,
+	"endColumn": 24,
+	"modelVersionId": 1,
+	"tags": [
+		2
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/C:/Dev/erp_commercial/lib/views/parametres_view.dart",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "deprecated_member_use",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/deprecated_member_use",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 2,
+	"message": "'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre.\nTry replacing the use of the deprecated member with the replacement.",
+	"source": "dart",
+	"startLineNumber": 175,
+	"startColumn": 17,
+	"endLineNumber": 175,
+	"endColumn": 28,
+	"modelVersionId": 3,
+	"tags": [
+		2
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/C:/Dev/erp_commercial/lib/views/signature_view.dart",
+	"owner": "_generated_diagnostic_collection_name_#2",
+	"code": {
+		"value": "use_build_context_synchronously",
+		"target": {
+			"$mid": 1,
+			"path": "/diagnostics/use_build_context_synchronously",
+			"scheme": "https",
+			"authority": "dart.dev"
+		}
+	},
+	"severity": 2,
+	"message": "Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check.\nGuard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext.",
+	"source": "dart",
+	"startLineNumber": 68,
+	"startColumn": 39,
+	"endLineNumber": 68,
+	"endColumn": 46,
+	"modelVersionId": 7,
+	"origin": "extHost1"
+}]

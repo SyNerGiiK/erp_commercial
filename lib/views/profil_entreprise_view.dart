@@ -269,7 +269,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     // CORRECTION DROPDOWN: Utilisation Key+InitialValue
                     DropdownButtonFormField<String>(
                       key: ValueKey(_frequenceCotisation), // Key Stable
-                      value: _frequenceCotisation, // Value car state tracké
+                      initialValue: _frequenceCotisation,
                       decoration: InputDecoration(
                         labelText: "Fréquence déclaration URSSAF",
                         border: OutlineInputBorder(

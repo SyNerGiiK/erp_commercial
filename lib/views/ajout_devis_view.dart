@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart'; // Added Import
 
 import '../config/theme.dart';
 import '../config/supabase_config.dart';
@@ -12,6 +13,7 @@ import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
+import '../viewmodels/entreprise_viewmodel.dart'; // Added Import
 
 // Services
 import '../services/pdf_service.dart';
@@ -245,9 +247,28 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       return;
     }
 
+    final entrepriseVM =
+        Provider.of<EntrepriseViewModel>(context, listen: false);
+    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+
+    // Ensure entreprise is loaded
+    if (entrepriseVM.profil == null) {
+      await entrepriseVM.fetchProfil();
+    }
+
     try {
+      final client = clientVM.clients
+          .firstWhere((c) => c.id == widget.devisAModifier!.clientId);
+
       // Appel au service PDF (implémenté dans pdf_service.dart)
-      await PdfService.generateDevisPdf(widget.devisAModifier!);
+      final pdfBytes = await PdfService.generateDevis(
+          widget.devisAModifier!, client, entrepriseVM.profil);
+
+      if (!mounted) return;
+
+      await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes,
+          name: "Devis_${widget.devisAModifier!.numeroDevis}.pdf");
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

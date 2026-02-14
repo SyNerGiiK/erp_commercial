@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 
 import '../config/theme.dart';
 import '../models/facture_model.dart';
@@ -14,6 +15,7 @@ import '../models/paiement_model.dart';
 import '../viewmodels/facture_viewmodel.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
+import '../viewmodels/entreprise_viewmodel.dart'; // Ajout Import
 import '../config/supabase_config.dart';
 
 import '../services/pdf_service.dart';
@@ -25,6 +27,7 @@ import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
 import '../utils/format_utils.dart';
+import '../utils/calculations_utils.dart';
 
 class AjoutFactureView extends StatefulWidget {
   final String? id;
@@ -309,8 +312,31 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
           content: Text("Veuillez d'abord enregistrer la facture.")));
       return;
     }
+
+    // Récupération des données nécessaires
+    final entrepriseVM =
+        Provider.of<EntrepriseViewModel>(context, listen: false);
+    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+
+    // Assurer que le profil entreprise est chargé
+    if (entrepriseVM.profil == null) {
+      await entrepriseVM.fetchProfil();
+    }
+
     try {
-      await PdfService.generateFacturePdf(widget.factureAModifier!);
+      // Trouver le client associé
+      final client = clientVM.clients
+          .firstWhere((c) => c.id == widget.factureAModifier!.clientId);
+
+      final pdfBytes = await PdfService.generateFacture(
+          widget.factureAModifier!, client, entrepriseVM.profil);
+
+      if (!mounted) return;
+
+      // Affichage ou partage du PDF (Ici on utilise Printing layout)
+      await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes,
+          name: "Facture_${widget.factureAModifier!.numeroFacture}.pdf");
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -341,7 +367,183 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // ... INFO CLIENT & DATES (Pour faire court, on se concentre sur les totaux corrigés) ...
+                      // EN-TÊTE
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: AppCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomTextField(
+                                    label: "Objet de la facture",
+                                    controller: _objetCtrl,
+                                    validator: (v) =>
+                                        v!.isEmpty ? "Requis" : null,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final d = await showDatePicker(
+                                                context: context,
+                                                initialDate: _dateEmission,
+                                                firstDate: DateTime(2020),
+                                                lastDate: DateTime(2030));
+                                            if (d != null && mounted) {
+                                              setState(() => _dateEmission = d);
+                                            }
+                                          },
+                                          child: InputDecorator(
+                                            decoration: const InputDecoration(
+                                                labelText: "Date émission",
+                                                border: OutlineInputBorder(),
+                                                filled: true,
+                                                fillColor: Colors.white),
+                                            child: Text(DateFormat('dd/MM/yyyy')
+                                                .format(_dateEmission)),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final d = await showDatePicker(
+                                                context: context,
+                                                initialDate: _dateEcheance,
+                                                firstDate: DateTime(2020),
+                                                lastDate: DateTime(2030));
+                                            if (d != null && mounted) {
+                                              setState(() => _dateEcheance = d);
+                                            }
+                                          },
+                                          child: InputDecorator(
+                                            decoration: const InputDecoration(
+                                                labelText: "Échéance",
+                                                border: OutlineInputBorder(),
+                                                filled: true,
+                                                fillColor: Colors.white),
+                                            child: Text(DateFormat('dd/MM/yyyy')
+                                                .format(_dateEcheance)),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 1,
+                            child: AppCard(
+                              onTap: _selectionnerClient,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text("CLIENT",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey)),
+                                  const SizedBox(height: 8),
+                                  if (_selectedClient != null) ...[
+                                    Text(_selectedClient!.nomComplet,
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold)),
+                                    Text(_selectedClient!.ville),
+                                  ] else
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.add_circle,
+                                            color: AppTheme.primary),
+                                        SizedBox(width: 8),
+                                        Text("Sélectionner...",
+                                            style: TextStyle(
+                                                color: AppTheme.primary)),
+                                      ],
+                                    )
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // LIGNES FACTURE
+                      const Text("LIGNES DE LA FACTURE",
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary)),
+                      const SizedBox(height: 10),
+                      ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _lignes.length,
+                        onReorder: (oldIndex, newIndex) {
+                          setState(() {
+                            if (newIndex > oldIndex) newIndex -= 1;
+                            final item = _lignes.removeAt(oldIndex);
+                            _lignes.insert(newIndex, item);
+                          });
+                        },
+                        itemBuilder: (context, index) {
+                          final ligne = _lignes[index];
+                          return Card(
+                            key: ValueKey(ligne.uiKey),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: LigneEditor(
+                              description: ligne.description,
+                              quantite: ligne.quantite,
+                              prixUnitaire: ligne.prixUnitaire,
+                              unite: ligne.unite,
+                              type: ligne.type,
+                              estGras: ligne.estGras,
+                              estItalique: ligne.estItalique,
+                              estSouligne: ligne.estSouligne,
+                              showHandle: true,
+                              onChanged: (desc, qte, pu, unite, type, gras,
+                                  ital, soul) {
+                                setState(() {
+                                  _lignes[index] = ligne.copyWith(
+                                    description: desc,
+                                    quantite: qte,
+                                    prixUnitaire: pu,
+                                    totalLigne:
+                                        CalculationsUtils.calculateTotalLigne(
+                                            qte, pu),
+                                    unite: unite,
+                                    type: type,
+                                    estGras: gras,
+                                    estItalique: ital,
+                                    estSouligne: soul,
+                                  );
+                                });
+                              },
+                              onDelete: () {
+                                setState(() {
+                                  _lignes.removeAt(index);
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton.icon(
+                        onPressed: _ajouterLigne,
+                        icon: const Icon(Icons.add),
+                        label: const Text("Ajouter ligne vide"),
+                      ),
+                      const SizedBox(height: 30),
 
                       // SECTION TOTAUX
                       AppCard(

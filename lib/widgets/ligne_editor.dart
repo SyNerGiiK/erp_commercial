@@ -140,11 +140,14 @@ class _LigneEditorState extends State<LigneEditor> {
   @override
   Widget build(BuildContext context) {
     if (widget.type == 'titre') return _buildTitreEditor();
-    if (widget.type == 'sous-titre')
+    if (widget.type == 'titre') return _buildTitreEditor();
+    if (widget.type == 'sous-titre') {
       return _buildSousTitreEditor(); // Module 1: Sous-titre
+    }
     if (widget.type == 'texte') return _buildTexteEditor();
-    if (widget.type == 'saut_page')
+    if (widget.type == 'saut_page') {
       return _buildSautPageEditor(); // Module 1: Saut de page
+    }
 
     // Mode Article Standard
     return widget.readOnly ? _buildReadOnly() : _buildEditable();

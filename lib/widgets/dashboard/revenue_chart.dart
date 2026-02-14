@@ -8,10 +8,10 @@ class RevenueChart extends StatelessWidget {
   final int year;
 
   const RevenueChart({
-    Key? key,
+    super.key,
     required this.monthlyRevenue,
     required this.year,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,8 @@ class RevenueChart extends StatelessWidget {
                       touchTooltipData: BarTouchTooltipData(
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           return BarTooltipItem(
-                            "${FormatUtils.currency(Decimal.parse(rod.toY.toString()))}",
+                            FormatUtils.currency(
+                                Decimal.parse(rod.toY.toString())),
                             const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold),
@@ -62,10 +63,10 @@ class RevenueChart extends StatelessWidget {
                     ),
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -139,7 +140,8 @@ class RevenueChart extends StatelessWidget {
                         ],
                       );
                     }),
-                    gridData: FlGridData(show: true, drawVerticalLine: false),
+                    gridData:
+                        const FlGridData(show: true, drawVerticalLine: false),
                   ),
                 ),
               ),

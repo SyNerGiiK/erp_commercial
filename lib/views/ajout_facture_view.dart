@@ -58,6 +58,8 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   List<LigneChiffrage> _chiffrage = []; // Pour rentabilité
   List<Paiement> _paiements = [];
 
+  String _typeFacture = 'standard';
+
   Decimal _remiseTaux = Decimal.zero;
   Decimal _acompteDejaRegle = Decimal.zero;
 
@@ -78,6 +80,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       final f = widget.factureAModifier!;
       _numeroCtrl = TextEditingController(text: f.numeroFacture);
       _objetCtrl = TextEditingController(text: f.objet);
+      _typeFacture = f.type;
       _notesCtrl = TextEditingController(text: f.notesPubliques ?? "");
       _conditionsCtrl = TextEditingController(text: f.conditionsReglement);
       _dateEmission = f.dateEmission;
@@ -111,6 +114,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       try {
         final devis =
             devisVM.devis.firstWhere((d) => d.id == widget.sourceDevisId);
+        _typeFacture = 'standard'; // Par défaut si créé depuis ID
         _numeroCtrl = TextEditingController(text: "Brouillon");
         _objetCtrl =
             TextEditingController(text: "Facture pour ${devis.numeroDevis}");
@@ -166,6 +170,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _objetCtrl = TextEditingController();
       _notesCtrl = TextEditingController();
       _conditionsCtrl = TextEditingController(text: "Paiement à réception");
+      _typeFacture = 'standard';
     }
   }
 
@@ -510,13 +515,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                         itemBuilder: (context, index) {
                           final ligne = _lignes[index];
                           // Détermine si c'est une situation
-                          final isSituation =
-                              widget.factureAModifier?.type == 'situation' ||
-                                  (widget.factureAModifier == null &&
-                                      _objetCtrl.text.startsWith("Situation"));
-                          // TODO: Mieux gérer le type dans le state local
-                          // Pour l'instant on se base sur ce qu'on a.
-                          // Pour faire propre, ajoutons une variable local _typeFacture
+                          final isSituation = _typeFacture == 'situation';
 
                           return Card(
                             key: ValueKey(ligne.uiKey),

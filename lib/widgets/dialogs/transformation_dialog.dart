@@ -117,7 +117,7 @@ class _TransformationDialogState extends State<TransformationDialog> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withOpacity(0.1) : null,
+          color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : null,
           border: Border.all(
               color: isSelected ? AppTheme.primary : Colors.grey.shade300),
           borderRadius: BorderRadius.circular(8),

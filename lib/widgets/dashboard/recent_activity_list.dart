@@ -10,10 +10,10 @@ class RecentActivityList extends StatelessWidget {
   final Function(dynamic) onTap;
 
   const RecentActivityList({
-    Key? key,
+    super.key,
     required this.items,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -74,14 +74,14 @@ class RecentActivityList extends StatelessWidget {
               (Decimal.parse(
                   "0.20")))); // TTC approx ou HT ? Let's use HT for now as consistent with app
       // Actually app uses HT mostly. Let's show HT.
-      amount = FormatUtils.currency(item.totalHt) + " HT";
+      amount = "${FormatUtils.currency(item.totalHt)} HT";
       date = DateFormat('dd/MM').format(item.dateEmission);
     } else if (item is Devis) {
       icon = Icons.description;
       color = item.statut == 'signe' ? Colors.green : Colors.blue;
       title = "Devis ${item.numeroDevis}";
       subtitle = item.objet;
-      amount = FormatUtils.currency(item.totalHt) + " HT";
+      amount = "${FormatUtils.currency(item.totalHt)} HT";
       date = DateFormat('dd/MM').format(item.dateEmission);
     } else {
       return Container();
@@ -89,7 +89,7 @@ class RecentActivityList extends StatelessWidget {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         child: Icon(icon, color: color, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),

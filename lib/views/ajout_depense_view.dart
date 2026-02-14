@@ -134,6 +134,7 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
 
     return BaseScreen(
       title: "Saisir Dépense",
+      menuIndex: 5,
       child: SingleChildScrollView(
         child: Column(
           children: [

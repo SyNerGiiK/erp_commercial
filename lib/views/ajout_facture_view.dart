@@ -221,6 +221,18 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     });
   }
 
+  void _ajouterLigneSpeciale(String type) {
+    setState(() {
+      _lignes.add(LigneFacture(
+        description: "",
+        quantite: Decimal.zero,
+        prixUnitaire: Decimal.zero,
+        totalLigne: Decimal.zero,
+        type: type,
+      ));
+    });
+  }
+
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClient == null) return;
@@ -350,7 +362,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         title: widget.id == null
             ? "Nouvelle Facture"
             : "Facture ${_numeroCtrl.text}",
-        menuIndex: 5,
+        menuIndex: 2,
         useFullWidth: true,
         headerActions: [
           if (widget.factureAModifier != null)
@@ -497,6 +509,15 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                         },
                         itemBuilder: (context, index) {
                           final ligne = _lignes[index];
+                          // Détermine si c'est une situation
+                          final isSituation =
+                              widget.factureAModifier?.type == 'situation' ||
+                                  (widget.factureAModifier == null &&
+                                      _objetCtrl.text.startsWith("Situation"));
+                          // TODO: Mieux gérer le type dans le state local
+                          // Pour l'instant on se base sur ce qu'on a.
+                          // Pour faire propre, ajoutons une variable local _typeFacture
+
                           return Card(
                             key: ValueKey(ligne.uiKey),
                             margin: const EdgeInsets.only(bottom: 8),
@@ -509,22 +530,35 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                               estGras: ligne.estGras,
                               estItalique: ligne.estItalique,
                               estSouligne: ligne.estSouligne,
+                              avancement: ligne.avancement,
+                              isSituation: isSituation,
                               showHandle: true,
                               onChanged: (desc, qte, pu, unite, type, gras,
-                                  ital, soul) {
+                                  ital, soul, av) {
                                 setState(() {
+                                  // Calcul du total ligne selon le mode
+                                  Decimal total;
+                                  if (isSituation) {
+                                    total =
+                                        ((qte * pu * av) / Decimal.fromInt(100))
+                                            .toDecimal();
+                                  } else {
+                                    total =
+                                        CalculationsUtils.calculateTotalLigne(
+                                            qte, pu);
+                                  }
+
                                   _lignes[index] = ligne.copyWith(
                                     description: desc,
                                     quantite: qte,
                                     prixUnitaire: pu,
-                                    totalLigne:
-                                        CalculationsUtils.calculateTotalLigne(
-                                            qte, pu),
+                                    totalLigne: total,
                                     unite: unite,
                                     type: type,
                                     estGras: gras,
                                     estItalique: ital,
                                     estSouligne: soul,
+                                    avancement: av,
                                   );
                                 });
                               },
@@ -538,10 +572,39 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                         },
                       ),
                       const SizedBox(height: 10),
-                      ElevatedButton.icon(
-                        onPressed: _ajouterLigne,
-                        icon: const Icon(Icons.add),
-                        label: const Text("Ajouter ligne vide"),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _ajouterLigne,
+                            icon: const Icon(Icons.add),
+                            label: const Text("Article"),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _ajouterLigneSpeciale('titre'),
+                            icon: const Icon(Icons.title),
+                            label: const Text("Titre"),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _ajouterLigneSpeciale('sous-titre'),
+                            icon: const Icon(Icons.text_fields),
+                            label: const Text("Sous-titre"),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _ajouterLigneSpeciale('texte'),
+                            icon: const Icon(Icons.comment),
+                            label: const Text("Note"),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _ajouterLigneSpeciale('saut_page'),
+                            icon: const Icon(Icons.feed),
+                            label: const Text("Saut Page"),
+                            style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.orange),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 30),
 

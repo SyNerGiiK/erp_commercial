@@ -1,6 +1,11 @@
 import 'package:decimal/decimal.dart';
 
 class UrssafConfig {
+  static final Decimal tauxPrestationStandard = Decimal.parse('21.2');
+  static final Decimal tauxVenteStandard = Decimal.parse('12.3');
+  static final Decimal tauxPrestationAcre = Decimal.parse('10.6');
+  static final Decimal tauxVenteAcre = Decimal.parse('6.2');
+
   final String? id;
   final String? userId;
   final bool accreActive;

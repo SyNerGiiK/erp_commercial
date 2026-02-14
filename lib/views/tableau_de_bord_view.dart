@@ -3,12 +3,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:decimal/decimal.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 
 import '../viewmodels/dashboard_viewmodel.dart';
+import '../viewmodels/facture_viewmodel.dart';
+import '../viewmodels/devis_viewmodel.dart';
 import '../models/facture_model.dart';
+import '../models/devis_model.dart';
+
 import '../widgets/base_screen.dart';
-import '../widgets/app_card.dart';
+import '../widgets/dashboard/kpi_card.dart';
+import '../widgets/dashboard/revenue_chart.dart';
+import '../widgets/dashboard/recent_activity_list.dart';
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
 
@@ -24,23 +32,56 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Provider.of<DashboardViewModel>(context, listen: false).refreshData();
-      }
+      _loadData();
     });
+  }
+
+  void _loadData() {
+    if (mounted) {
+      final dashVM = Provider.of<DashboardViewModel>(context, listen: false);
+      final factVM = Provider.of<FactureViewModel>(context, listen: false);
+      final devisVM = Provider.of<DevisViewModel>(context, listen: false);
+
+      dashVM.refreshData();
+      if (factVM.factures.isEmpty) factVM.fetchFactures();
+      if (devisVM.devis.isEmpty) devisVM.fetchDevis();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = Provider.of<DashboardViewModel>(context);
+    final dashVM = Provider.of<DashboardViewModel>(context);
+    final factVM = Provider.of<FactureViewModel>(context);
+    final devisVM = Provider.of<DevisViewModel>(context);
+
+    // Prepare Graph Data
+    final List<Decimal> graphData = List<Decimal>.filled(12, Decimal.zero);
+    dashVM.graphData.forEach((month, value) {
+      if (month >= 1 && month <= 12) {
+        graphData[month - 1] = Decimal.parse(value.toString());
+      }
+    });
+
+    // Prepare Recent Activity
+    final recentFactures = factVM.getRecentActivity(5);
+    final recentDevis = devisVM.getRecentActivity(5);
+    final List<dynamic> allActivity = [...recentFactures, ...recentDevis];
+    allActivity.sort((a, b) {
+      DateTime dateA =
+          a is Facture ? a.dateEmission : (a as Devis).dateEmission;
+      DateTime dateB =
+          b is Facture ? b.dateEmission : (b as Devis).dateEmission;
+      return dateB.compareTo(dateA); // Descending
+    });
+    final recentActivity = allActivity.take(5).toList();
 
     return BaseScreen(
-      menuIndex: 0, // INDEX IMPORTANT
+      menuIndex: 0,
       title: "Cockpit",
       subtitle: "Vue d'ensemble de l'activité",
       headerActions: [
         DropdownButton<DashboardPeriod>(
-          value: vm.selectedPeriod,
+          value: dashVM.selectedPeriod,
           dropdownColor: AppTheme.primary,
           style: const TextStyle(color: Colors.white),
           icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
@@ -54,242 +95,127 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 value: DashboardPeriod.annee, child: Text("Cette Année")),
           ],
           onChanged: (v) {
-            if (v != null) vm.setPeriod(v);
+            if (v != null) dashVM.setPeriod(v);
           },
         )
       ],
-      child: vm.isLoading
+      child: dashVM.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // KPI CARDS
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _KpiCard(
-                          title: "Chiffre d'Affaires",
-                          amount: FormatUtils.currency(vm.caEncaissePeriode),
-                          icon: Icons.attach_money,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _KpiCard(
-                          title: "Bénéfice Net",
-                          amount: FormatUtils.currency(vm.beneficeNetPeriode),
-                          icon: Icons.trending_up,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _KpiCard(
-                          title: "Charges (URSSAF)",
-                          amount: FormatUtils.currency(vm.totalCotisations),
-                          icon: Icons.account_balance,
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _KpiCard(
-                          title: "Dépenses / Achats",
-                          amount: FormatUtils.currency(vm.depensesPeriode),
-                          icon: Icons.shopping_cart,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // GRAPHIQUE
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Évolution CA (Annuel)",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 200,
-                            child: BarChart(
-                              BarChartData(
-                                alignment: BarChartAlignment.spaceAround,
-                                maxY: vm.graphData.values.isEmpty
-                                    ? 1000
-                                    : (vm.graphData.values.reduce(
-                                                (a, b) => a > b ? a : b) *
-                                            1.2)
-                                        .toDouble(),
-                                barTouchData: BarTouchData(enabled: false),
-                                titlesData: FlTitlesData(
-                                  show: true,
-                                  bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      getTitlesWidget: (value, meta) {
-                                        const style = TextStyle(
-                                          color: Colors.grey,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        );
-                                        String text;
-                                        switch (value.toInt()) {
-                                          case 1:
-                                            text = 'J';
-                                            break;
-                                          case 3:
-                                            text = 'M';
-                                            break;
-                                          case 5:
-                                            text = 'M';
-                                            break;
-                                          case 7:
-                                            text = 'J';
-                                            break;
-                                          case 9:
-                                            text = 'S';
-                                            break;
-                                          case 11:
-                                            text = 'N';
-                                            break;
-                                          default:
-                                            return Container();
-                                        }
-                                        return SideTitleWidget(
-                                          axisSide: meta.axisSide,
-                                          space: 4,
-                                          child: Text(text, style: style),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  leftTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                  topTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                  rightTitles: const AxisTitles(
-                                      sideTitles:
-                                          SideTitles(showTitles: false)),
-                                ),
-                                gridData: const FlGridData(show: false),
-                                borderData: FlBorderData(show: false),
-                                barGroups: vm.graphData.entries.map((entry) {
-                                  return BarChartGroupData(
-                                    x: entry.key,
-                                    barRods: [
-                                      BarChartRodData(
-                                        toY: entry.value,
-                                        color: AppTheme.primary,
-                                        width: 12,
-                                        borderRadius: BorderRadius.circular(4),
-                                      )
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            ),
+          : RefreshIndicator(
+              onRefresh: () async => _loadData(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ROW 1: Période (CA & Bénéfice)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: KpiCard(
+                            title: "CA Encaissé",
+                            subtitle: _getPeriodLabel(dashVM.selectedPeriod),
+                            value:
+                                FormatUtils.currency(dashVM.caEncaissePeriode),
+                            icon: Icons.account_balance_wallet,
+                            color: Colors.blue,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: KpiCard(
+                            title: "Bénéfice Net",
+                            subtitle: "Après charges est.",
+                            value:
+                                FormatUtils.currency(dashVM.beneficeNetPeriode),
+                            icon: Icons.savings,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+
+                    // ROW 2: Global (Impayés & Conversion)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FutureBuilder<Decimal>(
+                            future: factVM.getImpayes(),
+                            initialData: Decimal.zero,
+                            builder: (context, snapshot) {
+                              return KpiCard(
+                                title: "Impayés",
+                                subtitle: "Reste à recouvrer",
+                                value: FormatUtils.currency(
+                                    snapshot.data ?? Decimal.zero),
+                                icon: Icons.warning_amber,
+                                color: Colors.orange,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FutureBuilder<Decimal>(
+                            future: devisVM.getConversionRate(),
+                            initialData: Decimal.zero,
+                            builder: (context, snapshot) {
+                              final rate = snapshot.data ?? Decimal.zero;
+                              return KpiCard(
+                                title: "Transformation",
+                                subtitle: "Devis signés",
+                                value: "${rate.toStringAsFixed(1)} %",
+                                icon: Icons.check_circle_outline,
+                                color: Colors.purple,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // CHART
+                    RevenueChart(
+                      monthlyRevenue: graphData,
+                      year: DateTime.now().year,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ACTIVITY
+                    RecentActivityList(
+                      items: recentActivity,
+                      onTap: (item) {
+                        try {
+                          if (item is Facture && item.id != null) {
+                            context.push('/ajout_facture/${item.id}',
+                                extra: item);
+                          } else if (item is Devis && item.id != null) {
+                            context.push('/ajout_devis/${item.id}',
+                                extra: item);
+                          }
+                        } catch (e) {
+                          debugPrint("Nav error: $e");
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
     );
   }
-}
 
-class _KpiCard extends StatelessWidget {
-  final String title;
-  final String amount;
-  final IconData icon;
-  final Color color;
-
-  const _KpiCard({
-    required this.title,
-    required this.amount,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Style minimaliste moderne
-    final isDark = color == AppTheme.primary || color == AppTheme.secondary;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1), // Fond teinté léger
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color:
-                  isDark ? Colors.white.withValues(alpha: 0.2) : Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: isDark ? Colors.white : color, size: 18),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  amount,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppTheme.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  color: isDark ? Colors.white70 : AppTheme.textGrey,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  String _getPeriodLabel(DashboardPeriod p) {
+    switch (p) {
+      case DashboardPeriod.mois:
+        return "Ce mois-ci";
+      case DashboardPeriod.trimestre:
+        return "Ce trimestre";
+      case DashboardPeriod.annee:
+        return "Cette année";
+    }
   }
 }

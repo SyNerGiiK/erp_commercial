@@ -89,6 +89,8 @@ class CustomDrawer extends StatelessWidget {
                     context, 5, "Dépenses", Icons.receipt_long, '/depenses'),
                 _buildItem(context, 6, "Liste de Courses", Icons.shopping_cart,
                     '/shopping'),
+                _buildItem(context, 7, "Bibliothèque", Icons.library_books,
+                    '/bibliotheque'),
                 const Divider(),
                 _buildItem(
                     context, 9, "Paramètres", Icons.settings, '/parametres'),

@@ -162,6 +162,7 @@ class _AjoutClientViewState extends State<AjoutClientView> {
 
     return BaseScreen(
       title: widget.id == null ? "Nouveau Client" : "Modifier Client",
+      menuIndex: 3,
       child: Column(
         children: [
           if (widget.id != null)

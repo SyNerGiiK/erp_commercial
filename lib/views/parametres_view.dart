@@ -62,6 +62,16 @@ class _ParametresViewState extends State<ParametresView> {
     });
   }
 
+  void _updateRates(bool isAccre) {
+    if (isAccre) {
+      _tauxPrestaCtrl.text = UrssafConfig.tauxPrestationAcre.toString();
+      _tauxVenteCtrl.text = UrssafConfig.tauxVenteAcre.toString();
+    } else {
+      _tauxPrestaCtrl.text = UrssafConfig.tauxPrestationStandard.toString();
+      _tauxVenteCtrl.text = UrssafConfig.tauxVenteStandard.toString();
+    }
+  }
+
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -111,7 +121,10 @@ class _ParametresViewState extends State<ParametresView> {
                 subtitle:
                     const Text("Réduction de charges les premières années"),
                 value: _accreActive,
-                onChanged: (v) => setState(() => _accreActive = v),
+                onChanged: (v) {
+                  setState(() => _accreActive = v);
+                  _updateRates(v);
+                },
               ),
               const Divider(),
               const SizedBox(height: 10),

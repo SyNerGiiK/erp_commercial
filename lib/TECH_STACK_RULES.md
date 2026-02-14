@@ -73,3 +73,7 @@ Validation : Toujours utiliser if (_formKey.currentState!.validate()) avant de s
 Dans l'UI (build) : context.watch<MonViewModel>() ou Consumer<MonViewModel>.
 
 Dans les Actions (onTap) : Provider.of<MonViewModel>(context, listen: false).maFonction().
+
+7. LANGUE DE REPONSES 
+
+Toujour répondre en français.

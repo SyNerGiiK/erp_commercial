@@ -1,6 +1,8 @@
 ﻿import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'package:decimal/decimal.dart';
 import '../models/devis_model.dart';
+import '../models/facture_model.dart';
 import '../repositories/devis_repository.dart';
 
 class DevisViewModel extends ChangeNotifier {
@@ -73,6 +75,172 @@ class DevisViewModel extends ChangeNotifier {
       await _repository.markAsSigned(devis.id!, signatureUrl);
       await fetchDevis();
     });
+  }
+
+  // --- MODULE 2 : Transformation Facture ---
+
+  /// Génère un brouillon de facture en fonction du type demandé
+  /// [type] : 'standard', 'acompte', 'situation', 'solde'
+  /// [value] : Pourcentage ou Montant (pour acompte)
+  /// [isPercent] : Si la valeur est un pourcentage
+  Facture prepareFacture(Devis d, String type, Decimal value, bool isPercent) {
+    if (d.id == null) {
+      throw Exception("Le devis n'a pas d'ID");
+    }
+
+    final base = Facture(
+      userId: d.userId,
+      objet: d.objet,
+      clientId: d.clientId,
+      devisSourceId: d.id,
+      dateEmission: DateTime.now(),
+      dateEcheance: DateTime.now(), // À ajuster selon settings
+      statut: 'brouillon',
+      statutJuridique: 'brouillon',
+      conditionsReglement: d.conditionsReglement,
+      notesPubliques: d.notesPubliques,
+      tvaIntra: d.tvaIntra,
+      type: type,
+      totalHt: Decimal.zero, // Sera recalculé
+      remiseTaux: d.remiseTaux,
+      acompteDejaRegle: Decimal.zero,
+    );
+
+    if (type == 'standard') {
+      // Copie conforme
+      final newLignes = d.lignes.map((l) {
+        return LigneFacture(
+            description: l.description,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            totalLigne: l.totalLigne,
+            unite: l.unite,
+            type: l.type,
+            estGras: l.estGras,
+            estItalique: l.estItalique,
+            estSouligne: l.estSouligne,
+            avancement: Decimal.fromInt(100));
+      }).toList();
+      return base.copyWith(lignes: newLignes, totalHt: d.totalHt);
+    }
+
+    if (type == 'acompte') {
+      // Ligne unique
+      Decimal montantAcompte = Decimal.zero;
+      String desc = "";
+
+      if (isPercent) {
+        // Division returns Rational, must convert to Decimal
+        montantAcompte =
+            ((d.totalHt * value) / Decimal.fromInt(100)).toDecimal();
+        desc = "Acompte de $value% sur devis ${d.numeroDevis}";
+      } else {
+        montantAcompte = value;
+        desc = "Acompte sur devis ${d.numeroDevis}";
+      }
+
+      // No need for separate conversion line if done above
+
+      final ligne = LigneFacture(
+        description: desc,
+        quantite: Decimal.one,
+        prixUnitaire: montantAcompte,
+        totalLigne: montantAcompte,
+        type: 'article',
+        avancement: Decimal.fromInt(100),
+      );
+
+      return base.copyWith(
+          lignes: [ligne],
+          totalHt: montantAcompte,
+          remiseTaux: Decimal.zero, // Pas de remise sur un acompte net
+          objet: "Acompte - ${d.objet}");
+    }
+
+    if (type == 'situation') {
+      // On copie tout avec un avancement à 0 (ou on pourrait reprendre l'existant)
+      // Pour l'MVP: 0% pour forcer la saisie
+      final newLignes = d.lignes.map((l) {
+        return LigneFacture(
+            description: l.description,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            totalLigne: Decimal.zero, // Sera calculé par l'avancement
+            unite: l.unite,
+            type: l.type,
+            estGras: l.estGras,
+            estItalique: l.estItalique,
+            estSouligne: l.estSouligne,
+            avancement: Decimal.zero);
+      }).toList();
+
+      return base.copyWith(
+          lignes: newLignes,
+          totalHt: Decimal.zero,
+          objet: "Situation - ${d.objet}");
+    }
+
+    if (type == 'solde') {
+      // Copie à 100%
+      // La déduction des acomptes se fera via "Acompte déjà réglé" ou ligne négative ?
+      // Pour l'instant, faisons une facture complète 100%.
+      // L'utilisateur ajoutera manuellement la ligne de déduction ou on gère ça plus tard via "AcompteDéjaRéglé".
+      final newLignes = d.lignes.map((l) {
+        return LigneFacture(
+            description: l.description,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            totalLigne: l.totalLigne,
+            unite: l.unite,
+            type: l.type,
+            estGras: l.estGras,
+            estItalique: l.estItalique,
+            estSouligne: l.estSouligne,
+            avancement: Decimal.fromInt(100));
+      }).toList();
+
+      return base.copyWith(
+          lignes: newLignes, totalHt: d.totalHt, objet: "Solde - ${d.objet}");
+    }
+
+    return base;
+  }
+
+  // --- DASHBOARD & KPI ---
+
+  /// Taux de conversion (Devis Signés / Total Devis non annulés)
+  Future<Decimal> getConversionRate() async {
+    if (_devis.isEmpty) await fetchDevis();
+
+    if (_devis.isEmpty) return Decimal.zero;
+
+    int total = 0;
+    int signed = 0;
+
+    for (var d in _devis) {
+      if (d.statut != 'annule') {
+        total++;
+        if (d.statut == 'signe') {
+          signed++;
+        }
+      }
+    }
+
+    if (total == 0) return Decimal.zero;
+
+    // Fix: Decimal / Decimal -> Rational. Rational * Rational -> Rational.
+    final ratio = Decimal.fromInt(signed) / Decimal.fromInt(total); // Rational
+    final percentage = ratio * Decimal.fromInt(100).toRational(); // Rational
+    return percentage.toDecimal();
+  }
+
+  /// Retourne les derniers devis modifiés/créés
+  List<Devis> getRecentActivity(int limit) {
+    // Tri par date d'émission (ou création si on avait le champ created_at dispo en local)
+    // On utilise numeroDevis pour l'instant (plus récent = plus grand) ou dateEmission
+    final sorted = List<Devis>.from(_devis);
+    sorted.sort((a, b) => b.dateEmission.compareTo(a.dateEmission));
+    return sorted.take(limit).toList();
   }
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {

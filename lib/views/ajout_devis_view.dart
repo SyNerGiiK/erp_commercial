@@ -151,6 +151,18 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     });
   }
 
+  void _ajouterLigneSpeciale(String type) {
+    setState(() {
+      _lignes.add(LigneDevis(
+        description: "",
+        quantite: Decimal.zero, // Pas de quantité pour les titres/textes
+        prixUnitaire: Decimal.zero,
+        totalLigne: Decimal.zero,
+        type: type,
+      ));
+    });
+  }
+
   Future<void> _importerArticle() async {
     final article = await showDialog<Article>(
         context: context, builder: (_) => const ArticleSelectionDialog());
@@ -313,7 +325,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
   Widget build(BuildContext context) {
     return BaseScreen(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
-      menuIndex: 4,
+      menuIndex: 1,
       useFullWidth: true,
       headerActions: [
         if (widget.devisAModifier != null)
@@ -474,8 +486,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
                             estItalique: ligne.estItalique,
                             estSouligne: ligne.estSouligne,
                             showHandle: true,
-                            onChanged:
-                                (desc, qte, pu, unite, type, gras, ital, soul) {
+                            onChanged: (desc, qte, pu, unite, type, gras, ital,
+                                soul, avancement) {
                               setState(() {
                                 _lignes[index] = ligne.copyWith(
                                   description: desc,
@@ -502,18 +514,42 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    Row(
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
                         ElevatedButton.icon(
                           onPressed: _ajouterLigne,
                           icon: const Icon(Icons.add),
-                          label: const Text("Ajouter ligne vide"),
+                          label: const Text("Article"),
                         ),
-                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => _ajouterLigneSpeciale('titre'),
+                          icon: const Icon(Icons.title),
+                          label: const Text("Titre"),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _ajouterLigneSpeciale('sous-titre'),
+                          icon: const Icon(Icons.text_fields),
+                          label: const Text("Sous-titre"),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _ajouterLigneSpeciale('texte'),
+                          icon: const Icon(Icons.comment),
+                          label: const Text("Note"),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _ajouterLigneSpeciale('saut_page'),
+                          icon: const Icon(
+                              Icons.feed), // "Feed" looks like a page break
+                          label: const Text("Saut Page"),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.orange),
+                        ),
                         OutlinedButton.icon(
                           onPressed: _importerArticle,
                           icon: const Icon(Icons.library_books),
-                          label: const Text("Importer Article"),
+                          label: const Text("Importer"),
                         ),
                       ],
                     ),

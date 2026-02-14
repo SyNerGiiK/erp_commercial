@@ -116,7 +116,8 @@ class PdfService {
           pw.SizedBox(height: 30),
           _buildTitle(facture.objet),
           pw.SizedBox(height: 20),
-          _buildLignesTable(facture.lignes),
+          _buildLignesTable(facture.lignes,
+              isSituation: facture.type == 'situation'),
           pw.SizedBox(height: 20),
           _buildTotals(
               facture.totalHt, facture.remiseTaux, facture.acompteDejaRegle,
@@ -211,32 +212,141 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildLignesTable(dynamic lignes) {
-    final data = lignes.map((l) {
-      return [
-        l.description,
-        "${FormatUtils.quantity(l.quantite)} ${l.unite}",
-        FormatUtils.currency(l.prixUnitaire),
-        FormatUtils.currency(l.totalLigne),
-      ];
-    }).toList();
+  static pw.Widget _buildLignesTable(dynamic lignes,
+      {bool isSituation = false}) {
+    // 1. Split by Saut de Page
+    final chunks = <List<dynamic>>[];
+    var currentChunk = <dynamic>[];
 
-    return pw.TableHelper.fromTextArray(
-      headers: ["Désignation", "Qté", "P.U.", "Total"],
-      data: List<List<String>>.from(data),
-      headerStyle:
-          pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-      headerDecoration: const pw.BoxDecoration(color: _primaryColor),
-      rowDecoration: const pw.BoxDecoration(
-          border: pw.Border(bottom: pw.BorderSide(color: _lightGrey))),
-      cellAlignments: {
-        0: pw.Alignment.centerLeft,
-        1: pw.Alignment.centerRight,
-        2: pw.Alignment.centerRight,
-        3: pw.Alignment.centerRight,
-      },
-      cellPadding: const pw.EdgeInsets.all(5),
+    for (var l in lignes) {
+      if (l.type == 'saut_page') {
+        chunks.add(currentChunk);
+        currentChunk = [];
+      } else {
+        currentChunk.add(l);
+      }
+    }
+    chunks.add(currentChunk);
+
+    if (chunks.isEmpty) return pw.Container();
+
+    // 2. Build Widgets
+    return pw.Column(
+        children: List.generate(chunks.length, (index) {
+      final chunk = chunks[index];
+      if (chunk.isEmpty) return pw.Container();
+
+      final table = _buildChunkTable(chunk, isSituation: isSituation);
+
+      if (index < chunks.length - 1) {
+        return pw.Column(children: [table, pw.NewPage()]);
+      }
+      return table;
+    }));
+  }
+
+  static pw.Widget _buildChunkTable(List<dynamic> chunk,
+      {bool isSituation = false}) {
+    return pw.Table(
+        border: const pw.TableBorder(
+            bottom: pw.BorderSide(color: _lightGrey, width: 0.5)),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(4),
+          1: const pw.FlexColumnWidth(1),
+          2: const pw.FlexColumnWidth(1),
+          3: const pw.FlexColumnWidth(1),
+        },
+        children: [
+          // Header
+          pw.TableRow(
+              decoration: const pw.BoxDecoration(color: _primaryColor),
+              children: [
+                _buildHeaderCell("Désignation",
+                    alignment: pw.Alignment.centerLeft),
+                _buildHeaderCell(isSituation ? "Marché" : "Qté"),
+                _buildHeaderCell(isSituation ? "Avct %" : "P.U."),
+                _buildHeaderCell("Total"),
+              ]),
+          // Rows
+          ...chunk.map((l) => _buildRow(l, isSituation: isSituation)),
+        ]);
+  }
+
+  static pw.Widget _buildHeaderCell(String text,
+      {pw.Alignment alignment = pw.Alignment.centerRight}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(text,
+          style: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+          textAlign: alignment == pw.Alignment.centerRight
+              ? pw.TextAlign.right
+              : pw.TextAlign.left),
     );
+  }
+
+  static pw.TableRow _buildRow(dynamic l, {bool isSituation = false}) {
+    final bool isSpecial = ['titre', 'sous-titre', 'texte'].contains(l.type);
+
+    pw.TextStyle? style;
+    pw.BoxDecoration? decoration;
+
+    if (l.type == 'titre') {
+      style = pw.TextStyle(
+          fontWeight: pw.FontWeight.bold, color: _primaryColor, fontSize: 12);
+      decoration = const pw.BoxDecoration(color: _lightGrey);
+    }
+    if (l.type == 'sous-titre') {
+      style = pw.TextStyle(
+          fontWeight: pw.FontWeight.bold,
+          decoration: pw.TextDecoration.underline);
+    }
+    if (l.type == 'texte') {
+      style = pw.TextStyle(
+          fontStyle: pw.FontStyle.italic, color: PdfColors.grey700);
+    }
+
+    final label = l.description ?? "";
+
+    if (isSpecial) {
+      return pw.TableRow(decoration: decoration, children: [
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(label, style: style)),
+        pw.Container(),
+        pw.Container(),
+        pw.Container(),
+      ]);
+    }
+
+    // Normal Article
+    String col1; // Qté ou Marché
+    String col2; // P.U. ou Avct %
+
+    if (isSituation) {
+      // Col 1: Marché = Qte * PU
+      final marche = l.quantite * l.prixUnitaire;
+      col1 = FormatUtils.currency(marche);
+      // Col 2: Avancement
+      col2 = "${l.avancement}%";
+    } else {
+      col1 = "${FormatUtils.quantity(l.quantite)} ${l.unite}";
+      col2 = FormatUtils.currency(l.prixUnitaire);
+    }
+
+    return pw.TableRow(children: [
+      pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(label)),
+      pw.Padding(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(col1, textAlign: pw.TextAlign.right)),
+      pw.Padding(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(col2, textAlign: pw.TextAlign.right)),
+      pw.Padding(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(FormatUtils.currency(l.totalLigne),
+              textAlign: pw.TextAlign.right)),
+    ]);
   }
 
   static pw.Widget _buildTotals(

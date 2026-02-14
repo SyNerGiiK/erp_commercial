@@ -18,6 +18,9 @@ class LigneFacture {
   final bool estItalique;
   final bool estSouligne;
 
+  // MODULE 2: Avancement (0-100)
+  final Decimal avancement;
+
   // CLÉ STABLE UI
   final String uiKey;
 
@@ -34,8 +37,10 @@ class LigneFacture {
     this.estGras = false,
     this.estItalique = false,
     this.estSouligne = false,
+    Decimal? avancement,
     String? uiKey,
-  }) : uiKey = uiKey ?? const Uuid().v4();
+  })  : avancement = avancement ?? Decimal.fromInt(100),
+        uiKey = uiKey ?? const Uuid().v4();
 
   factory LigneFacture.fromMap(Map<String, dynamic> map) {
     return LigneFacture(
@@ -51,6 +56,7 @@ class LigneFacture {
       estGras: map['est_gras'] ?? false,
       estItalique: map['est_italique'] ?? false,
       estSouligne: map['est_souligne'] ?? false,
+      avancement: Decimal.parse((map['avancement'] ?? 100).toString()),
     );
   }
 
@@ -68,6 +74,7 @@ class LigneFacture {
       'est_gras': estGras,
       'est_italique': estItalique,
       'est_souligne': estSouligne,
+      'avancement': avancement.toString(),
     };
   }
 
@@ -84,6 +91,7 @@ class LigneFacture {
     bool? estGras,
     bool? estItalique,
     bool? estSouligne,
+    Decimal? avancement,
   }) {
     return LigneFacture(
       id: id ?? this.id,
@@ -99,6 +107,7 @@ class LigneFacture {
       estGras: estGras ?? this.estGras,
       estItalique: estItalique ?? this.estItalique,
       estSouligne: estSouligne ?? this.estSouligne,
+      avancement: avancement ?? this.avancement,
     );
   }
 }
@@ -116,6 +125,10 @@ class Facture {
   final String statut;
   final String statutJuridique;
   final bool estArchive;
+
+  // MODULE 2: Type de facture
+  final String type; // standard, acompte, situation, solde
+  final Decimal? avancementGlobal; // Optionnel, pour suivi macro
 
   final Decimal totalHt;
   final Decimal remiseTaux;
@@ -142,6 +155,8 @@ class Facture {
     this.statut = 'brouillon',
     this.statutJuridique = 'brouillon',
     this.estArchive = false,
+    this.type = 'standard',
+    this.avancementGlobal,
     required this.totalHt,
     required this.remiseTaux,
     required this.acompteDejaRegle,
@@ -169,6 +184,10 @@ class Facture {
       statut: map['statut'] ?? 'brouillon',
       statutJuridique: map['statut_juridique'] ?? 'brouillon',
       estArchive: map['est_archive'] ?? false,
+      type: map['type'] ?? 'standard',
+      avancementGlobal: map['avancement_global'] != null
+          ? Decimal.parse(map['avancement_global'].toString())
+          : null,
       totalHt: Decimal.parse((map['total_ht'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
       acompteDejaRegle:
@@ -205,6 +224,8 @@ class Facture {
       'statut': statut,
       'statut_juridique': statutJuridique,
       'est_archive': estArchive,
+      'type': type,
+      'avancement_global': avancementGlobal?.toString(),
       'total_ht': totalHt.toString(),
       'remise_taux': remiseTaux.toString(),
       'acompte_deja_regle': acompteDejaRegle.toString(),
@@ -227,6 +248,8 @@ class Facture {
     String? statut,
     String? statutJuridique,
     bool? estArchive,
+    String? type,
+    Decimal? avancementGlobal,
     Decimal? totalHt,
     Decimal? remiseTaux,
     Decimal? acompteDejaRegle,
@@ -250,6 +273,8 @@ class Facture {
       statut: statut ?? this.statut,
       statutJuridique: statutJuridique ?? this.statutJuridique,
       estArchive: estArchive ?? this.estArchive,
+      type: type ?? this.type,
+      avancementGlobal: avancementGlobal ?? this.avancementGlobal,
       totalHt: totalHt ?? this.totalHt,
       remiseTaux: remiseTaux ?? this.remiseTaux,
       acompteDejaRegle: acompteDejaRegle ?? this.acompteDejaRegle,

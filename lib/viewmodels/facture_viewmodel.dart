@@ -164,6 +164,75 @@ class FactureViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- DASHBOARD & KPI ---
+
+  /// Retourne le CA (HT) par mois pour l'année donnée.
+  /// Index 0 = Janvier, 11 = Décembre.
+  Future<List<Decimal>> getChiffreAffaires(int year) async {
+    // On s'assure d'avoir les données
+    if (_factures.isEmpty) await fetchFactures();
+
+    final monthlyCA = List<Decimal>.filled(12, Decimal.zero);
+
+    for (var f in _factures) {
+      if (f.statut == 'validee' || f.statut == 'payee') {
+        if (f.dateEmission.year == year) {
+          final monthIndex = f.dateEmission.month - 1; // 0..11
+          // On prend le HT total
+          monthlyCA[monthIndex] += f.totalHt;
+        }
+      }
+    }
+    return monthlyCA;
+  }
+
+  /// Retourne le montant total des factures validées mais NON payées (reste à payer).
+  Future<Decimal> getImpayes() async {
+    if (_factures.isEmpty) await fetchFactures();
+
+    Decimal totalImpaye = Decimal.zero;
+
+    for (var f in _factures) {
+      if (f.statut == 'validee') {
+        // En théorie 'validee' signifie qu'elle n'est pas encore 'payee' (statut final)
+        // Mais on doit vérifier le reste à payer réel.
+
+        // Calcul du total réglé
+        final totalRegle =
+            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+
+        // Calcul acompte devis déjà s'il y a
+        // Note: f.acompteDejaRegle vient du devis, il est considéré payé.
+
+        // Attention: Dans Facture, totalHt est le total des lignes.
+        // Remise est déduite du HT.
+        // Net Commercial = HT - Remise.
+        final remiseAmount = (f.totalHt * f.remiseTaux) / Decimal.fromInt(100);
+        final netCommercial = f.totalHt - remiseAmount.toDecimal();
+
+        // Reste = Net - AcompteInitial - TotalReglé
+        // (On simplifie ici l'historique acomptes liés pour la perf standard,
+        // ou on l'ignore si c'est minime. Pour être précis 100%, faudrait charger l'historique)
+
+        final reste = netCommercial - f.acompteDejaRegle - totalRegle;
+
+        if (reste > Decimal.zero) {
+          totalImpaye += reste;
+        }
+      }
+    }
+    return totalImpaye;
+  }
+
+  /// Retourne les dernières factures modifiées/créées
+  List<Facture> getRecentActivity(int limit) {
+    // Tri par date d'émission (ou création si on avait le champ created_at dispo en local)
+    // On utilise dateEmission pour l'instant
+    final sorted = List<Facture>.from(_factures);
+    sorted.sort((a, b) => b.dateEmission.compareTo(a.dateEmission));
+    return sorted.take(limit).toList();
+  }
+
   void _clearError() {
     _errorMessage = null;
     notifyListeners();

@@ -12,7 +12,7 @@ dependencies:
   
   # --- UI & UX ---
   google_fonts: ^6.1.0 # Version stable recommandée
-  fl_chart: ^0.66.0    # Attention aux breaking changes fréquents sur fl_chart
+  fl_chart: ^1.1.1    # Attention aux breaking changes fréquents sur fl_chart
   table_calendar: ^3.1.0
   signature: ^5.4.0    # Downgrade léger pour stabilité web parfois nécessaire, sinon garder latest
   

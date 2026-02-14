@@ -1,7 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:printing/printing.dart';
+import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
+
+import '../widgets/dialogs/transformation_dialog.dart';
 
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
@@ -68,35 +71,35 @@ class _ListeDevisViewState extends State<ListeDevisView>
         onLayout: (format) async => bytes, name: 'Devis_${d.numeroDevis}.pdf');
   }
 
-  void _showTransformationDialog(Devis d) {
-    showDialog(
+  void _showTransformationDialog(Devis d) async {
+    final result = await showDialog<TransformationResultWrapper>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Transformer en Facture ?"),
-        content: const Text(
-            "Cela va créer une facture provisoire reprenant toutes les lignes du devis."),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Annuler")),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.go('/ajout_facture', extra: null); // Nouveau
-              // Astuce : on passe l'ID du devis via query param ou on adapte le router.
-              // Ici, pour faire simple, on utilise l'extra pour dire "sourceDevisId"
-              // Mais le router attend Facture?.
-              // FIX: On navigue avec une query parameter ou on adapte AjoutFacture.
-              // Le router actuel : /ajout_facture?sourceDevisId=... n'est pas configuré.
-              // On va utiliser une navigation directe vers l'écran d'ajout avec l'argument nommé du widget si le router le permettait.
-              // Solution Router GoRouter compatible :
-              context.push('/ajout_facture?sourceDevisId=${d.id}');
-            },
-            child: const Text("Transformer"),
-          )
-        ],
-      ),
+      builder: (ctx) => TransformationDialog(
+          totalTTC: d.totalHt *
+              (Decimal.one +
+                  (Decimal.parse(
+                      d.tvaIntra != null ? "0" : "0.20")))), // Basic Approx TTC
     );
+
+    if (result == null || !mounted) return;
+
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
+
+    try {
+      final draftFacture = vm.prepareFacture(
+          d,
+          result.type.name, // 'standard', 'acompte', ...
+          result.value,
+          result.isPercent);
+
+      if (!mounted) return;
+
+      // Navigation vers AjoutFacture avec l'objet pré-rempli
+      context.push('/ajout_facture', extra: draftFacture);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur préparation facture: $e")));
+    }
   }
 
   @override

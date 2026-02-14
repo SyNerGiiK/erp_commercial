@@ -53,8 +53,9 @@
       iban: map['iban'],
       bic: map['bic'],
       frequenceCotisation: map['frequence_cotisation'] ?? 'mois',
-      logoUrl: map['logo_url'], // Mapping vers la colonne URL
-      signatureUrl: map['signature_url'], // Mapping vers la colonne URL
+      logoUrl: map[
+          'logo_base64'], // Mapping vers la colonne historique (qui contient maintenant une URL)
+      signatureUrl: map['signature_base64'], // Idem
       mentionsLegales: map['mentions_legales'],
     );
   }
@@ -74,8 +75,8 @@
       'iban': iban,
       'bic': bic,
       'frequence_cotisation': frequenceCotisation,
-      'logo_url': logoUrl,
-      'signature_url': signatureUrl,
+      'logo_base64': logoUrl, // On écrit l'URL dans la colonne existante
+      'signature_base64': signatureUrl, // Idem
       'mentions_legales': mentionsLegales,
     };
   }

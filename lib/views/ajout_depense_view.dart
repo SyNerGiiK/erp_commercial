@@ -112,16 +112,37 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
       devisId: _selectedDevisId,
     );
 
+    setState(() => _isLoading = true); // Indicateur de chargement
+
     final vm = Provider.of<DepenseViewModel>(context, listen: false);
     bool success;
-    if (newDepense.id == null) {
-      success = await vm.addDepense(newDepense);
-    } else {
-      success = await vm.updateDepense(newDepense);
+    try {
+      if (newDepense.id == null) {
+        success = await vm.addDepense(newDepense);
+      } else {
+        success = await vm.updateDepense(newDepense);
+      }
+    } catch (e) {
+      success = false;
     }
 
-    if (mounted && success) {
-      context.pop();
+    if (mounted) {
+      setState(() => _isLoading = false); // Fin du chargement
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Dépense enregistrée avec succès")));
+
+        // Petite pause pour laisser le temps à l'utilisateur de voir que ça a marché
+        // et éviter l'effet "freeze" ressenti si la navigation est trop brutale pendant un rebuild
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) context.go('/app/depenses');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                "Erreur lors de l'enregistrement de la dépense. Vérifiez les logs.")));
+      }
     }
   }
 

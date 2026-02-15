@@ -14,10 +14,13 @@ import '../models/devis_model.dart';
 import '../models/article_model.dart';
 import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
-import '../models/config_charges_model.dart';
+// import '../models/config_charges_model.dart'; // Removed
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
-import '../viewmodels/entreprise_viewmodel.dart'; // Added Import
+import '../viewmodels/entreprise_viewmodel.dart';
+import '../viewmodels/urssaf_viewmodel.dart';
+import '../models/urssaf_model.dart';
+import '../models/enums/entreprise_enums.dart';
 
 // Services
 import '../services/pdf_service.dart';
@@ -71,9 +74,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   List<LigneDevis> _lignes = [];
   List<LigneChiffrage> _chiffrage = [];
 
-  // Configuration des charges sociales
-  ConfigCharges _configCharges = ConfigCharges();
-
   // Totaux & Options
   Decimal _remiseTaux = Decimal.zero;
   // _acompteMontant est maintenant calculé dynamiquement
@@ -94,14 +94,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initData();
-    _loadConfigCharges();
-  }
-
-  Future<void> _loadConfigCharges() async {
-    final config = await PreferencesService.getConfigCharges();
-    setState(() {
-      _configCharges = config;
-    });
   }
 
   void _initData() {
@@ -939,6 +931,42 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
   // --- ONGLET ANALYSE COÛTS ---
   Widget _buildTabAnalyse() {
+    // Récupération configuration URSSAF & Profil
+    final urssafVM = Provider.of<UrssafViewModel>(context);
+    final entrepriseVM = Provider.of<EntrepriseViewModel>(context);
+
+    final config = urssafVM.config;
+    final profil = entrepriseVM.profil;
+
+    // Calcul du taux applicable (Priorité Micro-Entrepreneur Vente pour les matières)
+    Decimal tauxApplicable = Decimal.zero;
+    String detailsTaux = "Non configuré";
+
+    if (config != null && profil != null) {
+      if (profil.typeEntreprise.isMicroEntrepreneur) {
+        // Pour les matières premières, c'est de la Vente de Marchandises
+        final tauxBase = config.tauxMicroVente;
+        final tauxEffectif = config.getTauxMicroEffectif(tauxBase);
+        final cfp = config.tauxCfpMicroVente;
+
+        tauxApplicable = tauxEffectif + cfp;
+        detailsTaux =
+            "Micro-Entreprise Vente : ${tauxEffectif.toDouble()}% (Cotis.) + ${cfp.toDouble()}% (CFP) = ${tauxApplicable.toDouble()}%";
+        if (config.accreActive) {
+          detailsTaux += " [ACRE Année ${config.accreAnnee}]";
+        }
+      } else {
+        // Autres régimes (TNS, SASU...)
+        // Le calcul est beaucoup plus complexe (sur bénéfice), on affiche 0 pour l'instant
+        // ou on pourrait mettre une estimation si demandé.
+        detailsTaux =
+            "Régime Réel / TNS : Calcul sur bénéfice (Non simulé ici)";
+        tauxApplicable = Decimal.zero;
+      }
+    } else {
+      detailsTaux = "Profil entreprise ou Config URSSAF manquant";
+    }
+
     // Calculer totaux Decimal
     final totalAchats = _chiffrage.fold<Decimal>(
       Decimal.zero,
@@ -950,8 +978,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       (sum, ligne) => sum + (ligne.quantite * ligne.prixVenteUnitaire),
     );
 
-    final charges =
-        (totalVentes * _configCharges.tauxTotal) / Decimal.fromInt(100);
+    final charges = (totalVentes * tauxApplicable) / Decimal.fromInt(100);
     final chargesDecimal = charges.toDecimal();
     final solde = totalVentes - totalAchats - chargesDecimal;
 
@@ -967,7 +994,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
             cout: totalAchats,
             charges: chargesDecimal,
             solde: solde,
-            tauxUrssaf: _configCharges.tauxTotal,
+            tauxUrssaf: tauxApplicable,
           ),
           const SizedBox(height: 16),
 
@@ -1016,7 +1043,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                             prixAchat: ligne.prixAchatUnitaire,
                             prixVente: ligne.prixVenteUnitaire,
                             unite: ligne.unite,
-                            tauxUrssaf: _configCharges.tauxTotal,
+                            tauxUrssaf: tauxApplicable,
                             onChanged: (desc, qte, pa, pv, unite) {
                               setState(() {
                                 _chiffrage[index] = ligne.copyWith(
@@ -1054,14 +1081,14 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        "Taux de charges sociales configurables",
+                        "Information Taux & Charges",
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                       Text(
-                        "Taux actuel: URSSAF ${_configCharges.tauxUrssaf}% + Retraite ${_configCharges.tauxRetraite}% + CFP/CSG ${_configCharges.tauxCfpCsg}%",
+                        detailsTaux,
                         style:
-                            const TextStyle(fontSize: 11, color: Colors.grey),
+                            const TextStyle(fontSize: 11, color: Colors.indigo),
                       ),
                     ],
                   ),

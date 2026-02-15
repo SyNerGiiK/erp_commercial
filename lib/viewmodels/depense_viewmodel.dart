@@ -54,6 +54,9 @@ class DepenseViewModel extends ChangeNotifier {
       await operation();
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print("🔴 DepenseViewModel Error: $e");
+      }
       return false;
     }
   }

@@ -728,6 +728,20 @@
     "key_type": null
   },
   {
+    "table_name": "factures",
+    "column_name": "signature_url",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "date_signature",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
     "table_name": "lignes_chiffrages",
     "column_name": "id",
     "data_type": "uuid",

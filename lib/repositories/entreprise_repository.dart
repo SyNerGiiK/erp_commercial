@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import '../models/entreprise_model.dart';
 import '../config/supabase_config.dart';
@@ -10,6 +11,7 @@ abstract class IEntrepriseRepository {
   Future<void> saveProfil(ProfilEntreprise profil);
   Future<String> uploadImage(
       XFile file, String type); // type = 'logo' ou 'signature'
+  Future<String> uploadSignatureBytes(Uint8List bytes);
 }
 
 class EntrepriseRepository implements IEntrepriseRepository {
@@ -78,6 +80,27 @@ class EntrepriseRepository implements IEntrepriseRepository {
       return "$url?t=${DateTime.now().millisecondsSinceEpoch}";
     } catch (e) {
       throw _handleError(e, 'uploadImage ($type)');
+    }
+  }
+
+  @override
+  Future<String> uploadSignatureBytes(Uint8List bytes) async {
+    try {
+      final userId = SupabaseConfig.userId;
+      // Nom fixe pour la signature artisan
+      final path = '$userId/entreprise/signature.png';
+
+      await _client.storage.from('documents').uploadBinary(
+            path,
+            bytes,
+            fileOptions:
+                const FileOptions(upsert: true, contentType: 'image/png'),
+          );
+
+      final url = _client.storage.from('documents').getPublicUrl(path);
+      return "$url?t=${DateTime.now().millisecondsSinceEpoch}";
+    } catch (e) {
+      throw _handleError(e, 'uploadSignatureBytes');
     }
   }
 

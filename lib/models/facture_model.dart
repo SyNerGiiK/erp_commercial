@@ -130,6 +130,10 @@ class Facture {
   final String type; // standard, acompte, situation, solde
   final Decimal? avancementGlobal; // Optionnel, pour suivi macro
 
+  // MODULE 3: Signature
+  final String? signatureUrl;
+  final DateTime? dateSignature;
+
   final Decimal totalHt;
   final Decimal remiseTaux;
   final Decimal acompteDejaRegle;
@@ -157,6 +161,8 @@ class Facture {
     this.estArchive = false,
     this.type = 'standard',
     this.avancementGlobal,
+    this.signatureUrl,
+    this.dateSignature,
     required this.totalHt,
     required this.remiseTaux,
     required this.acompteDejaRegle,
@@ -187,6 +193,10 @@ class Facture {
       type: map['type'] ?? 'standard',
       avancementGlobal: map['avancement_global'] != null
           ? Decimal.parse(map['avancement_global'].toString())
+          : null,
+      signatureUrl: map['signature_url'],
+      dateSignature: map['date_signature'] != null
+          ? DateTime.parse(map['date_signature'])
           : null,
       totalHt: Decimal.parse((map['total_ht'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
@@ -226,6 +236,8 @@ class Facture {
       'est_archive': estArchive,
       'type': type,
       'avancement_global': avancementGlobal?.toString(),
+      'signature_url': signatureUrl,
+      'date_signature': dateSignature?.toIso8601String(),
       'total_ht': totalHt.toString(),
       'remise_taux': remiseTaux.toString(),
       'acompte_deja_regle': acompteDejaRegle.toString(),
@@ -250,6 +262,8 @@ class Facture {
     bool? estArchive,
     String? type,
     Decimal? avancementGlobal,
+    String? signatureUrl,
+    DateTime? dateSignature,
     Decimal? totalHt,
     Decimal? remiseTaux,
     Decimal? acompteDejaRegle,
@@ -275,6 +289,8 @@ class Facture {
       estArchive: estArchive ?? this.estArchive,
       type: type ?? this.type,
       avancementGlobal: avancementGlobal ?? this.avancementGlobal,
+      signatureUrl: signatureUrl ?? this.signatureUrl,
+      dateSignature: dateSignature ?? this.dateSignature,
       totalHt: totalHt ?? this.totalHt,
       remiseTaux: remiseTaux ?? this.remiseTaux,
       acompteDejaRegle: acompteDejaRegle ?? this.acompteDejaRegle,

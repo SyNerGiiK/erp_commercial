@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import '../models/entreprise_model.dart';
 import '../repositories/entreprise_repository.dart';
 
@@ -66,6 +67,32 @@ class EntrepriseViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint("Erreur uploadImage: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+      notifyListeners();
+    }
+  }
+
+  /// Upload Signature depuis Canvas (Bytes)
+  Future<bool> uploadSignatureBytes(Uint8List bytes) async {
+    if (_profil == null) return false;
+
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final url = await _repository.uploadSignatureBytes(bytes);
+
+      // MAJ Locale
+      final newProfil = _profil!.copyWith(signatureUrl: url);
+
+      // Sauvegarde
+      await _repository.saveProfil(newProfil);
+      await fetchProfil();
+      return true;
+    } catch (e) {
+      debugPrint("Erreur uploadSignatureBytes: $e");
       return false;
     } finally {
       _isLoading = false;

@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:typed_data';
 
 import '../config/theme.dart';
 import '../models/entreprise_model.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
+import '../widgets/dialogs/signature_dialog.dart';
 
 class ProfilEntrepriseView extends StatefulWidget {
   const ProfilEntrepriseView({super.key});
@@ -141,6 +143,32 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     if (success) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Image mise à jour !")));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Erreur upload")));
+    }
+  }
+
+  Future<void> _drawAndUpload() async {
+    // 1. Ouvrir le dialog de signature
+    // ATTENTION: Il faut importer SignatureDialog (à créer/importer)
+    final Uint8List? signatureBytes = await showDialog(
+      context: context,
+      builder: (context) => const SignatureDialog(),
+    );
+
+    if (signatureBytes == null) return;
+    if (!mounted) return;
+
+    // 2. Upload via ViewModel
+    final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
+    final success = await vm.uploadSignatureBytes(signatureBytes);
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signature mise à jour !")));
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Erreur upload")));
@@ -323,9 +351,9 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                                   fit: BoxFit.contain),
                             ),
                           ElevatedButton.icon(
-                            onPressed: () => _pickAndUpload('signature'),
-                            icon: const Icon(Icons.upload),
-                            label: const Text("Uploader Signature / Tampon"),
+                            onPressed: _drawAndUpload, // NEW: _drawAndUpload
+                            icon: const Icon(Icons.draw), // CHANGED ICON
+                            label: const Text("Dessiner ma Signature"),
                             style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: AppTheme.textDark,

@@ -27,6 +27,8 @@ import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
 import '../widgets/dialogs/paiement_dialog.dart'; // NEW: Import Dialog Paiement
+import '../widgets/dialogs/signature_dialog.dart'; // NEW: Import Dialog Signature
+import 'dart:typed_data';
 import '../utils/format_utils.dart';
 import '../utils/calculations_utils.dart';
 
@@ -59,6 +61,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   List<LigneChiffrage> _chiffrage = [];
   List<Paiement> _paiements = [];
 
+  String? _signatureUrl;
+  DateTime? _dateSignature;
+
   String _typeFacture = 'standard';
 
   Decimal _remiseTaux = Decimal.zero;
@@ -88,8 +93,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _lignes = List.from(f.lignes);
       _chiffrage = List.from(f.chiffrage);
       _paiements = List.from(f.paiements);
+
       _remiseTaux = f.remiseTaux;
       _acompteDejaRegle = f.acompteDejaRegle;
+      _signatureUrl = f.signatureUrl;
+      _dateSignature = f.dateSignature;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -257,6 +265,69 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     setState(() {
       _paiements.removeAt(index);
     });
+  }
+
+  Future<void> _signerClient() async {
+    if (widget.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              "Veuillez d'abord enregistrer la facture pour pouvoir la signer.")));
+      return;
+    }
+
+    final Uint8List? signatureBytes = await showDialog(
+      context: context,
+      builder: (_) => const SignatureDialog(),
+    );
+
+    if (signatureBytes == null) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+
+    // Upload via VM (qui update aussi le repository)
+    // Note: Le VM update la facture dans la liste, mais ici on a un état local.
+    // Il faut recharger l'URL ou l'attendre.
+    // Ma méthode VM uploadSignature update la facture et refetch, donc c'est bon.
+    // Mais on doit récupérer l'URL pour l'affichage local si on ne refetch pas tout le widget.
+    // Le VM ne retourne pas l'URL pour l'instant, il retourne bool via _executeOperation ? Non, il retourne Future<bool>.
+    // Je vais assumer que ça marche et recharger ou juste afficher un message.
+    // Mieux: Le repo retourne l'URL, le VM l'utilise.
+    // Je vais modifier le VM pour qu'il retourne l'URL au lieu de bool ? Non, je reste sur bool.
+    // Je vais just fetchFactures et comme c'est un stateful widget qui init dans initState,
+    // il ne se mettra pas à jour tout seul sauf si je relis le VM dans build ou si je force init.
+    // Simplification: Je vais tricher et set _signatureUrl localement avec un timestamp pour forcer le refresh image si je l'avais
+    // MAIS je n'ai pas l'URL ici facilement sans modifier le VM.
+    // Je vais appeler upload et si succès, je set un state pour dire "Signé" (même si l'image met du temps).
+
+    final success = await vm.uploadSignature(widget.id!, signatureBytes);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      // Pour l'affichage immédiat, on peut reconstruire l'URL théorique ou attendre re-init.
+      // Le plus simple : Afficher un succès et peut-être recharger la vue (context.go).
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signature enregistrée !")));
+
+      // On recharge la page pour voir la signature
+      // context.pushReplacement('/app/ajout_facture/${widget.id}', extra: vm.factures.firstWhere((f) => f.id == widget.id));
+      // Ou plus simple, on met à jour l'état local si possible.
+      // Je vais laisser l'utilisateur voir "Signé" via un switch UI ou rechargement.
+      // Mieux:
+      setState(() {
+        // Je force un refresh visuel en supposant que l'URL est celle standard
+        final userId = SupabaseConfig.userId;
+        _signatureUrl =
+            "${SupabaseConfig.client.storage.from('documents').getPublicUrl('$userId/factures/${widget.id}/signature.png')}?t=${DateTime.now().millisecondsSinceEpoch}";
+        _dateSignature = DateTime.now();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de la signature")));
+    }
   }
 
   Future<void> _sauvegarder() async {
@@ -731,12 +802,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                           children: [
                             const Text("RÈGLEMENTS / PAIEMENTS REÇUS"),
                             const Spacer(),
-                            if (_resteAPayer > Decimal.zero)
-                              TextButton.icon(
-                                onPressed: _ajouterPaiement,
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text("Ajouter"),
-                              )
+                            TextButton.icon(
+                              onPressed: _ajouterPaiement,
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text("Ajouter"),
+                            )
                           ],
                         ),
                         child: Column(
@@ -794,6 +864,56 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                                               ? Colors.orange
                                               : Colors.green))
                                 ])
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // NEW: SECTION SIGNATURE CLIENT
+                      AppCard(
+                        title: const Text("SIGNATURE CLIENT"),
+                        child: Column(
+                          children: [
+                            if (_signatureUrl != null)
+                              Column(
+                                children: [
+                                  Container(
+                                    height: 100,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.network(_signatureUrl!,
+                                        fit: BoxFit.contain),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                      "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                                      style: const TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold)),
+                                ],
+                              )
+                            else
+                              Column(
+                                children: [
+                                  const Text("Aucune signature client",
+                                      style: TextStyle(color: Colors.grey)),
+                                  const SizedBox(height: 10),
+                                  ElevatedButton.icon(
+                                    onPressed: _signerClient,
+                                    icon: const Icon(Icons.draw),
+                                    label: const Text("Faire signer le client"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),

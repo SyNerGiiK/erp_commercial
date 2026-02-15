@@ -1,5 +1,6 @@
 ﻿import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
@@ -134,6 +135,36 @@ class FactureViewModel extends ChangeNotifier {
     return await _executeOperation(() async {
       await _repository.deletePaiement(paiementId);
       await fetchFactures();
+    });
+  }
+
+  // --- SIGNATURE ---
+
+  Future<bool> uploadSignature(String factureId, Uint8List bytes) async {
+    return await _executeOperation(() async {
+      final url = await _repository.uploadSignature(factureId, bytes);
+
+      // On met à jour la facture locale et distante
+      final facture = _factures.firstWhere((f) => f.id == factureId,
+          orElse: () => Facture(
+              id: factureId,
+              numeroFacture: '',
+              objet: '',
+              clientId: '',
+              dateEmission: DateTime.now(),
+              dateEcheance: DateTime.now(),
+              totalHt: Decimal.zero,
+              remiseTaux: Decimal.zero,
+              acompteDejaRegle: Decimal.zero));
+
+      if (facture.numeroFacture.isNotEmpty) {
+        final updated = facture.copyWith(
+          signatureUrl: url,
+          dateSignature: DateTime.now(),
+        );
+        await _repository.updateFacture(updated);
+        await fetchFactures();
+      }
     });
   }
 

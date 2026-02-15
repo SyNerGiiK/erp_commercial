@@ -104,6 +104,8 @@ class PdfService {
         facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
     final reste = netAPayer - totalRegle; // Decimal
 
+    final signatureClientBytes = await _downloadImage(facture.signatureUrl);
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -125,8 +127,8 @@ class PdfService {
           pw.SizedBox(height: 30),
           _buildPaiementsTable(facture.paiements),
           pw.SizedBox(height: 20),
-          _buildFooterSignatures(
-              facture.notesPubliques, entreprise, signatureEntBytes, null),
+          _buildFooterSignatures(facture.notesPubliques, entreprise,
+              signatureEntBytes, signatureClientBytes),
         ],
         footer: (context) => _buildFooterMentions(entreprise),
       ),

@@ -123,22 +123,21 @@ class AppRouter {
         ),
 
         // --- ROUTES DYNAMIQUES (CRUD) ---
-        // Supporte : /app/ajout_devis (Nouveau) et /app/ajout_devis/123 (Edit)
+        // Modification: Routes dé-imbriquées pour éviter que le bouton retour
+        // d'une édition (:id) ne renvoie vers la création (parent).
 
         // DEVIS
         GoRoute(
           path: '/app/ajout_devis',
           builder: (context, state) => const AjoutDevisView(),
-          routes: [
-            GoRoute(
-              path: ':id', // /app/ajout_devis/123
-              builder: (context, state) {
-                final id = state.pathParameters['id'];
-                final devis = state.extra as Devis?;
-                return AjoutDevisView(id: id, devisAModifier: devis);
-              },
-            ),
-          ],
+        ),
+        GoRoute(
+          path: '/app/ajout_devis/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'];
+            final devis = state.extra as Devis?;
+            return AjoutDevisView(id: id, devisAModifier: devis);
+          },
         ),
 
         // FACTURES
@@ -149,65 +148,54 @@ class AppRouter {
             final fromTransformation =
                 state.uri.queryParameters['from_transformation'] == 'true';
 
-            // Si transformation devis, on récupère le draft depuis le ViewModel
             if (fromTransformation) {
               final devisVM =
                   Provider.of<DevisViewModel>(context, listen: false);
               final draftFacture = devisVM.pendingDraftFacture;
-
-              // Clear le draft après récupération
               devisVM.clearPendingDraftFacture();
 
               if (draftFacture != null) {
                 return AjoutFactureView(factureAModifier: draftFacture);
               }
             }
-
-            // Ancien système query param ou mode vierge
             return AjoutFactureView(sourceDevisId: sourceDevisId);
           },
-          routes: [
-            GoRoute(
-              path: ':id', // /app/ajout_facture/123
-              builder: (context, state) {
-                final id = state.pathParameters['id'];
-                final facture = state.extra as Facture?;
-                return AjoutFactureView(id: id, factureAModifier: facture);
-              },
-            ),
-          ],
+        ),
+        GoRoute(
+          path: '/app/ajout_facture/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'];
+            final facture = state.extra as Facture?;
+            return AjoutFactureView(id: id, factureAModifier: facture);
+          },
         ),
 
         // CLIENTS
         GoRoute(
           path: '/app/ajout_client',
           builder: (context, state) => const AjoutClientView(),
-          routes: [
-            GoRoute(
-              path: ':id',
-              builder: (context, state) {
-                final id = state.pathParameters['id'];
-                final client = state.extra as Client?;
-                return AjoutClientView(id: id, clientAModifier: client);
-              },
-            ),
-          ],
+        ),
+        GoRoute(
+          path: '/app/ajout_client/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'];
+            final client = state.extra as Client?;
+            return AjoutClientView(id: id, clientAModifier: client);
+          },
         ),
 
         // DEPENSES
         GoRoute(
           path: '/app/ajout_depense',
           builder: (context, state) => const AjoutDepenseView(),
-          routes: [
-            GoRoute(
-              path: ':id',
-              builder: (context, state) {
-                final id = state.pathParameters['id'];
-                final depense = state.extra as Depense?;
-                return AjoutDepenseView(id: id, depenseAModifier: depense);
-              },
-            ),
-          ],
+        ),
+        GoRoute(
+          path: '/app/ajout_depense/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'];
+            final depense = state.extra as Depense?;
+            return AjoutDepenseView(id: id, depenseAModifier: depense);
+          },
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
@@ -17,6 +18,9 @@ abstract class IFactureRepository {
   // GESTION DES PAIEMENTS
   Future<void> addPaiement(Paiement paiement);
   Future<void> deletePaiement(String id);
+
+  // SIGNATURE
+  Future<String> uploadSignature(String factureId, Uint8List bytes);
 }
 
 class FactureRepository implements IFactureRepository {
@@ -172,6 +176,26 @@ class FactureRepository implements IFactureRepository {
       await _client.from('paiements').delete().eq('id', id);
     } catch (e) {
       throw _handleError(e, 'deletePaiement');
+    }
+  }
+
+  @override
+  Future<String> uploadSignature(String factureId, Uint8List bytes) async {
+    try {
+      final userId = SupabaseConfig.userId;
+      final path = '$userId/factures/$factureId/signature.png';
+
+      await _client.storage.from('documents').uploadBinary(
+            path,
+            bytes,
+            fileOptions:
+                const FileOptions(upsert: true, contentType: 'image/png'),
+          );
+
+      final url = _client.storage.from('documents').getPublicUrl(path);
+      return "$url?t=${DateTime.now().millisecondsSinceEpoch}";
+    } catch (e) {
+      throw _handleError(e, 'uploadSignature');
     }
   }
 

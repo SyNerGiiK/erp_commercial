@@ -15,17 +15,18 @@ import '../models/paiement_model.dart';
 import '../viewmodels/facture_viewmodel.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
-import '../viewmodels/entreprise_viewmodel.dart'; // Ajout Import
+import '../viewmodels/entreprise_viewmodel.dart';
 import '../config/supabase_config.dart';
 
 import '../services/pdf_service.dart';
 
 import '../widgets/base_screen.dart';
-import '../widgets/app_card.dart'; // Import ajouté
+import '../widgets/app_card.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
+import '../widgets/dialogs/paiement_dialog.dart'; // NEW: Import Dialog Paiement
 import '../utils/format_utils.dart';
 import '../utils/calculations_utils.dart';
 
@@ -55,7 +56,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   DateTime _dateEcheance = DateTime.now().add(const Duration(days: 30));
 
   List<LigneFacture> _lignes = [];
-  List<LigneChiffrage> _chiffrage = []; // Pour rentabilité
+  List<LigneChiffrage> _chiffrage = [];
   List<Paiement> _paiements = [];
 
   String _typeFacture = 'standard';
@@ -63,7 +64,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   Decimal _remiseTaux = Decimal.zero;
   Decimal _acompteDejaRegle = Decimal.zero;
 
-  // Calculé dynamiquement (Règlements reçus sur factures d'acomptes liées)
   Decimal _historiqueReglements = Decimal.zero;
 
   bool _isLoading = false;
@@ -99,7 +99,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         } catch (_) {}
       });
 
-      // Charger historique règlements si lié à un devis ET si facture existante (id != null)
       if (f.devisSourceId != null && f.id != null) {
         final vm = Provider.of<FactureViewModel>(context, listen: false);
         final hist =
@@ -114,7 +113,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       try {
         final devis =
             devisVM.devis.firstWhere((d) => d.id == widget.sourceDevisId);
-        _typeFacture = 'standard'; // Par défaut si créé depuis ID
+        _typeFacture = 'standard';
         _numeroCtrl = TextEditingController(text: "Brouillon");
         _objetCtrl =
             TextEditingController(text: "Facture pour ${devis.numeroDevis}");
@@ -124,7 +123,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         _dateEmission = DateTime.now();
         _dateEcheance = DateTime.now().add(const Duration(days: 30));
 
-        // Conversion Lignes Devis -> Lignes Facture
         _lignes = devis.lignes
             .map((ld) => LigneFacture(
                 description: ld.description,
@@ -140,14 +138,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 estSouligne: ld.estSouligne))
             .toList();
 
-        _chiffrage =
-            List.from(devis.chiffrage); // On reprend le chiffrage pour la renta
+        _chiffrage = List.from(devis.chiffrage);
 
         _remiseTaux = devis.remiseTaux;
-        _acompteDejaRegle =
-            devis.acompteMontant; // On considère l'acompte devis comme réglé
+        _acompteDejaRegle = devis.acompteMontant;
 
-        // Init client
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
           try {
@@ -157,7 +152,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
           } catch (_) {}
         });
       } catch (e) {
-        // Devis non trouvé
         _numeroCtrl = TextEditingController(text: "Erreur Devis");
         _objetCtrl = TextEditingController();
         _notesCtrl = TextEditingController();
@@ -189,7 +183,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _lignes.fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
 
   Decimal get _totalRemise {
-    // CORRECTION RATIONAL : conversion explicite
     return ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
   }
 
@@ -198,9 +191,17 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   Decimal get _totalRegle =>
       _paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
-  // Reste à payer = Net - (AcompteInitial + Historique + PaiementsReçus)
-  Decimal get _resteAPayer =>
-      _netCommercial - _acompteDejaRegle - _historiqueReglements - _totalRegle;
+  Decimal get _resteAPayer {
+    final reste = _netCommercial -
+        _acompteDejaRegle -
+        _historiqueReglements -
+        _totalRegle;
+    // Si c'est une facture d'acompte, le "reste à payer" est le montant de l'acompte lui-même moins ce qui a été réglé.
+    // Mais ici le calcul est générique : Net - Déjà payé.
+    // _netCommercial pour un acompte = Montant Acompte.
+    // Donc c'est correct.
+    return reste;
+  }
 
   // --- ACTIONS ---
 
@@ -238,6 +239,26 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     });
   }
 
+  // NEW: GESTION PAIEMENTS
+  Future<void> _ajouterPaiement() async {
+    final nouveauPaiement = await showDialog<Paiement>(
+      context: context,
+      builder: (_) => const PaiementDialog(),
+    );
+
+    if (nouveauPaiement != null) {
+      setState(() {
+        _paiements.add(nouveauPaiement);
+      });
+    }
+  }
+
+  void _supprimerPaiement(int index) {
+    setState(() {
+      _paiements.removeAt(index);
+    });
+  }
+
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClient == null) return;
@@ -258,25 +279,51 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         statut: widget.factureAModifier?.statut ?? 'brouillon',
         statutJuridique:
             widget.factureAModifier?.statutJuridique ?? 'brouillon',
-        type:
-            _typeFacture, // ✅ FIX: Ajout du champ type (acompte, standard, situation, solde)
+        type: _typeFacture,
         totalHt: _totalHT,
         remiseTaux: _remiseTaux,
         acompteDejaRegle: _acompteDejaRegle,
         conditionsReglement: _conditionsCtrl.text,
         notesPubliques: _notesCtrl.text,
-        tvaIntra: widget.factureAModifier?.tvaIntra ??
-            _selectedClient?.tvaIntra, // ✅ FIX: Ajout tvaIntra
+        tvaIntra:
+            widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
         lignes: _lignes,
         paiements: _paiements,
-        chiffrage: _chiffrage, // Important pour stats marge
+        chiffrage: _chiffrage,
         estArchive: widget.factureAModifier?.estArchive ?? false);
 
     bool success;
     if (widget.id == null) {
       success = await vm.addFacture(factureToSave);
+      // Facture créée + paiements sauvegardés viaRepo
     } else {
       success = await vm.updateFacture(factureToSave);
+      // Facture update ignore paiements -> On gère le delta ici
+      if (success) {
+        try {
+          final oldPaiements = widget.factureAModifier?.paiements ?? [];
+
+          // 1. Ajouter les nouveaux (id est null)
+          for (var p in _paiements) {
+            if (p.id == null) {
+              // On associe l'ID facture
+              await vm.addPaiement(p.copyWith(factureId: widget.id));
+            }
+          }
+
+          // 2. Supprimer les absents (ceux qui étaient dans old mais plus dans new)
+          // On compare via ID
+          for (var oldP in oldPaiements) {
+            final stillExists = _paiements.any((newP) => newP.id == oldP.id);
+            if (!stillExists && oldP.id != null) {
+              await vm.deletePaiement(oldP.id!);
+            }
+          }
+        } catch (e) {
+          print("Erreur sync paiements: $e");
+          // On ne bloque pas le succès global mais on pourrait notifier
+        }
+      }
     }
 
     if (!mounted) return;
@@ -284,7 +331,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     setState(() => _isLoading = false);
 
     if (success) {
-      context.pop();
+      context.go('/app/factures');
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Facture enregistrée !")));
     } else {
@@ -317,7 +364,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     setState(() => _isLoading = true);
     final vm = Provider.of<FactureViewModel>(context, listen: false);
 
-    // On doit s'assurer qu'on travaille sur une facture sauvegardée
     if (widget.factureAModifier != null) {
       await vm.finaliserFacture(widget.factureAModifier!);
     }
@@ -334,18 +380,15 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       return;
     }
 
-    // Récupération des données nécessaires
     final entrepriseVM =
         Provider.of<EntrepriseViewModel>(context, listen: false);
     final clientVM = Provider.of<ClientViewModel>(context, listen: false);
 
-    // Assurer que le profil entreprise est chargé
     if (entrepriseVM.profil == null) {
       await entrepriseVM.fetchProfil();
     }
 
     try {
-      // Trouver le client associé
       final client = clientVM.clients
           .firstWhere((c) => c.id == widget.factureAModifier!.clientId);
 
@@ -354,7 +397,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
 
       if (!mounted) return;
 
-      // Affichage ou partage du PDF (Ici on utilise Printing layout)
       await Printing.layoutPdf(
           onLayout: (format) async => pdfBytes,
           name: "Facture_${widget.factureAModifier!.numeroFacture}.pdf");
@@ -518,7 +560,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                         },
                         itemBuilder: (context, index) {
                           final ligne = _lignes[index];
-                          // Détermine si c'est une situation
                           final isSituation = _typeFacture == 'situation';
 
                           return Card(
@@ -539,7 +580,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                               onChanged: (desc, qte, pu, unite, type, gras,
                                   ital, soul, av) {
                                 setState(() {
-                                  // Calcul du total ligne selon le mode
                                   Decimal total;
                                   if (isSituation) {
                                     total =
@@ -679,15 +719,66 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                                         style:
                                             const TextStyle(color: Colors.grey))
                                   ]),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // NEW: SECTION PAIEMENTS / RÈGLEMENTS
+                      AppCard(
+                        title: Row(
+                          children: [
+                            const Text("RÈGLEMENTS / PAIEMENTS REÇUS"),
+                            const Spacer(),
+                            if (_resteAPayer > Decimal.zero)
+                              TextButton.icon(
+                                onPressed: _ajouterPaiement,
+                                icon: const Icon(Icons.add, size: 16),
+                                label: const Text("Ajouter"),
+                              )
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            if (_paiements.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text("Aucun règlement enregistré",
+                                    style: TextStyle(color: Colors.grey)),
+                              )
+                            else
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _paiements.length,
+                                separatorBuilder: (_, __) => const Divider(),
+                                itemBuilder: (context, index) {
+                                  final p = _paiements[index];
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(
+                                        "${FormatUtils.currency(p.montant)} (${p.typePaiement})"),
+                                    subtitle: Text(
+                                        "${DateFormat('dd/MM/yyyy').format(p.datePaiement)} - ${p.commentaire}"),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red, size: 20),
+                                      onPressed: () =>
+                                          _supprimerPaiement(index),
+                                    ),
+                                  );
+                                },
+                              ),
+                            const Divider(),
                             Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
-                                      "Règlements reçus sur cette facture : "),
+                                  const Text("Total Règlements : "),
                                   Text("- ${FormatUtils.currency(_totalRegle)}")
                                 ]),
-                            const Divider(),
+                            const SizedBox(height: 10),
                             Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [

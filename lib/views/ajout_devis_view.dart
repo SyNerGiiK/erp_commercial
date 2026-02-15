@@ -258,7 +258,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     setState(() => _isLoading = false);
 
     if (success) {
-      context.pop();
+      context.go(
+          '/app/devis'); // ✅ FIX: Utiliser go() au lieu de pop() pour éviter "nothing to pop"
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
     } else {

@@ -304,3 +304,38 @@ extension TypeLigneExtension on TypeLigne {
     }
   }
 }
+
+/// Fréquence de déclaration et paiement des cotisations
+enum FrequenceCotisation {
+  /// Mensuelle (par défaut)
+  mensuelle,
+
+  /// Trimestrielle
+  trimestrielle,
+}
+
+extension FrequenceCotisationExtension on FrequenceCotisation {
+  String get label {
+    switch (this) {
+      case FrequenceCotisation.mensuelle:
+        return "Mensuelle";
+      case FrequenceCotisation.trimestrielle:
+        return "Trimestrielle";
+    }
+  }
+
+  /// Valeur stockée en base de données (rétrocompatibilité)
+  String get dbValue {
+    switch (this) {
+      case FrequenceCotisation.mensuelle:
+        return "mois";
+      case FrequenceCotisation.trimestrielle:
+        return "trimestre";
+    }
+  }
+
+  static FrequenceCotisation fromDbValue(String? value) {
+    if (value == "trimestre") return FrequenceCotisation.trimestrielle;
+    return FrequenceCotisation.mensuelle;
+  }
+}

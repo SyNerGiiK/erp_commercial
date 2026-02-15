@@ -36,7 +36,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _bicController = TextEditingController();
   final _mentionsController = TextEditingController();
 
-  String _frequenceCotisation = 'mois';
+  FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
   TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurServiceBIC;
   RegimeFiscal? _regimeFiscal;
   CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
@@ -326,7 +326,8 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     const SizedBox(height: 20),
 
                     // CORRECTION DROPDOWN: Utilisation Key+InitialValue
-                    DropdownButtonFormField<String>(
+                    // CORRECTION DROPDOWN: Utilisation Key+InitialValue
+                    DropdownButtonFormField<FrequenceCotisation>(
                       key: ValueKey(_frequenceCotisation), // Key Stable
                       initialValue: _frequenceCotisation,
                       decoration: InputDecoration(
@@ -336,12 +337,12 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         filled: true,
                         fillColor: Colors.white,
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'mois', child: Text("Mensuelle")),
-                        DropdownMenuItem(
-                            value: 'trimestre', child: Text("Trimestrielle")),
-                      ],
+                      items: FrequenceCotisation.values
+                          .map((f) => DropdownMenuItem(
+                                value: f,
+                                child: Text(f.label),
+                              ))
+                          .toList(),
                       onChanged: (v) =>
                           setState(() => _frequenceCotisation = v!),
                     ),

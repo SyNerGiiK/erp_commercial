@@ -13,7 +13,7 @@ class ProfilEntreprise {
   final String? telephone;
   final String? iban;
   final String? bic;
-  final String frequenceCotisation;
+  final FrequenceCotisation frequenceCotisation;
 
   // CHANGEMENT MAJEUR : Stockage par URL (Cloud) et non Base64 (RAM)
   final String? logoUrl;
@@ -44,7 +44,7 @@ class ProfilEntreprise {
     this.telephone,
     this.iban,
     this.bic,
-    required this.frequenceCotisation,
+    this.frequenceCotisation = FrequenceCotisation.mensuelle,
     this.logoUrl,
     this.signatureUrl,
     this.mentionsLegales,
@@ -67,7 +67,8 @@ class ProfilEntreprise {
       telephone: map['telephone'],
       iban: map['iban'],
       bic: map['bic'],
-      frequenceCotisation: map['frequence_cotisation'] ?? 'mois',
+      frequenceCotisation:
+          FrequenceCotisationExtension.fromDbValue(map['frequence_cotisation']),
       logoUrl: map[
           'logo_base64'], // Mapping vers la colonne historique (qui contient maintenant une URL)
       signatureUrl: map['signature_base64'], // Idem
@@ -125,7 +126,7 @@ class ProfilEntreprise {
       'telephone': telephone,
       'iban': iban,
       'bic': bic,
-      'frequence_cotisation': frequenceCotisation,
+      'frequence_cotisation': frequenceCotisation.dbValue,
       'logo_base64': logoUrl, // On écrit l'URL dans la colonne existante
       'signature_base64': signatureUrl, // Idem
       'mentions_legales': mentionsLegales,
@@ -148,7 +149,7 @@ class ProfilEntreprise {
     String? telephone,
     String? iban,
     String? bic,
-    String? frequenceCotisation,
+    FrequenceCotisation? frequenceCotisation,
     String? logoUrl,
     String? signatureUrl,
     String? mentionsLegales,

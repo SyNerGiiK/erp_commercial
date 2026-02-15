@@ -182,14 +182,30 @@ class DevisViewModel extends ChangeNotifier {
     }
 
     if (type == 'situation') {
-      // On copie tout avec un avancement à 0 (ou on pourrait reprendre l'existant)
-      // Pour l'MVP: 0% pour forcer la saisie
+      // NOUVELLE LOGIQUE: Le calcul se fait sur (Devis - Acompte)
+      // Exemple: Devis 10k€, Acompte 3k€ → Base = 7k€
+      // Situation 50% = 50% × 7k€ = 3.5k€
+
+      // Calculer la base de référence
+      final montantDeReference = d.totalHt - d.acompteMontant;
+
+      // Ratio de réduction à appliquer sur chaque ligne
+      // Si pas d'acompte, ratio = 1.0 (comportement standard)
+      final ratioReduction = d.acompteMontant > Decimal.zero
+          ? (montantDeReference / d.totalHt).toDecimal()
+          : Decimal.one;
+
       final newLignes = d.lignes.map((l) {
+        // Appliquer le ratio sur le prix unitaire
+        // Decimal * Decimal = Decimal (pas besoin de toDecimal)
+        final prixUnitaireAjuste = l.prixUnitaire * ratioReduction;
+
         return LigneFacture(
             description: l.description,
             quantite: l.quantite,
-            prixUnitaire: l.prixUnitaire,
-            totalLigne: Decimal.zero, // Sera calculé par l'avancement
+            prixUnitaire:
+                prixUnitaireAjuste, // Prix réduit en fonction de l'acompte
+            totalLigne: Decimal.zero, // Sera calculé par l'avancement dans l'UI
             unite: l.unite,
             type: l.type,
             estGras: l.estGras,

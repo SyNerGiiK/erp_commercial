@@ -11,7 +11,7 @@ abstract class IDevisRepository {
   Future<void> updateDevis(Devis devis);
   Future<void> deleteDevis(String id);
   Future<void> toggleArchive(String id, bool archive);
-  Future<void> finalizeDevis(String id, String numero);
+  Future<void> finalizeDevis(String id);
   Future<void> markAsSigned(String id, String? signatureUrl);
   Future<String> uploadSignature(String devisId, Uint8List bytes);
   Future<String> generateNextNumero(int annee);
@@ -97,10 +97,8 @@ class DevisRepository implements IDevisRepository {
   }
 
   @override
-  Future<void> finalizeDevis(String id, String numero) async {
-    await _client
-        .from('devis')
-        .update({'numero_devis': numero, 'statut': 'envoye'}).eq('id', id);
+  Future<void> finalizeDevis(String id) async {
+    await _client.from('devis').update({'statut': 'envoye'}).eq('id', id);
   }
 
   @override

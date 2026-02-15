@@ -61,9 +61,7 @@ class DevisViewModel extends ChangeNotifier {
   Future<bool> finaliserDevis(Devis devis) async {
     if (devis.id == null) return false;
     return await _executeOperation(() async {
-      final annee = DateTime.now().year;
-      final newNumero = await _repository.generateNextNumero(annee);
-      await _repository.finalizeDevis(devis.id!, newNumero);
+      await _repository.finalizeDevis(devis.id!);
       await fetchDevis();
     });
   }

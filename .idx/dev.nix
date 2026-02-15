@@ -11,6 +11,7 @@
     pkgs.unzip
     pkgs.flutter
     pkgs.dart
+    pkgs.nodejs_20
   ];
 
   # Sets environment variables in the workspace

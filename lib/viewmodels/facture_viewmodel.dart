@@ -72,13 +72,9 @@ class FactureViewModel extends ChangeNotifier {
   Future<bool> finaliserFacture(Facture facture) async {
     if (facture.id == null) return false;
     return await _executeOperation(() async {
-      // Génération Numéro
-      final annee = DateTime.now().year;
-      final newNumero = await _repository.generateNextNumero(annee);
-
       // Update local temporaire pour éviter re-fetch immédiat (Optimistic)
       final updated = facture.copyWith(
-        numeroFacture: newNumero,
+        // numeroFacture: Laisse vide, sera généré par le Trigger
         statut: 'validee',
         statutJuridique: 'validee',
         dateValidation: DateTime.now(),

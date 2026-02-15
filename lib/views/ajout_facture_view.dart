@@ -67,9 +67,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   String _typeFacture = 'standard';
 
   Decimal _remiseTaux = Decimal.zero;
-  Decimal _acompteDejaRegle = Decimal.zero;
-
-  Decimal _historiqueReglements = Decimal.zero;
 
   bool _isLoading = false;
 
@@ -106,7 +103,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _paiements = List.from(f.paiements);
 
       _remiseTaux = f.remiseTaux;
-      _acompteDejaRegle = f.acompteDejaRegle;
 
       // Init Signature (Clean URL handled display-side)
       _signatureUrl = f.signatureUrl;
@@ -124,14 +120,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
           setState(() => _selectedClient = client);
         } catch (_) {}
       });
-
-      if (f.devisSourceId != null && f.id != null) {
-        final vm = Provider.of<FactureViewModel>(context, listen: false);
-        final hist =
-            await vm.calculateHistoriqueReglements(f.devisSourceId!, f.id!);
-        if (!mounted) return;
-        setState(() => _historiqueReglements = hist);
-      }
     }
     // Cas 2 : Création depuis Devis
     else if (widget.sourceDevisId != null) {
@@ -167,11 +155,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         _chiffrage = List.from(devis.chiffrage);
 
         _remiseTaux = devis.remiseTaux;
-        // FIX: On ne pré-remplit PAS _acompteDejaRegle avec le montant du devis.
-        // Pourquoi ? Parce que si une facture d'acompte a été créée et payée,
-        // ce montant sera récupéré via _historiqueReglements.
-        // Si on le laisse ici, on le déduirait DEUX FOIS (une fois via ce champ, une fois via l'historique).
-        _acompteDejaRegle = Decimal.zero;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -180,15 +163,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 clientVM.clients.firstWhere((c) => c.id == devis.clientId);
             setState(() => _selectedClient = client);
           } catch (_) {}
-        });
-
-        // Charger l'historique des règlements (acomptes précédents)
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          final vm = Provider.of<FactureViewModel>(context, listen: false);
-          // On passe null comme 2e argument car la facture n'est pas encore créée (donc pas d'ID à exclure)
-          final hist = await vm.calculateHistoriqueReglements(devis.id!, "");
-          if (!mounted) return;
-          setState(() => _historiqueReglements = hist);
         });
       } catch (e) {
         _numeroCtrl = TextEditingController(text: "Erreur Devis");
@@ -231,15 +205,8 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
   Decimal get _resteAPayer {
-    final reste = _netCommercial -
-        _acompteDejaRegle -
-        _historiqueReglements -
-        _totalRegle;
-    // Si c'est une facture d'acompte, le "reste à payer" est le montant de l'acompte lui-même moins ce qui a été réglé.
-    // Mais ici le calcul est générique : Net - Déjà payé.
-    // _netCommercial pour un acompte = Montant Acompte.
-    // Donc c'est correct.
-    return reste;
+    // Logique simplifiée : Net Commercial - Paiements reçus
+    return _netCommercial - _totalRegle;
   }
 
   // --- ACTIONS ---
@@ -403,8 +370,8 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       type: _typeFacture,
       totalHt: _totalHT,
       remiseTaux: _remiseTaux,
-      // IMPORTANT: On sauvegarde la somme de l'acompte initial (Devis) ET des règlements des factures liées (Situations)
-      acompteDejaRegle: _acompteDejaRegle + _historiqueReglements,
+      // On initialise à zéro : ce champ n'est plus utilisé dans la nouvelle logique
+      acompteDejaRegle: Decimal.zero,
       conditionsReglement: _conditionsCtrl.text,
       notesPubliques: _notesCtrl.text,
       tvaIntra: widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
@@ -819,31 +786,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                                           fontWeight: FontWeight.bold,
                                           fontSize: 18))
                                 ]),
-                            if (_acompteDejaRegle > Decimal.zero)
-                              Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text("Acompte initial (Devis) : ",
-                                        style: TextStyle(color: Colors.grey)),
-                                    Text(
-                                        "- ${FormatUtils.currency(_acompteDejaRegle)}",
-                                        style:
-                                            const TextStyle(color: Colors.grey))
-                                  ]),
-                            if (_historiqueReglements > Decimal.zero)
-                              Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                        "Règlements antérieurs (Factures liées) : ",
-                                        style: TextStyle(color: Colors.grey)),
-                                    Text(
-                                        "- ${FormatUtils.currency(_historiqueReglements)}",
-                                        style:
-                                            const TextStyle(color: Colors.grey))
-                                  ]),
                           ],
                         ),
                       ),

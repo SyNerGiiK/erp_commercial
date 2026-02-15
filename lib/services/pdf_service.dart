@@ -92,19 +92,10 @@ class PdfService {
 
     final pdf = pw.Document(theme: theme);
 
-    // FIX DECIMAL: Division returns Rational -> toDecimal(). Subtraction returns Decimal -> NO toDecimal().
     final montantRemiseRational =
         (facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100);
     final montantRemise = montantRemiseRational.toDecimal();
-
-    final netAPayer =
-        facture.totalHt - montantRemise; // Decimal - Decimal = Decimal
-
-    final totalRegle =
-        facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-    // FIX: On déduit aussi les acomptes déjà réglés sur les factures précédentes (situations)
-    final reste = netAPayer - facture.acompteDejaRegle - totalRegle; // Decimal
+    final netAPayer = facture.totalHt - montantRemise; // Decimal - Decimal
 
     final signatureClientBytes = await _downloadImage(facture.signatureUrl);
 
@@ -124,10 +115,9 @@ class PdfService {
               isSituation: facture.type == 'situation'),
           pw.SizedBox(height: 20),
           _buildTotals(
-              facture.totalHt, facture.remiseTaux, facture.acompteDejaRegle,
-              dejaRegle: totalRegle, resteAPayer: reste),
+              facture.totalHt, facture.remiseTaux, facture.acompteDejaRegle),
           pw.SizedBox(height: 30),
-          _buildPaiementsTable(facture.paiements),
+          _buildPaiementsTable(facture.paiements, netAPayer),
           pw.SizedBox(height: 20),
           _buildFooterSignatures(facture.notesPubliques, entreprise,
               signatureEntBytes, signatureClientBytes),
@@ -355,72 +345,56 @@ class PdfService {
 
   static pw.Widget _buildTotals(
       Decimal totalHt, Decimal remise, Decimal acompte,
-      {bool isDevis = false, Decimal? dejaRegle, Decimal? resteAPayer}) {
+      {bool isDevis = false}) {
     // FIX DECIMAL: Ensure division converts to Decimal
     final remiseMontantRational = (totalHt * remise) / Decimal.fromInt(100);
     final remiseMontant = remiseMontantRational.toDecimal();
-    final netCommercial = totalHt - remiseMontant; // Decimal - Decimal
+    final netAPayer = totalHt - remiseMontant; // Decimal - Decimal
 
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       child: pw.Container(
-        width: 250, // Elargi pour libellé plus long
+        width: 200,
         child: pw.Column(children: [
           _buildTotalRow("Total HT", totalHt),
           if (remise > Decimal.zero)
             _buildTotalRow("Remise ($remise%)", remiseMontant,
                 isNegative: true),
           pw.Divider(),
-          // Affichage Net Commercial (HT - Remise)
-          _buildTotalRow("Net Commercial", netCommercial, isBold: false),
+          _buildTotalRow("NET À PAYER", netAPayer, isBold: true),
 
-          // Si facture, on affiche les acomptes déduits
-          if (!isDevis && acompte > Decimal.zero)
-            _buildTotalRow("Acomptes / Situations", acompte, isNegative: true),
-
-          pw.Divider(),
-
-          // Net à Payer = Net Commercial - Acomptes
-          _buildTotalRow(isDevis ? "NET À PAYER (Estimé)" : "NET À PAYER",
-              netCommercial - (isDevis ? Decimal.zero : acompte),
-              isBold: true),
-
-          // Pour Devis seulement : Acompte demandé
+          // Pour DEVIS uniquement : Acompte demandé
           if (isDevis && acompte > Decimal.zero)
             _buildTotalRow("Acompte demandé", acompte),
-
-          // Pour Facture : Déjà réglé (paiements reçus sur cette facture spécifique)
-          if (!isDevis && dejaRegle != null && dejaRegle > Decimal.zero)
-            _buildTotalRow("Déjà réglé (Paiements)", dejaRegle,
-                isNegative: true),
-
-          // Reste à Payer Final
-          if (!isDevis && resteAPayer != null)
-            _buildTotalRow("Reste à Payer", resteAPayer,
-                isBold: true, isRed: true),
         ]),
       ),
     );
   }
 
   static pw.Widget _buildTotalRow(String label, Decimal? amount,
-      {bool isBold = false, bool isNegative = false, bool isRed = false}) {
-    return pw
-        .Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-      pw.Text(label,
-          style: pw.TextStyle(
-              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isRed ? PdfColors.red : PdfColors.black)),
-      if (amount != null)
-        pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
-            style: pw.TextStyle(
-                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-                color: isRed ? PdfColors.red : PdfColors.black)),
-    ]);
+      {bool isBold = false, bool isNegative = false}) {
+    return pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label,
+              style: pw.TextStyle(
+                  fontWeight:
+                      isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+          if (amount != null)
+            pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
+                style: pw.TextStyle(
+                    fontWeight:
+                        isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+        ]);
   }
 
-  static pw.Widget _buildPaiementsTable(List<Paiement> paiements) {
+  static pw.Widget _buildPaiementsTable(
+      List<Paiement> paiements, Decimal netAPayer) {
     if (paiements.isEmpty) return pw.Container();
+
+    final totalRegle =
+        paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+    final reste = netAPayer - totalRegle;
 
     final data = paiements
         .map((p) => [
@@ -432,8 +406,8 @@ class PdfService {
 
     return pw
         .Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      pw.Text("Historique des règlements",
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+      pw.Text("Règlements reçus",
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
       pw.SizedBox(height: 5),
       pw.TableHelper.fromTextArray(
         headers: ["Date", "Mode", "Montant"],
@@ -442,7 +416,39 @@ class PdfService {
         cellStyle: const pw.TextStyle(fontSize: 8),
         border: null,
         headerDecoration: const pw.BoxDecoration(color: _lightGrey),
-      )
+      ),
+      pw.SizedBox(height: 10),
+      // RECAP à droite
+      pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
+        pw.Container(
+          width: 200,
+          child: pw.Column(children: [
+            pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Total réglé",
+                      style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text(FormatUtils.currency(totalRegle),
+                      style: const pw.TextStyle(fontSize: 10)),
+                ]),
+            pw.Divider(),
+            pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Reste à payer",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                  pw.Text(FormatUtils.currency(reste),
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 11,
+                          color: reste > Decimal.zero
+                              ? PdfColors.red
+                              : PdfColors.green)),
+                ]),
+          ]),
+        )
+      ])
     ]);
   }
 

@@ -391,7 +391,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
             }
           }
         } catch (e) {
-          print("Erreur sync paiements: $e");
+          // print("Erreur sync paiements: $e");
           // On ne bloque pas le succès global mais on pourrait notifier
         }
       }

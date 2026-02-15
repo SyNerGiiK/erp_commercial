@@ -161,6 +161,7 @@ class FactureViewModel extends ChangeNotifier {
         final updated = facture.copyWith(
           signatureUrl: url,
           dateSignature: DateTime.now(),
+          statut: 'signee', // Changement de statut explicite
         );
         await _repository.updateFacture(updated);
         await fetchFactures();

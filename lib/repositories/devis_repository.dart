@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import '../models/devis_model.dart';
 import '../config/supabase_config.dart';
@@ -12,6 +13,7 @@ abstract class IDevisRepository {
   Future<void> toggleArchive(String id, bool archive);
   Future<void> finalizeDevis(String id, String numero);
   Future<void> markAsSigned(String id, String? signatureUrl);
+  Future<String> uploadSignature(String devisId, Uint8List bytes);
   Future<String> generateNextNumero(int annee);
 }
 
@@ -108,6 +110,25 @@ class DevisRepository implements IDevisRepository {
       'date_signature': DateTime.now().toIso8601String(),
       if (signatureUrl != null) 'signature_url': signatureUrl,
     }).eq('id', id);
+  }
+
+  @override
+  Future<String> uploadSignature(String devisId, Uint8List bytes) async {
+    try {
+      final userId = SupabaseConfig.userId;
+      final path = '$userId/devis/$devisId/signature.png';
+
+      await _client.storage.from('documents').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
+
+      final url = _client.storage.from('documents').getPublicUrl(path);
+      return url;
+    } catch (e) {
+      throw _handleError(e, 'uploadSignature');
+    }
   }
 
   @override

@@ -40,16 +40,20 @@ class _SignatureDialogState extends State<SignatureDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
+            width: 305, // Fixed width (300 + borders/padding)
+            height: 205, // Fixed height
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(4),
               color: Colors.white,
             ),
-            child: Signature(
-              controller: _controller,
-              width: 300,
-              height: 200,
-              backgroundColor: Colors.white,
+            child: ClipRect(
+              child: Signature(
+                controller: _controller,
+                width: 300,
+                height: 200,
+                backgroundColor: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 8),

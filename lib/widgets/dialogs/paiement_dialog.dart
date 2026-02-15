@@ -87,8 +87,9 @@ class _PaiementDialogState extends State<PaiementDialog> {
                     const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.isEmpty) return "Requis";
-                  if (Decimal.tryParse(v.replaceAll(',', '.')) == null)
+                  if (Decimal.tryParse(v.replaceAll(',', '.')) == null) {
                     return "Invalide";
+                  }
                   return null;
                 },
               ),
@@ -96,7 +97,7 @@ class _PaiementDialogState extends State<PaiementDialog> {
 
               // Type
               DropdownButtonFormField<String>(
-                value: _typePaiement,
+                initialValue: _typePaiement,
                 decoration: const InputDecoration(
                   labelText: "Mode de règlement",
                   border: OutlineInputBorder(),

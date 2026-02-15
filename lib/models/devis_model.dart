@@ -162,15 +162,15 @@ class Devis {
       statut: map['statut'] ?? 'brouillon',
       estTransforme: map['est_transforme'] ?? false,
       estArchive: map['est_archive'] ?? false,
+      signatureUrl: map['signature_url'],
+      dateSignature: map['date_signature'] != null
+          ? DateTime.parse(map['date_signature'])
+          : null,
       totalHt: Decimal.parse((map['total_ht'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
       acompteMontant: Decimal.parse((map['acompte_montant'] ?? 0).toString()),
       conditionsReglement: map['conditions_reglement'] ?? '',
       notesPubliques: map['notes_publiques'],
-      signatureUrl: map['signature_url'],
-      dateSignature: map['date_signature'] != null
-          ? DateTime.parse(map['date_signature'])
-          : null,
       tvaIntra: map['tva_intra'],
       lignes: (map['lignes_devis'] as List<dynamic>?)
               ?.map((e) => LigneDevis.fromMap(e))

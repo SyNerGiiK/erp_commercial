@@ -1,6 +1,7 @@
 ﻿import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:decimal/decimal.dart';
+import 'dart:typed_data';
 import '../models/devis_model.dart';
 import '../models/facture_model.dart';
 import '../repositories/devis_repository.dart';
@@ -83,10 +84,19 @@ class DevisViewModel extends ChangeNotifier {
     });
   }
 
-  Future<bool> markAsSigned(Devis devis, String? signatureUrl) async {
-    if (devis.id == null) return false;
+  Future<bool> uploadSignature(String devisId, Uint8List bytes) async {
+    if (devisId.isEmpty) return false;
     return await _executeOperation(() async {
-      await _repository.markAsSigned(devis.id!, signatureUrl);
+      final url = await _repository.uploadSignature(devisId, bytes);
+
+      final devis = _devis.firstWhere((d) => d.id == devisId);
+      final updated = devis.copyWith(
+        signatureUrl: url,
+        dateSignature: DateTime.now(),
+        statut: 'signe',
+      );
+
+      await _repository.updateDevis(updated);
       await fetchDevis();
     });
   }

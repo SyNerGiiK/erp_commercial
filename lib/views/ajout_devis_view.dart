@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
-import 'package:printing/printing.dart'; // Added Import
+import 'package:printing/printing.dart';
+import 'dart:typed_data';
+import '../widgets/dialogs/signature_dialog.dart';
 
 import '../config/theme.dart';
 import '../config/supabase_config.dart';
@@ -67,6 +69,11 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       ((_netCommercial * _acomptePercentage) / Decimal.fromInt(100))
           .toDecimal();
   Decimal _acomptePercentage = Decimal.fromInt(30); // Défaut : 30%
+  String _statut = 'brouillon';
+
+  // Signature
+  String? _signatureUrl;
+  DateTime? _dateSignature;
 
   bool _isLoading = false;
 
@@ -101,6 +108,9 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
         }
       }
 
+      // Init Statut
+      _statut = d.statut;
+
       // Charger le client si on a l'ID
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -116,7 +126,9 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();
       _notesCtrl = TextEditingController();
+      _notesCtrl = TextEditingController();
       _conditionsCtrl = TextEditingController(text: "Paiement à réception");
+      _statut = 'brouillon';
     }
   }
 
@@ -230,7 +242,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       clientId: _selectedClient!.id!,
       dateEmission: _dateEmission,
       dateValidite: _dateValidite,
-      statut: widget.devisAModifier?.statut ?? 'brouillon',
+      statut: _statut,
       totalHt: _totalHT,
       remiseTaux: _remiseTaux,
       acompteMontant: _acompteMontant,
@@ -239,8 +251,9 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       lignes: _lignes,
       chiffrage: _chiffrage,
       // On conserve les champs non éditables ici
-      signatureUrl: widget.devisAModifier?.signatureUrl,
-      dateSignature: widget.devisAModifier?.dateSignature,
+      // On utilise les variables d'état qui peuvent avoir été mises à jour par _signerClient
+      signatureUrl: _signatureUrl,
+      dateSignature: _dateSignature,
       estTransforme: widget.devisAModifier?.estTransforme ?? false,
       estArchive: widget.devisAModifier?.estArchive ?? false,
     );
@@ -335,6 +348,46 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     if (!mounted) return;
     setState(() => _isLoading = false);
     context.pop(); // Retour liste
+  }
+
+  Future<void> _signerClient() async {
+    if (widget.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              "Veuillez d'abord enregistrer le devis pour pouvoir le signer.")));
+      return;
+    }
+
+    final Uint8List? signatureBytes = await showDialog(
+      context: context,
+      builder: (_) => const SignatureDialog(),
+    );
+
+    if (signatureBytes == null) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
+
+    final success = await vm.uploadSignature(widget.id!, signatureBytes);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signature enregistrée !")));
+      setState(() {
+        final userId = SupabaseConfig.userId;
+        _signatureUrl =
+            "${SupabaseConfig.client.storage.from('documents').getPublicUrl('$userId/devis/${widget.id}/signature.png')}?t=${DateTime.now().millisecondsSinceEpoch}";
+        _dateSignature = DateTime.now();
+        _statut = 'signe';
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de la signature")));
+    }
   }
 
   @override
@@ -693,6 +746,52 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
                                 ),
                               ),
                             ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // SIGNATURE CLIENT
+                    AppCard(
+                      title: const Text("Signature Client"),
+                      child: Column(
+                        children: [
+                          if (_signatureUrl != null) ...[
+                            Image.network(
+                              _signatureUrl!,
+                              height: 150,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const SizedBox(
+                                      height: 150,
+                                      child: Center(
+                                          child: Text(
+                                              "Erreur chargement signature"))),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                              style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.green),
+                            ),
+                          ] else
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text(
+                                  "Aucune signature client enregistrée pour ce devis."),
+                            ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _signerClient,
+                              icon: const Icon(Icons.draw),
+                              label: Text(_signatureUrl != null
+                                  ? "Refaire la signature"
+                                  : "Faire signer le client"),
+                            ),
                           ),
                         ],
                       ),

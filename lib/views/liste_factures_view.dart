@@ -167,12 +167,21 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                       Provider.of<FactureViewModel>(context, listen: false)
                           .deleteFacture(f.id!);
                     }
+                    if (val == 'avoir') {
+                      context.go(Uri(
+                              path: '/app/ajout_facture',
+                              queryParameters: {'source_facture': f.id})
+                          .toString());
+                    }
                   },
                   itemBuilder: (ctx) => [
                         const PopupMenuItem(
                             value: 'pdf', child: Text("Voir PDF")),
                         const PopupMenuItem(
                             value: 'archive', child: Text("Archiver")),
+                        if (f.statut != 'brouillon' && f.type != 'avoir')
+                          const PopupMenuItem(
+                              value: 'avoir', child: Text("Créer Avoir")),
                         if (f.statut == 'brouillon')
                           const PopupMenuItem(
                               value: 'delete', child: Text("Supprimer"))

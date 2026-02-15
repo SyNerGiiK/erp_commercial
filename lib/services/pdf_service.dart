@@ -44,14 +44,17 @@ class PdfService {
     return null;
   }
 
-  // --- GÉNÉRATION DEVIS ---
-  static Future<Uint8List> generateDevis(
-      Devis devis, Client client, ProfilEntreprise? entreprise) async {
+  // --- GÉNÉRATION DOCUMENTS (Devis, BC, BL) ---
+  static Future<Uint8List> generateDocument(
+      Devis devis, Client client, ProfilEntreprise? entreprise,
+      {String docType = "DEVIS"}) async {
     final theme = await _loadTheme();
 
     final logoBytes = await _downloadImage(entreprise?.logoUrl);
     final signatureEntBytes = await _downloadImage(entreprise?.signatureUrl);
     final signatureClientBytes = await _downloadImage(devis.signatureUrl);
+
+    final isBL = docType == "BON DE LIVRAISON";
 
     final pdf = pw.Document(theme: theme);
 
@@ -60,17 +63,18 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
         build: (context) => [
-          _buildHeader(entreprise, "DEVIS", devis.numeroDevis,
+          _buildHeader(entreprise, docType, devis.numeroDevis,
               devis.dateEmission, logoBytes),
           pw.SizedBox(height: 30),
           _buildAddresses(entreprise, client),
           pw.SizedBox(height: 30),
           _buildTitle(devis.objet),
           pw.SizedBox(height: 20),
-          _buildLignesTable(devis.lignes),
+          _buildLignesTable(devis.lignes, isBL: isBL), // Hide prices if BL
           pw.SizedBox(height: 20),
-          _buildTotals(devis.totalHt, devis.remiseTaux, devis.acompteMontant,
-              isDevis: true),
+          if (!isBL) // Hide totals if BL
+            _buildTotals(devis.totalHt, devis.remiseTaux, devis.acompteMontant,
+                isDevis: true),
           pw.SizedBox(height: 30),
           _buildFooterSignatures(devis.notesPubliques, entreprise,
               signatureEntBytes, signatureClientBytes),
@@ -81,6 +85,11 @@ class PdfService {
 
     return pdf.save();
   }
+
+  // Deprecated wrapper for backward compatibility
+  static Future<Uint8List> generateDevis(
+          Devis devis, Client client, ProfilEntreprise? ent) =>
+      generateDocument(devis, client, ent, docType: "DEVIS");
 
   // --- GÉNÉRATION FACTURE ---
   static Future<Uint8List> generateFacture(
@@ -104,8 +113,12 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
         build: (context) => [
-          _buildHeader(entreprise, "FACTURE", facture.numeroFacture,
-              facture.dateEmission, logoBytes),
+          _buildHeader(
+              entreprise,
+              facture.type == 'avoir' ? "AVOIR" : "FACTURE",
+              facture.numeroFacture,
+              facture.dateEmission,
+              logoBytes),
           pw.SizedBox(height: 30),
           _buildAddresses(entreprise, client),
           pw.SizedBox(height: 30),
@@ -207,7 +220,7 @@ class PdfService {
   }
 
   static pw.Widget _buildLignesTable(dynamic lignes,
-      {bool isSituation = false}) {
+      {bool isSituation = false, bool isBL = false}) {
     // 1. Split by Saut de Page
     final chunks = <List<dynamic>>[];
     var currentChunk = <dynamic>[];
@@ -230,7 +243,8 @@ class PdfService {
       final chunk = chunks[index];
       if (chunk.isEmpty) return pw.Container();
 
-      final table = _buildChunkTable(chunk, isSituation: isSituation);
+      final table =
+          _buildChunkTable(chunk, isSituation: isSituation, isBL: isBL);
 
       if (index < chunks.length - 1) {
         return pw.Column(children: [table, pw.NewPage()]);
@@ -240,7 +254,7 @@ class PdfService {
   }
 
   static pw.Widget _buildChunkTable(List<dynamic> chunk,
-      {bool isSituation = false}) {
+      {bool isSituation = false, bool isBL = false}) {
     return pw.Table(
         border: const pw.TableBorder(
             bottom: pw.BorderSide(color: _lightGrey, width: 0.5)),
@@ -258,11 +272,12 @@ class PdfService {
                 _buildHeaderCell("Désignation",
                     alignment: pw.Alignment.centerLeft),
                 _buildHeaderCell(isSituation ? "Marché" : "Qté"),
-                _buildHeaderCell(isSituation ? "Avct %" : "P.U."),
-                _buildHeaderCell("Total"),
+                if (!isBL) _buildHeaderCell(isSituation ? "Avct %" : "P.U."),
+                if (!isBL) _buildHeaderCell("Total"),
               ]),
           // Rows
-          ...chunk.map((l) => _buildRow(l, isSituation: isSituation)),
+          ...chunk
+              .map((l) => _buildRow(l, isSituation: isSituation, isBL: isBL)),
         ]);
   }
 
@@ -279,7 +294,8 @@ class PdfService {
     );
   }
 
-  static pw.TableRow _buildRow(dynamic l, {bool isSituation = false}) {
+  static pw.TableRow _buildRow(dynamic l,
+      {bool isSituation = false, bool isBL = false}) {
     final bool isSpecial = ['titre', 'sous-titre', 'texte'].contains(l.type);
 
     pw.TextStyle? style;
@@ -308,8 +324,8 @@ class PdfService {
             padding: const pw.EdgeInsets.all(5),
             child: pw.Text(label, style: style)),
         pw.Container(),
-        pw.Container(),
-        pw.Container(),
+        if (!isBL) pw.Container(),
+        if (!isBL) pw.Container(),
       ]);
     }
 
@@ -333,13 +349,15 @@ class PdfService {
       pw.Padding(
           padding: const pw.EdgeInsets.all(5),
           child: pw.Text(col1, textAlign: pw.TextAlign.right)),
-      pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(col2, textAlign: pw.TextAlign.right)),
-      pw.Padding(
-          padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(FormatUtils.currency(l.totalLigne),
-              textAlign: pw.TextAlign.right)),
+      if (!isBL)
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(col2, textAlign: pw.TextAlign.right)),
+      if (!isBL)
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(5),
+            child: pw.Text(FormatUtils.currency(l.totalLigne),
+                textAlign: pw.TextAlign.right)),
     ]);
   }
 
@@ -518,6 +536,16 @@ class PdfService {
         pw.Text(ent!.mentionsLegales!,
             style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey),
             textAlign: pw.TextAlign.center),
+
+      // MENTIONS TVA
+      if (ent?.tvaApplicable == true && ent?.numeroTvaIntra != null)
+        pw.Text("TVA Intracommunautaire : ${ent!.numeroTvaIntra}",
+            style: const pw.TextStyle(fontSize: 8, color: _darkGrey)),
+
+      if (ent?.tvaApplicable == false)
+        pw.Text("TVA non applicable, art. 293 B du CGI",
+            style: const pw.TextStyle(fontSize: 8, color: _darkGrey)),
+
       pw.Text("Document généré par Artisan 3.0",
           style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
     ]);

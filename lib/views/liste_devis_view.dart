@@ -45,7 +45,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
     });
   }
 
-  Future<void> _genererPDF(Devis d) async {
+  Future<void> _genererPDF(Devis d, {String docType = "DEVIS"}) async {
     final clientVM = Provider.of<ClientViewModel>(context, listen: false);
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
 
@@ -63,12 +63,14 @@ class _ListeDevisViewState extends State<ListeDevisView>
 
     if (!mounted) return;
 
-    final bytes = await PdfService.generateDevis(d, client, entVM.profil);
+    final bytes = await PdfService.generateDocument(d, client, entVM.profil,
+        docType: docType);
 
     if (!mounted) return;
 
     await Printing.layoutPdf(
-        onLayout: (format) async => bytes, name: 'Devis_${d.numeroDevis}.pdf');
+        onLayout: (format) async => bytes,
+        name: '${docType.replaceAll(" ", "_")}_${d.numeroDevis}.pdf');
   }
 
   void _showTransformationDialog(Devis d) async {
@@ -206,6 +208,8 @@ class _ListeDevisViewState extends State<ListeDevisView>
                 icon: const Icon(Icons.more_vert, color: Colors.grey),
                 onSelected: (val) {
                   if (val == 'pdf') _genererPDF(d);
+                  if (val == 'bl') _genererPDF(d, docType: "BON DE LIVRAISON");
+                  if (val == 'bc') _genererPDF(d, docType: "BON DE COMMANDE");
                   if (val == 'facture') _showTransformationDialog(d);
                   if (val == 'archive') {
                     Provider.of<DevisViewModel>(context, listen: false)
@@ -218,6 +222,12 @@ class _ListeDevisViewState extends State<ListeDevisView>
                 },
                 itemBuilder: (ctx) => [
                   const PopupMenuItem(value: 'pdf', child: Text("Voir PDF")),
+                  if (d.statut == 'signe') ...[
+                    const PopupMenuItem(
+                        value: 'bl', child: Text("Bon de Livraison")),
+                    const PopupMenuItem(
+                        value: 'bc', child: Text("Bon de Commande")),
+                  ],
                   if (d.statut == 'signe' || d.statut == 'envoye')
                     const PopupMenuItem(
                         value: 'facture', child: Text("Créer Facture")),

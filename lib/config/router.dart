@@ -145,6 +145,7 @@ class AppRouter {
           path: '/app/ajout_facture',
           builder: (context, state) {
             final sourceDevisId = state.uri.queryParameters['source_devis'];
+            final sourceFactureId = state.uri.queryParameters['source_facture'];
             final fromTransformation =
                 state.uri.queryParameters['from_transformation'] == 'true';
 
@@ -158,7 +159,8 @@ class AppRouter {
                 return AjoutFactureView(factureAModifier: draftFacture);
               }
             }
-            return AjoutFactureView(sourceDevisId: sourceDevisId);
+            return AjoutFactureView(
+                sourceDevisId: sourceDevisId, sourceFactureId: sourceFactureId);
           },
         ),
         GoRoute(

@@ -36,9 +36,14 @@ class AjoutFactureView extends StatefulWidget {
   final String? id;
   final Facture? factureAModifier;
   final String? sourceDevisId;
+  final String? sourceFactureId;
 
   const AjoutFactureView(
-      {super.key, this.id, this.factureAModifier, this.sourceDevisId});
+      {super.key,
+      this.id,
+      this.factureAModifier,
+      this.sourceDevisId,
+      this.sourceFactureId});
 
   @override
   State<AjoutFactureView> createState() => _AjoutFactureViewState();
@@ -171,7 +176,58 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         _conditionsCtrl = TextEditingController();
       }
     }
-    // Cas 3 : Nouvelle Facture Vierge
+    // Cas 3 : Création Avoir depuis Facture
+    else if (widget.sourceFactureId != null) {
+      final factureVM = Provider.of<FactureViewModel>(context, listen: false);
+      try {
+        final source = factureVM.factures
+            .firstWhere((f) => f.id == widget.sourceFactureId);
+        _typeFacture = 'avoir';
+        _numeroCtrl = TextEditingController(text: "Brouillon Avoir");
+        _objetCtrl = TextEditingController(
+            text: "Avoir sur facture ${source.numeroFacture}");
+        _notesCtrl = TextEditingController(text: source.notesPubliques ?? "");
+        _conditionsCtrl =
+            TextEditingController(text: source.conditionsReglement);
+        _dateEmission = DateTime.now();
+        _dateEcheance = DateTime.now().add(const Duration(days: 30));
+
+        // On copie les lignes à l'identique
+        _lignes = source.lignes
+            .map((l) => LigneFacture(
+                description: l.description,
+                quantite: l.quantite,
+                prixUnitaire: l.prixUnitaire,
+                totalLigne: l.totalLigne,
+                unite: l.unite,
+                typeActivite: l.typeActivite,
+                type: l.type,
+                ordre: l.ordre,
+                estGras: l.estGras,
+                estItalique: l.estItalique,
+                estSouligne: l.estSouligne,
+                tauxTva: l.tauxTva)) // Copie taux TVA
+            .toList();
+
+        _chiffrage = List.from(source.chiffrage);
+        _remiseTaux = source.remiseTaux;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+          try {
+            final client =
+                clientVM.clients.firstWhere((c) => c.id == source.clientId);
+            setState(() => _selectedClient = client);
+          } catch (_) {}
+        });
+      } catch (e) {
+        _numeroCtrl = TextEditingController(text: "Erreur Source");
+        _objetCtrl = TextEditingController();
+        _notesCtrl = TextEditingController();
+        _conditionsCtrl = TextEditingController();
+      }
+    }
+    // Cas 4 : Nouvelle Facture Vierge
     else {
       _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();

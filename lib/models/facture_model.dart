@@ -130,6 +130,7 @@ class Facture {
   final String objet;
   final String clientId;
   final String? devisSourceId;
+  final String? factureSourceId; // Pour les Avoirs
   final DateTime dateEmission;
   final DateTime dateEcheance;
   final DateTime? dateValidation;
@@ -171,6 +172,7 @@ class Facture {
     required this.objet,
     required this.clientId,
     this.devisSourceId,
+    this.factureSourceId,
     required this.dateEmission,
     required this.dateEcheance,
     this.dateValidation,
@@ -203,6 +205,7 @@ class Facture {
       objet: map['objet'] ?? '',
       clientId: map['client_id'],
       devisSourceId: map['devis_source_id'],
+      factureSourceId: map['facture_source_id'],
       dateEmission: DateTime.parse(map['date_emission']),
       dateEcheance: DateTime.parse(map['date_echeance']),
       dateValidation: map['date_validation'] != null
@@ -251,6 +254,7 @@ class Facture {
       'objet': objet,
       'client_id': clientId,
       'devis_source_id': devisSourceId,
+      'facture_source_id': factureSourceId,
       'date_emission': dateEmission.toIso8601String(),
       'date_echeance': dateEcheance.toIso8601String(),
       'date_validation': dateValidation?.toIso8601String(),
@@ -279,6 +283,7 @@ class Facture {
     String? objet,
     String? clientId,
     String? devisSourceId,
+    String? factureSourceId,
     DateTime? dateEmission,
     DateTime? dateEcheance,
     DateTime? dateValidation,
@@ -308,6 +313,7 @@ class Facture {
       objet: objet ?? this.objet,
       clientId: clientId ?? this.clientId,
       devisSourceId: devisSourceId ?? this.devisSourceId,
+      factureSourceId: factureSourceId ?? this.factureSourceId,
       dateEmission: dateEmission ?? this.dateEmission,
       dateEcheance: dateEcheance ?? this.dateEcheance,
       dateValidation: dateValidation ?? this.dateValidation,

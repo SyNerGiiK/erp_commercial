@@ -82,7 +82,18 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   void _initData() async {
     // Cas 1 : Modification Facture existante
     if (widget.factureAModifier != null) {
-      final f = widget.factureAModifier!;
+      Facture f = widget.factureAModifier!;
+
+      // Tentative de récupération fraîche
+      if (widget.id != null) {
+        final vm = Provider.of<FactureViewModel>(context, listen: false);
+        try {
+          final fresh =
+              vm.factures.firstWhere((element) => element.id == widget.id);
+          f = fresh;
+        } catch (_) {}
+      }
+
       _numeroCtrl = TextEditingController(text: f.numeroFacture);
       _objetCtrl = TextEditingController(text: f.objet);
       _typeFacture = f.type;
@@ -96,7 +107,14 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
 
       _remiseTaux = f.remiseTaux;
       _acompteDejaRegle = f.acompteDejaRegle;
+
+      // Init Signature (Clean URL handled display-side)
       _signatureUrl = f.signatureUrl;
+      if (_signatureUrl != null && !_signatureUrl!.contains('?')) {
+        // Add timestamp for display only
+        _signatureUrl =
+            "$_signatureUrl?t=${DateTime.now().millisecondsSinceEpoch}";
+      }
       _dateSignature = f.dateSignature;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -320,10 +338,29 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       setState(() {
         // Je force un refresh visuel en supposant que l'URL est celle standard
         final userId = SupabaseConfig.userId;
+        // On construit une URL théorique, mais idéalement on devrait récupérer celle du serveur si différente
+        // Pour l'instant on fait comme AjoutDevis : on fetch pas, on force l'affichage
+        // Mais attention : Si on save, il faut que l'URL soit clean.
+        // On va tricher : on ne set PAS _signatureUrl ici car on ne veut pas l'afficher tant qu'on a pas rechargé ?
+        // Non, on veut voir la signature.
         _signatureUrl =
             "${SupabaseConfig.client.storage.from('documents').getPublicUrl('$userId/factures/${widget.id}/signature.png')}?t=${DateTime.now().millisecondsSinceEpoch}";
         _dateSignature = DateTime.now();
       });
+
+      // Petit hack pour recharger la facture depuis le serveur pour être sûr d'avoir les bonnes infos
+      // le VM a déjà fait fetchFactures() ? Oui dans uploadSignature.
+      // Donc on peut essayer de refresh depuis le VM
+      try {
+        final updated = vm.factures.firstWhere((f) => f.id == widget.id);
+        setState(() {
+          if (updated.signatureUrl != null) {
+            _signatureUrl =
+                "${updated.signatureUrl}?t=${DateTime.now().millisecondsSinceEpoch}";
+          }
+          _dateSignature = updated.dateSignature;
+        });
+      } catch (e) {}
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erreur lors de la signature")));
@@ -338,30 +375,31 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     final vm = Provider.of<FactureViewModel>(context, listen: false);
 
     final factureToSave = Facture(
-        id: widget.id,
-        userId: SupabaseConfig.userId,
-        numeroFacture: _numeroCtrl.text,
-        objet: _objetCtrl.text,
-        clientId: _selectedClient!.id!,
-        devisSourceId:
-            widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
-        dateEmission: _dateEmission,
-        dateEcheance: _dateEcheance,
-        statut: widget.factureAModifier?.statut ?? 'brouillon',
-        statutJuridique:
-            widget.factureAModifier?.statutJuridique ?? 'brouillon',
-        type: _typeFacture,
-        totalHt: _totalHT,
-        remiseTaux: _remiseTaux,
-        acompteDejaRegle: _acompteDejaRegle,
-        conditionsReglement: _conditionsCtrl.text,
-        notesPubliques: _notesCtrl.text,
-        tvaIntra:
-            widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
-        lignes: _lignes,
-        paiements: _paiements,
-        chiffrage: _chiffrage,
-        estArchive: widget.factureAModifier?.estArchive ?? false);
+      id: widget.id,
+      userId: SupabaseConfig.userId,
+      numeroFacture: _numeroCtrl.text,
+      objet: _objetCtrl.text,
+      clientId: _selectedClient!.id!,
+      devisSourceId:
+          widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
+      dateEmission: _dateEmission,
+      dateEcheance: _dateEcheance,
+      statut: widget.factureAModifier?.statut ?? 'brouillon',
+      statutJuridique: widget.factureAModifier?.statutJuridique ?? 'brouillon',
+      type: _typeFacture,
+      totalHt: _totalHT,
+      remiseTaux: _remiseTaux,
+      acompteDejaRegle: _acompteDejaRegle,
+      conditionsReglement: _conditionsCtrl.text,
+      notesPubliques: _notesCtrl.text,
+      tvaIntra: widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
+      lignes: _lignes,
+      paiements: _paiements,
+      chiffrage: _chiffrage,
+      estArchive: widget.factureAModifier?.estArchive ?? false,
+      signatureUrl: _signatureUrl?.split('?').first,
+      dateSignature: _dateSignature,
+    );
 
     bool success;
     if (widget.id == null) {

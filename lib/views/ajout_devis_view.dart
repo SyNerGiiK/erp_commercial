@@ -84,7 +84,19 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
   }
 
   void _initData() {
-    final d = widget.devisAModifier;
+    Devis? d = widget.devisAModifier;
+
+    // Tentative de récupération de la version la plus récente depuis le ViewModel
+    if (widget.id != null) {
+      final vm = Provider.of<DevisViewModel>(context, listen: false);
+      try {
+        final fresh = vm.devis.firstWhere((element) => element.id == widget.id);
+        d = fresh;
+      } catch (_) {
+        // Pas trouvé dans le VM (peut-être pas encore chargé), on garde widget.devisAModifier
+      }
+    }
+
     if (d != null) {
       _numeroCtrl = TextEditingController(text: d.numeroDevis);
       _objetCtrl = TextEditingController(text: d.objet);
@@ -110,12 +122,21 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
 
       // Init Statut
       _statut = d.statut;
+      // Init Signature (Clean URL handled display-side)
+      _signatureUrl = d.signatureUrl;
+      if (_signatureUrl != null && !_signatureUrl!.contains('?')) {
+        // Add timestamp for display only
+        _signatureUrl =
+            "$_signatureUrl?t=${DateTime.now().millisecondsSinceEpoch}";
+      }
+      _dateSignature = d.dateSignature;
 
       // Charger le client si on a l'ID
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
         try {
-          final client = clientVM.clients.firstWhere((c) => c.id == d.clientId);
+          final client =
+              clientVM.clients.firstWhere((c) => c.id == d!.clientId);
           setState(() => _selectedClient = client);
         } catch (_) {
           // Client non trouvé (peut-être supprimé ou liste non chargée)
@@ -125,8 +146,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     } else {
       _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();
-      _notesCtrl = TextEditingController();
-      _notesCtrl = TextEditingController();
+      _notesCtrl = TextEditingController(); // Fixed duplicate line
       _conditionsCtrl = TextEditingController(text: "Paiement à réception");
       _statut = 'brouillon';
     }
@@ -252,7 +272,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       chiffrage: _chiffrage,
       // On conserve les champs non éditables ici
       // On utilise les variables d'état qui peuvent avoir été mises à jour par _signerClient
-      signatureUrl: _signatureUrl,
+      // IMPORTANT : On nettoie l'URL de tout paramètre (timestamp) avant sauvegarde
+      signatureUrl: _signatureUrl?.split('?').first,
       dateSignature: _dateSignature,
       estTransforme: widget.devisAModifier?.estTransforme ?? false,
       estArchive: widget.devisAModifier?.estArchive ?? false,
@@ -377,13 +398,26 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signature enregistrée !")));
-      setState(() {
-        final userId = SupabaseConfig.userId;
-        _signatureUrl =
-            "${SupabaseConfig.client.storage.from('documents').getPublicUrl('$userId/devis/${widget.id}/signature.png')}?t=${DateTime.now().millisecondsSinceEpoch}";
-        _dateSignature = DateTime.now();
-        _statut = 'signe';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signature enregistrée !")));
+
+      // Récupérer le devis mis à jour depuis le VM pour avoir l'URL correcte
+      try {
+        final updatedDevis = vm.devis.firstWhere((d) => d.id == widget.id);
+        setState(() {
+          // On ajoute un timestamp pour forcer le rafraîchissement du cache navigateur
+          if (updatedDevis.signatureUrl != null) {
+            _signatureUrl =
+                "${updatedDevis.signatureUrl}?t=${DateTime.now().millisecondsSinceEpoch}";
+          } else {
+            _signatureUrl = null;
+          }
+          _dateSignature = updatedDevis.dateSignature;
+          _statut = updatedDevis.statut;
+        });
+      } catch (e) {
+        // Fallback si pas trouvé (rare)
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erreur lors de la signature")));
@@ -776,6 +810,10 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
                                   fontStyle: FontStyle.italic,
                                   color: Colors.green),
                             ),
+                            const SizedBox(height: 4),
+                            SelectableText(_signatureUrl ?? 'URL Nulle',
+                                style: const TextStyle(
+                                    fontSize: 10, color: Colors.grey)), // DEBUG
                           ] else
                             const Padding(
                               padding: EdgeInsets.all(16.0),

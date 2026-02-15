@@ -6,7 +6,8 @@ import '../../models/paiement_model.dart';
 import '../custom_text_field.dart';
 
 class PaiementDialog extends StatefulWidget {
-  const PaiementDialog({super.key});
+  final bool isAcompteDefault;
+  const PaiementDialog({super.key, this.isAcompteDefault = false});
 
   @override
   State<PaiementDialog> createState() => _PaiementDialogState();
@@ -18,8 +19,15 @@ class _PaiementDialogState extends State<PaiementDialog> {
   final _commentaireCtrl = TextEditingController();
   DateTime _datePaiement = DateTime.now();
   String _typePaiement = 'virement';
+  late bool _isAcompte;
 
   final List<String> _types = ['virement', 'cheque', 'especes', 'cb', 'autre'];
+
+  @override
+  void initState() {
+    super.initState();
+    _isAcompte = widget.isAcompteDefault;
+  }
 
   @override
   void dispose() {
@@ -40,6 +48,7 @@ class _PaiementDialogState extends State<PaiementDialog> {
         datePaiement: _datePaiement,
         typePaiement: _typePaiement,
         commentaire: _commentaireCtrl.text,
+        isAcompte: _isAcompte,
       );
 
       Navigator.pop(context, paiement);

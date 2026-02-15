@@ -167,7 +167,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         _chiffrage = List.from(devis.chiffrage);
 
         _remiseTaux = devis.remiseTaux;
-        _acompteDejaRegle = devis.acompteMontant;
+        // FIX: On ne pré-remplit PAS _acompteDejaRegle avec le montant du devis.
+        // Pourquoi ? Parce que si une facture d'acompte a été créée et payée,
+        // ce montant sera récupéré via _historiqueReglements.
+        // Si on le laisse ici, on le déduirait DEUX FOIS (une fois via ce champ, une fois via l'historique).
+        _acompteDejaRegle = Decimal.zero;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -176,6 +180,15 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 clientVM.clients.firstWhere((c) => c.id == devis.clientId);
             setState(() => _selectedClient = client);
           } catch (_) {}
+        });
+
+        // Charger l'historique des règlements (acomptes précédents)
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final vm = Provider.of<FactureViewModel>(context, listen: false);
+          // On passe null comme 2e argument car la facture n'est pas encore créée (donc pas d'ID à exclure)
+          final hist = await vm.calculateHistoriqueReglements(devis.id!, "");
+          if (!mounted) return;
+          setState(() => _historiqueReglements = hist);
         });
       } catch (e) {
         _numeroCtrl = TextEditingController(text: "Erreur Devis");
@@ -267,9 +280,10 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
 
   // NEW: GESTION PAIEMENTS
   Future<void> _ajouterPaiement() async {
+    final isAcompteInvoice = _typeFacture == 'acompte';
     final nouveauPaiement = await showDialog<Paiement>(
       context: context,
-      builder: (_) => const PaiementDialog(),
+      builder: (_) => PaiementDialog(isAcompteDefault: isAcompteInvoice),
     );
 
     if (nouveauPaiement != null) {
@@ -389,7 +403,8 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       type: _typeFacture,
       totalHt: _totalHT,
       remiseTaux: _remiseTaux,
-      acompteDejaRegle: _acompteDejaRegle,
+      // IMPORTANT: On sauvegarde la somme de l'acompte initial (Devis) ET des règlements des factures liées (Situations)
+      acompteDejaRegle: _acompteDejaRegle + _historiqueReglements,
       conditionsReglement: _conditionsCtrl.text,
       notesPubliques: _notesCtrl.text,
       tvaIntra: widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
@@ -425,12 +440,13 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
           for (var oldP in oldPaiements) {
             final stillExists = _paiements.any((newP) => newP.id == oldP.id);
             if (!stillExists && oldP.id != null) {
-              await vm.deletePaiement(oldP.id!);
+              await vm.deletePaiement(oldP.id!, widget.id);
             }
           }
         } catch (e) {
-          // print("Erreur sync paiements: $e");
-          // On ne bloque pas le succès global mais on pourrait notifier
+          // Erreur non critique : La synchronisation des paiements a échoué partiellement,
+          // mais la facture principale est sauvegardée. On ne bloque pas l'utilisateur.
+          // developer.log("Erreur sync paiements", error: e);
         }
       }
     }
@@ -836,19 +852,24 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
 
                       // NEW: SECTION PAIEMENTS / RÈGLEMENTS
                       AppCard(
-                        title: Row(
-                          children: [
-                            const Text("RÈGLEMENTS / PAIEMENTS REÇUS"),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: _ajouterPaiement,
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text("Ajouter"),
-                            )
-                          ],
-                        ),
                         child: Column(
                           children: [
+                            Row(
+                              children: [
+                                const Text("RÈGLEMENTS / PAIEMENTS REÇUS",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: AppTheme.textDark)),
+                                const Spacer(),
+                                TextButton.icon(
+                                  onPressed: _ajouterPaiement,
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text("Ajouter"),
+                                )
+                              ],
+                            ),
+                            const Divider(),
                             if (_paiements.isEmpty)
                               const Padding(
                                 padding: EdgeInsets.all(8.0),

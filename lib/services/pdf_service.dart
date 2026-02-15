@@ -102,7 +102,9 @@ class PdfService {
 
     final totalRegle =
         facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-    final reste = netAPayer - totalRegle; // Decimal
+
+    // FIX: On déduit aussi les acomptes déjà réglés sur les factures précédentes (situations)
+    final reste = netAPayer - facture.acompteDejaRegle - totalRegle; // Decimal
 
     final signatureClientBytes = await _downloadImage(facture.signatureUrl);
 
@@ -362,40 +364,59 @@ class PdfService {
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       child: pw.Container(
-        width: 200,
+        width: 250, // Elargi pour libellé plus long
         child: pw.Column(children: [
           _buildTotalRow("Total HT", totalHt),
           if (remise > Decimal.zero)
             _buildTotalRow("Remise ($remise%)", remiseMontant,
                 isNegative: true),
           pw.Divider(),
-          _buildTotalRow("NET À PAYER", netCommercial, isBold: true),
+          // Affichage Net Commercial (HT - Remise)
+          _buildTotalRow("Net Commercial", netCommercial, isBold: false),
+
+          // Si facture, on affiche les acomptes déduits
+          if (!isDevis && acompte > Decimal.zero)
+            _buildTotalRow("Acomptes / Situations", acompte, isNegative: true),
+
+          pw.Divider(),
+
+          // Net à Payer = Net Commercial - Acomptes
+          _buildTotalRow(isDevis ? "NET À PAYER (Estimé)" : "NET À PAYER",
+              netCommercial - (isDevis ? Decimal.zero : acompte),
+              isBold: true),
+
+          // Pour Devis seulement : Acompte demandé
           if (isDevis && acompte > Decimal.zero)
             _buildTotalRow("Acompte demandé", acompte),
+
+          // Pour Facture : Déjà réglé (paiements reçus sur cette facture spécifique)
           if (!isDevis && dejaRegle != null && dejaRegle > Decimal.zero)
-            _buildTotalRow("Déjà réglé", dejaRegle),
+            _buildTotalRow("Déjà réglé (Paiements)", dejaRegle,
+                isNegative: true),
+
+          // Reste à Payer Final
           if (!isDevis && resteAPayer != null)
-            _buildTotalRow("Reste à Payer", resteAPayer, isBold: true),
+            _buildTotalRow("Reste à Payer", resteAPayer,
+                isBold: true, isRed: true),
         ]),
       ),
     );
   }
 
   static pw.Widget _buildTotalRow(String label, Decimal? amount,
-      {bool isBold = false, bool isNegative = false}) {
-    return pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(label,
-              style: pw.TextStyle(
-                  fontWeight:
-                      isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-          if (amount != null)
-            pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
-                style: pw.TextStyle(
-                    fontWeight:
-                        isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-        ]);
+      {bool isBold = false, bool isNegative = false, bool isRed = false}) {
+    return pw
+        .Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+      pw.Text(label,
+          style: pw.TextStyle(
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: isRed ? PdfColors.red : PdfColors.black)),
+      if (amount != null)
+        pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
+            style: pw.TextStyle(
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: isRed ? PdfColors.red : PdfColors.black)),
+    ]);
   }
 
   static pw.Widget _buildPaiementsTable(List<Paiement> paiements) {

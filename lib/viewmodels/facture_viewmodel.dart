@@ -97,24 +97,38 @@ class FactureViewModel extends ChangeNotifier {
     try {
       final userId = SupabaseConfig.userId;
 
-      // On récupère toutes les factures liées à ce devis
-      final response = await _client
+      var query = _client
           .from('factures')
           .select('*, paiements(*)')
           .eq('user_id', userId)
-          .eq('devis_source_id', devisSourceId)
-          .neq('id', excludeFactureId); // On exclut la facture courante
+          .eq('devis_source_id', devisSourceId);
+
+      if (excludeFactureId.isNotEmpty) {
+        query = query.neq('id', excludeFactureId);
+      }
+
+      final response = await query;
 
       final linkedFactures =
           (response as List).map((e) => Facture.fromMap(e)).toList();
 
+      developer.log(
+          "CALCUL HISTORIQUE: DevisID=$devisSourceId, ExcludeID=$excludeFactureId");
+      developer.log(
+          "CALCUL HISTORIQUE: ${linkedFactures.length} factures liées trouvées");
+
       Decimal total = Decimal.zero;
       for (var f in linkedFactures) {
+        developer.log(
+            "  - Facture ${f.numeroFacture} (ID: ${f.id}, Type: ${f.type})");
         // On additionne les paiements reçus sur ces factures
         for (var p in f.paiements) {
+          developer.log(
+              "    -> Paiement: ${p.montant} (Date: ${p.datePaiement}, isAcompte: ${p.isAcompte})");
           total += p.montant;
         }
       }
+      developer.log("CALCUL HISTORIQUE: TOTAL = $total");
       return total;
     } catch (e) {
       developer.log("Erreur calcul historique règlements", error: e);
@@ -128,14 +142,57 @@ class FactureViewModel extends ChangeNotifier {
     return await _executeOperation(() async {
       await _repository.addPaiement(paiement);
       await fetchFactures();
+
+      // Auto-update status check
+      await _checkUpdateStatusPayee(paiement.factureId);
     });
   }
 
-  Future<bool> deletePaiement(String paiementId) async {
+  Future<bool> deletePaiement(String paiementId, String? factureId) async {
     return await _executeOperation(() async {
       await _repository.deletePaiement(paiementId);
       await fetchFactures();
+
+      if (factureId != null) {
+        await _checkUpdateStatusPayee(factureId);
+      }
     });
+  }
+
+  /// Vérifie si la facture est entièrement payée et met à jour le statut
+  Future<void> _checkUpdateStatusPayee(String factureId) async {
+    try {
+      // On cherche la facture dans la liste à jour
+      final facture = _factures.firstWhere((f) => f.id == factureId);
+
+      // Si elle est brouillon ou annulée, on ne touche pas
+      if (facture.statut == 'brouillon' || facture.statut == 'annulee') return;
+
+      // Calcul du Reste à Payer
+      final totalRegle =
+          facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+
+      final remiseAmount =
+          (facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100);
+      final netCommercial = facture.totalHt - remiseAmount.toDecimal();
+
+      final reste = netCommercial - facture.acompteDejaRegle - totalRegle;
+
+      // Tolérance pour les erreurs d'arrondi décimales infimes
+      final isPaid = reste <= Decimal.parse('0.01');
+
+      if (isPaid && facture.statut != 'payee') {
+        final updated = facture.copyWith(statut: 'payee');
+        await _repository.updateFacture(updated);
+        await fetchFactures();
+      } else if (!isPaid && facture.statut == 'payee') {
+        final updated = facture.copyWith(statut: 'validee');
+        await _repository.updateFacture(updated);
+        await fetchFactures();
+      }
+    } catch (e) {
+      developer.log("Error updating status payee", error: e);
+    }
   }
 
   // --- SIGNATURE ---

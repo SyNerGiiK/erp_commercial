@@ -701,10 +701,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
 
                     // ACOMPTE
                     AppCard(
-                      title: const Text("Acompte demandé"),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const Text("Acompte demandé",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Divider(),
                           const Text("Pourcentage de l'acompte :",
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 10),
@@ -789,9 +792,12 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
 
                     // SIGNATURE CLIENT
                     AppCard(
-                      title: const Text("Signature Client"),
                       child: Column(
                         children: [
+                          const Text("Signature Client",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Divider(),
                           if (_signatureUrl != null) ...[
                             Image.network(
                               _signatureUrl!,

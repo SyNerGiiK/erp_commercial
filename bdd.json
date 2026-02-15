@@ -567,6 +567,27 @@
     "key_type": null
   },
   {
+    "table_name": "entreprises",
+    "column_name": "type_entreprise",
+    "data_type": "character varying",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "regime_fiscal",
+    "data_type": "character varying",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "entreprises",
+    "column_name": "caisse_retraite",
+    "data_type": "character varying",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
     "table_name": "factures",
     "column_name": "id",
     "data_type": "uuid",
@@ -1333,6 +1354,391 @@
     "table_name": "urssaf_configs",
     "column_name": "created_at",
     "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "accre_annee",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_micro_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_micro_service_bic",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_micro_service_bnc",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_micro_liberal_cipav",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_micro_meubles",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_micro_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_micro_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_micro_liberal",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "plafond_ca_micro_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "plafond_ca_micro_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "seuil_tva_micro_vente",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "seuil_tva_micro_service",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "abattement_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "abattement_min_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "abattement_max_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_maladie_tns_min",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_maladie_tns_max",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_ij_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_base_tns_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_base_tns_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_tns_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_tns_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_invalidite_deces_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_alloc_fam_tns_min",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_alloc_fam_tns_max",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_csg_crds_tns",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_artisan",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_cfp_commercant",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_vieillesse_sal_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_vieillesse_sal_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_sal_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_sal_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_apec_sal",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_csg_deductible",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_csg_non_deductible",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_crds",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_maladie_patronal1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_maladie_patronal2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_vieillesse_pat_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_vieillesse_pat_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_alloc_fam_patronal1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_alloc_fam_patronal2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_chomage_patronal",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_pat_t1",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_retraite_comp_pat_t2",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_apec_pat",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_accident_travail",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_reduction_max50",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_reduction_max50plus",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_csg_dividendes",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_pfu_ir",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_pfu_total",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_is_reduit",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "urssaf_configs",
+    "column_name": "taux_is_normal",
+    "data_type": "numeric",
     "is_nullable": "YES",
     "key_type": null
   }

@@ -1,6 +1,7 @@
 ﻿import 'package:decimal/decimal.dart';
 import 'package:uuid/uuid.dart';
 import 'chiffrage_model.dart';
+import 'config_charges_model.dart';
 
 class LigneDevis {
   final String? id;
@@ -126,6 +127,53 @@ class Devis {
 
   final List<LigneDevis> lignes;
   final List<LigneChiffrage> chiffrage;
+
+  // --- GETTERS ANALYSE DE RENTABILITÉ ---
+
+  /// Total des achats (matières premières)
+  Decimal get totalAchats =>
+      chiffrage.fold(Decimal.zero, (sum, ligne) => sum + ligne.totalAchat);
+
+  /// Marge brute (CA - Achats)
+  Decimal get margeBrute => totalHt - totalAchats;
+
+  /// Taux de marge brute en %
+  Decimal get tauxMargeBrute {
+    if (totalHt <= Decimal.zero) return Decimal.zero;
+    // Division returns Rational -> toDecimal()
+    final tauxRational = (margeBrute * Decimal.fromInt(100)) / totalHt;
+    return tauxRational.toDecimal();
+  }
+
+  /// Net commercial (HT - Remise)
+  Decimal get netCommercial {
+    final remiseRational = (totalHt * remiseTaux) / Decimal.fromInt(100);
+    final remiseMontant = remiseRational.toDecimal();
+    return totalHt - remiseMontant;
+  }
+
+  /// Calcule le montant total des charges sociales
+  Decimal calculerChargesSociales(ConfigCharges config) {
+    return config.calculerCharges(netCommercial);
+  }
+
+  /// Calcule le détail des charges par type
+  Map<String, Decimal> calculerDetailCharges(ConfigCharges config) {
+    return config.calculerDetailCharges(netCommercial);
+  }
+
+  /// Calcule le résultat net (Marge brute - Charges sociales)
+  Decimal calculerResultatNet(ConfigCharges config) {
+    return margeBrute - calculerChargesSociales(config);
+  }
+
+  /// Taux de résultat net en %
+  Decimal calculerTauxResultatNet(ConfigCharges config) {
+    if (totalHt <= Decimal.zero) return Decimal.zero;
+    final resultat = calculerResultatNet(config);
+    final tauxRational = (resultat * Decimal.fromInt(100)) / totalHt;
+    return tauxRational.toDecimal();
+  }
 
   Devis({
     this.id,

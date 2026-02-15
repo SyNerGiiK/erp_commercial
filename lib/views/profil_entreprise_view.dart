@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import '../config/theme.dart';
 import '../models/entreprise_model.dart';
+import '../models/enums/entreprise_enums.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
@@ -36,6 +37,9 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _mentionsController = TextEditingController();
 
   String _frequenceCotisation = 'mois';
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurServiceBIC;
+  RegimeFiscal? _regimeFiscal;
+  CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
 
   @override
   void initState() {
@@ -66,6 +70,9 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       _mentionsController.text = p.mentionsLegales ?? "";
       setState(() {
         _frequenceCotisation = p.frequenceCotisation;
+        _typeEntreprise = p.typeEntreprise;
+        _regimeFiscal = p.regimeFiscal;
+        _caisseRetraite = p.caisseRetraite;
       });
     }
   }
@@ -112,6 +119,9 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       mentionsLegales: _mentionsController.text.trim(),
       logoUrl: existingLogo,
       signatureUrl: existingSignature,
+      typeEntreprise: _typeEntreprise,
+      regimeFiscal: _regimeFiscal,
+      caisseRetraite: _caisseRetraite,
     );
 
     final success = await vm.saveProfil(profilToSave);
@@ -237,6 +247,27 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         label: "SIRET",
                         controller: _siretController,
                         validator: (v) => v!.isEmpty ? "SIRET requis" : null),
+                    const SizedBox(height: 20),
+
+                    // TYPE D'ENTREPRISE
+                    DropdownButtonFormField<TypeEntreprise>(
+                      key: ValueKey(_typeEntreprise),
+                      value: _typeEntreprise,
+                      decoration: InputDecoration(
+                        labelText: "Type d'entreprise (régime fiscal)",
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: TypeEntreprise.values
+                          .map((type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.label),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _typeEntreprise = v!),
+                    ),
                     const SizedBox(height: 10),
                     CustomTextField(
                         label: "Email contact",
@@ -313,6 +344,53 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                       ],
                       onChanged: (v) =>
                           setState(() => _frequenceCotisation = v!),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // RÉGIME FISCAL (Optionnel)
+                    DropdownButtonFormField<RegimeFiscal?>(
+                      key: ValueKey(_regimeFiscal),
+                      value: _regimeFiscal,
+                      decoration: InputDecoration(
+                        labelText: "Régime fiscal (si différent du type)",
+                        hintText: "Déterminé automatiquement",
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                            value: null, child: Text("Auto")),
+                        ...RegimeFiscal.values
+                            .map((r) => DropdownMenuItem(
+                                  value: r,
+                                  child: Text(r.label),
+                                ))
+                            .toList(),
+                      ],
+                      onChanged: (v) => setState(() => _regimeFiscal = v),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // CAISSE RETRAITE
+                    DropdownButtonFormField<CaisseRetraite>(
+                      key: ValueKey(_caisseRetraite),
+                      value: _caisseRetraite,
+                      decoration: InputDecoration(
+                        labelText: "Caisse de retraite",
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: CaisseRetraite.values
+                          .map((c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c.label),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setState(() => _caisseRetraite = v!),
                     ),
 
                     const SizedBox(height: 30),

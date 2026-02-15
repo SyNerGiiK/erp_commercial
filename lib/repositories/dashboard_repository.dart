@@ -5,12 +5,14 @@ import '../config/supabase_config.dart';
 import '../models/facture_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
+import '../models/entreprise_model.dart';
 
 abstract class IDashboardRepository {
   Future<List<Facture>> getFacturesPeriod(DateTime start, DateTime end);
   Future<List<Facture>> getAllFacturesYear(int year);
   Future<List<Depense>> getDepensesPeriod(DateTime start, DateTime end);
   Future<UrssafConfig> getUrssafConfig();
+  Future<ProfilEntreprise?> getProfilEntreprise();
 }
 
 class DashboardRepository implements IDashboardRepository {
@@ -69,6 +71,23 @@ class DashboardRepository implements IDashboardRepository {
     } catch (e) {
       developer.log("⚠️ Pas de config URSSAF trouvée, utilisation défaut.");
       return UrssafConfig();
+    }
+  }
+
+  @override
+  Future<ProfilEntreprise?> getProfilEntreprise() async {
+    try {
+      final userId = SupabaseConfig.userId;
+      final response = await _client
+          .from('entreprises')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      return response != null ? ProfilEntreprise.fromMap(response) : null;
+    } catch (e) {
+      developer.log("⚠️ Pas de profil entreprise trouvé.", error: e);
+      return null;
     }
   }
 

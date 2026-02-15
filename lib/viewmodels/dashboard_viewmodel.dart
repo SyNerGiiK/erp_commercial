@@ -6,6 +6,8 @@ import '../repositories/dashboard_repository.dart';
 import '../models/facture_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
+import '../models/entreprise_model.dart';
+import '../models/enums/entreprise_enums.dart';
 
 enum DashboardPeriod { mois, trimestre, annee }
 
@@ -50,21 +52,23 @@ class DashboardViewModel extends ChangeNotifier {
       final dates = _getDatesForPeriod(_selectedPeriod, now);
 
       // --- OPTIMISATION PERFORMANCE ---
-      // Lancement des 3 requêtes en PARALLÈLE
+      // Lancement des 4 requêtes en PARALLÈLE
       final results = await Future.wait([
         _repository.getFacturesPeriod(
             dates['start']!, dates['end']!), // Index 0
         _repository.getDepensesPeriod(
             dates['start']!, dates['end']!), // Index 1
         _repository.getUrssafConfig(), // Index 2
+        _repository.getProfilEntreprise(), // Index 3
       ]);
 
       final factures = results[0] as List<Facture>;
       final depenses = results[1] as List<Depense>;
       final urssafConfig = results[2] as UrssafConfig;
+      final profilEntreprise = results[3] as ProfilEntreprise?;
 
       // --- CALCULS LOCAUX ---
-      _calculateKPI(factures, depenses, urssafConfig, dates);
+      _calculateKPI(factures, depenses, urssafConfig, profilEntreprise, dates);
       _generateGraphData(factures);
     } catch (e, s) {
       developer.log("🔴 Erreur Dashboard VM", error: e, stackTrace: s);
@@ -74,8 +78,12 @@ class DashboardViewModel extends ChangeNotifier {
     }
   }
 
-  void _calculateKPI(List<Facture> factures, List<Depense> depenses,
-      UrssafConfig urssaf, Map<String, DateTime> dates) {
+  void _calculateKPI(
+      List<Facture> factures,
+      List<Depense> depenses,
+      UrssafConfig urssaf,
+      ProfilEntreprise? profil,
+      Map<String, DateTime> dates) {
     final start = dates['start']!;
     final end = dates['end']!;
 
@@ -92,11 +100,40 @@ class DashboardViewModel extends ChangeNotifier {
       }
     }
 
-    // 2. Calcul des cotisations (Estimatif)
-    if (_caEncaissePeriode > Decimal.zero) {
-      final taux = urssaf.tauxPrestation;
-      final cotis = (_caEncaissePeriode * taux) / Decimal.fromInt(100);
-      _totalCotisations = cotis.toDecimal();
+    // 2. Calcul des cotisations selon le type d'entreprise
+    if (_caEncaissePeriode > Decimal.zero && profil != null) {
+      final type = profil.typeEntreprise;
+
+      if (type.isMicroEntrepreneur) {
+        // Micro-entrepreneur : calculer sur CA
+        _totalCotisations =
+            urssaf.calculerCotisationsMicro(_caEncaissePeriode, type);
+      } else if (type.isTNS) {
+        // TNS : calculer sur revenu net (CA - charges)
+        final revenuNet = _caEncaissePeriode - _depensesPeriode;
+        if (revenuNet > Decimal.zero) {
+          _totalCotisations = urssaf.calculerCotisationsTNS(revenuNet);
+        }
+      } else if (type.isAssimileSalarie) {
+        // Assimilé salarié : estimation 30% (cotisations patronales + salariales)
+        final revenu = _caEncaissePeriode - _depensesPeriode;
+        if (revenu > Decimal.zero) {
+          _totalCotisations =
+              (revenu * Decimal.fromInt(30) / Decimal.fromInt(100)).toDecimal();
+        }
+      } else {
+        // Fallback : 22% (taux micro moyen)
+        _totalCotisations =
+            (_caEncaissePeriode * Decimal.fromInt(22) / Decimal.fromInt(100))
+                .toDecimal();
+      }
+    } else {
+      // Pas de profil : utiliser estimation par défaut
+      if (_caEncaissePeriode > Decimal.zero) {
+        _totalCotisations =
+            (_caEncaissePeriode * Decimal.fromInt(22) / Decimal.fromInt(100))
+                .toDecimal();
+      }
     }
 
     // 3. Dépenses

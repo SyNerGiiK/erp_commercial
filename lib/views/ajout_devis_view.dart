@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
 import 'dart:typed_data';
 import '../widgets/dialogs/signature_dialog.dart';
+import '../widgets/dialogs/matiere_dialog.dart';
 
 import '../config/theme.dart';
 import '../config/supabase_config.dart';
@@ -13,12 +14,14 @@ import '../models/devis_model.dart';
 import '../models/article_model.dart';
 import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
+import '../models/config_charges_model.dart';
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
 import '../viewmodels/entreprise_viewmodel.dart'; // Added Import
 
 // Services
 import '../services/pdf_service.dart';
+import '../services/preferences_service.dart';
 
 // Widgets
 import '../widgets/base_screen.dart';
@@ -27,6 +30,8 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
+import '../widgets/chiffrage_editor.dart';
+import '../widgets/rentabilite_card.dart';
 
 // Utils
 import '../utils/format_utils.dart';
@@ -42,8 +47,12 @@ class AjoutDevisView extends StatefulWidget {
   State<AjoutDevisView> createState() => _AjoutDevisViewState();
 }
 
-class _AjoutDevisViewState extends State<AjoutDevisView> {
+class _AjoutDevisViewState extends State<AjoutDevisView>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
+  // TabController pour les onglets Devis / Analyse Coûts
+  late TabController _tabController;
 
   // Champs Infos Générales
   late TextEditingController _numeroCtrl;
@@ -61,6 +70,9 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
   // Listes
   List<LigneDevis> _lignes = [];
   List<LigneChiffrage> _chiffrage = [];
+
+  // Configuration des charges sociales
+  ConfigCharges _configCharges = ConfigCharges();
 
   // Totaux & Options
   Decimal _remiseTaux = Decimal.zero;
@@ -80,7 +92,16 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _initData();
+    _loadConfigCharges();
+  }
+
+  Future<void> _loadConfigCharges() async {
+    final config = await PreferencesService.getConfigCharges();
+    setState(() {
+      _configCharges = config;
+    });
   }
 
   void _initData() {
@@ -154,6 +175,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _numeroCtrl.dispose();
     _objetCtrl.dispose();
     _notesCtrl.dispose();
@@ -196,6 +218,51 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
         totalLigne: Decimal.zero,
       ));
     });
+  }
+
+  // --- GESTION MATIÈRES PREMIÈRES ---
+
+  Future<void> _ajouterMatiere() async {
+    final result = await showDialog<LigneChiffrage>(
+      context: context,
+      builder: (_) => const MatiereDialog(),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _chiffrage.add(result);
+      });
+    }
+  }
+
+  Future<void> _modifierMatiere(int index) async {
+    final result = await showDialog<LigneChiffrage>(
+      context: context,
+      builder: (_) => MatiereDialog(ligneExistante: _chiffrage[index]),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _chiffrage[index] = result;
+      });
+    }
+  }
+
+  void _supprimerMatiere(int index) {
+    setState(() {
+      _chiffrage.removeAt(index);
+    });
+  }
+
+  Future<void> _ouvrirConfigCharges() async {
+    // TODO: Créer dialog de config des taux
+    // Pour l'instant, afficher un placeholder
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Configuration des taux bientôt disponible"),
+      ),
+    );
   }
 
   void _ajouterLigneSpeciale(String type) {
@@ -440,438 +507,594 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
       ],
       child: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // EN-TÊTE
-                    Row(
+          : Column(
+              children: [
+                // TAB BAR
+                Container(
+                  color: Colors.white,
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: AppTheme.primary,
+                    labelColor: AppTheme.primary,
+                    unselectedLabelColor: Colors.grey,
+                    tabs: const [
+                      Tab(icon: Icon(Icons.description), text: "Devis"),
+                      Tab(
+                          icon: Icon(Icons.analytics),
+                          text: "Coûts & Rentabilité"),
+                    ],
+                  ),
+                ),
+                // TAB BAR VIEW
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTabDevis(),
+                      _buildTabAnalyse(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  // --- ONGLET DEVIS ---
+  Widget _buildTabDevis() {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // EN-TÊTE
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: AppCard(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          flex: 2,
-                          child: AppCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CustomTextField(
-                                  label: "Objet du devis",
-                                  controller: _objetCtrl,
-                                  validator: (v) =>
-                                      v!.isEmpty ? "Requis" : null,
+                        CustomTextField(
+                          label: "Objet du devis",
+                          controller: _objetCtrl,
+                          validator: (v) => v!.isEmpty ? "Requis" : null,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final d = await showDatePicker(
+                                      context: context,
+                                      initialDate: _dateEmission,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030));
+                                  if (d != null && mounted) {
+                                    setState(() => _dateEmission = d);
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                      labelText: "Date émission",
+                                      border: OutlineInputBorder(),
+                                      filled: true,
+                                      fillColor: Colors.white),
+                                  child: Text(DateFormat('dd/MM/yyyy')
+                                      .format(_dateEmission)),
                                 ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () async {
-                                          final d = await showDatePicker(
-                                              context: context,
-                                              initialDate: _dateEmission,
-                                              firstDate: DateTime(2020),
-                                              lastDate: DateTime(2030));
-                                          if (d != null && mounted) {
-                                            setState(() => _dateEmission = d);
-                                          }
-                                        },
-                                        child: InputDecorator(
-                                          decoration: const InputDecoration(
-                                              labelText: "Date émission",
-                                              border: OutlineInputBorder(),
-                                              filled: true,
-                                              fillColor: Colors.white),
-                                          child: Text(DateFormat('dd/MM/yyyy')
-                                              .format(_dateEmission)),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () async {
-                                          final d = await showDatePicker(
-                                              context: context,
-                                              initialDate: _dateValidite,
-                                              firstDate: DateTime(2020),
-                                              lastDate: DateTime(2030));
-                                          if (d != null && mounted) {
-                                            setState(() => _dateValidite = d);
-                                          }
-                                        },
-                                        child: InputDecorator(
-                                          decoration: const InputDecoration(
-                                              labelText: "Validité",
-                                              border: OutlineInputBorder(),
-                                              filled: true,
-                                              fillColor: Colors.white),
-                                          child: Text(DateFormat('dd/MM/yyyy')
-                                              .format(_dateValidite)),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 1,
-                          child: AppCard(
-                            onTap: _selectionnerClient,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text("CLIENT",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey)),
-                                const SizedBox(height: 8),
-                                if (_selectedClient != null) ...[
-                                  Text(_selectedClient!.nomComplet,
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold)),
-                                  Text(_selectedClient!.ville),
-                                ] else
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.add_circle,
-                                          color: AppTheme.primary),
-                                      SizedBox(width: 8),
-                                      Text("Sélectionner...",
-                                          style: TextStyle(
-                                              color: AppTheme.primary)),
-                                    ],
-                                  )
-                              ],
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final d = await showDatePicker(
+                                      context: context,
+                                      initialDate: _dateValidite,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030));
+                                  if (d != null && mounted) {
+                                    setState(() => _dateValidite = d);
+                                  }
+                                },
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                      labelText: "Validité",
+                                      border: OutlineInputBorder(),
+                                      filled: true,
+                                      fillColor: Colors.white),
+                                  child: Text(DateFormat('dd/MM/yyyy')
+                                      .format(_dateValidite)),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          ],
+                        )
                       ],
                     ),
-                    const SizedBox(height: 20),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: AppCard(
+                    onTap: _selectionnerClient,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("CLIENT",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey)),
+                        const SizedBox(height: 8),
+                        if (_selectedClient != null) ...[
+                          Text(_selectedClient!.nomComplet,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(_selectedClient!.ville),
+                        ] else
+                          const Row(
+                            children: [
+                              Icon(Icons.add_circle, color: AppTheme.primary),
+                              SizedBox(width: 8),
+                              Text("Sélectionner...",
+                                  style: TextStyle(color: AppTheme.primary)),
+                            ],
+                          )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-                    // LIGNES DEVIS
-                    const Text("LIGNES DU DEVIS",
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary)),
-                    const SizedBox(height: 10),
-                    ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _lignes.length,
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex -= 1;
-                          final item = _lignes.removeAt(oldIndex);
-                          _lignes.insert(newIndex, item);
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        final ligne = _lignes[index];
-                        return Card(
-                          key: ValueKey(ligne.uiKey), // Utilisation UiKey
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: LigneEditor(
-                            description: ligne.description,
+            // LIGNES DEVIS
+            const Text("LIGNES DU DEVIS",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary)),
+            const SizedBox(height: 10),
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _lignes.length,
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  if (newIndex > oldIndex) newIndex -= 1;
+                  final item = _lignes.removeAt(oldIndex);
+                  _lignes.insert(newIndex, item);
+                });
+              },
+              itemBuilder: (context, index) {
+                final ligne = _lignes[index];
+                return Card(
+                  key: ValueKey(ligne.uiKey), // Utilisation UiKey
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: LigneEditor(
+                    description: ligne.description,
+                    quantite: ligne.quantite,
+                    prixUnitaire: ligne.prixUnitaire,
+                    unite: ligne.unite,
+                    type: ligne.type,
+                    estGras: ligne.estGras,
+                    estItalique: ligne.estItalique,
+                    estSouligne: ligne.estSouligne,
+                    showHandle: true,
+                    onChanged: (desc, qte, pu, unite, type, gras, ital, soul,
+                        avancement) {
+                      setState(() {
+                        _lignes[index] = ligne.copyWith(
+                          description: desc,
+                          quantite: qte,
+                          prixUnitaire: pu,
+                          totalLigne:
+                              CalculationsUtils.calculateTotalLigne(qte, pu),
+                          unite: unite,
+                          type: type,
+                          estGras: gras,
+                          estItalique: ital,
+                          estSouligne: soul,
+                        );
+                      });
+                    },
+                    onDelete: () {
+                      setState(() {
+                        _lignes.removeAt(index);
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _ajouterLigne,
+                  icon: const Icon(Icons.add),
+                  label: const Text("Article"),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _ajouterLigneSpeciale('titre'),
+                  icon: const Icon(Icons.title),
+                  label: const Text("Titre"),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _ajouterLigneSpeciale('sous-titre'),
+                  icon: const Icon(Icons.text_fields),
+                  label: const Text("Sous-titre"),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _ajouterLigneSpeciale('texte'),
+                  icon: const Icon(Icons.comment),
+                  label: const Text("Note"),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _ajouterLigneSpeciale('saut_page'),
+                  icon:
+                      const Icon(Icons.feed), // "Feed" looks like a page break
+                  label: const Text("Saut Page"),
+                  style:
+                      OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _importerArticle,
+                  icon: const Icon(Icons.library_books),
+                  label: const Text("Importer"),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 30),
+
+            // TOTAUX
+            AppCard(
+              child: Column(
+                children: [
+                  _rowTotal("Total HT", _totalHT),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Remise (%)"),
+                      SizedBox(
+                        width: 100,
+                        child: TextFormField(
+                          initialValue: _remiseTaux.toString(),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: const InputDecoration(suffixText: "%"),
+                          onChanged: (v) {
+                            setState(() {
+                              _remiseTaux = Decimal.tryParse(v) ?? Decimal.zero;
+                            });
+                          },
+                        ),
+                      ),
+                      Text("- ${FormatUtils.currency(_totalRemise)}",
+                          style: const TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                  const Divider(),
+                  _rowTotal("NET COMMERCIAL", _netCommercial, isBig: true),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ACOMPTE
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Acompte demandé",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Divider(),
+                  const Text("Pourcentage de l'acompte :",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    children: [10, 20, 30, 40, 50].map((p) {
+                      final isSelected =
+                          _acomptePercentage == Decimal.fromInt(p);
+                      return ChoiceChip(
+                        label: Text("$p%"),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _acomptePercentage = Decimal.fromInt(p);
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          key: ValueKey(_acomptePercentage.toString()),
+                          initialValue: _acomptePercentage.toString(),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: "Autre (%)",
+                            suffixText: "%",
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          onChanged: (v) {
+                            setState(() {
+                              _acomptePercentage =
+                                  Decimal.tryParse(v) ?? Decimal.zero;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Montant calculé :",
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey)),
+                              Text(
+                                FormatUtils.currency(_acompteMontant),
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // SIGNATURE CLIENT
+            AppCard(
+              child: Column(
+                children: [
+                  const Text("Signature Client",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Divider(),
+                  if (_signatureUrl != null) ...[
+                    Image.network(
+                      _signatureUrl!,
+                      height: 150,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox(
+                              height: 150,
+                              child: Center(
+                                  child: Text("Erreur chargement signature"))),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                      style: const TextStyle(
+                          fontStyle: FontStyle.italic, color: Colors.green),
+                    ),
+                    const SizedBox(height: 4),
+                    SelectableText(_signatureUrl ?? 'URL Nulle',
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.grey)), // DEBUG
+                  ] else
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                          "Aucune signature client enregistrée pour ce devis."),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _signerClient,
+                      icon: const Icon(Icons.draw),
+                      label: Text(_signatureUrl != null
+                          ? "Refaire la signature"
+                          : "Faire signer le client"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+            // ACTIONS BAS DE PAGE
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.devisAModifier?.statut == 'brouillon')
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: OutlinedButton(
+                      onPressed: _finaliser,
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.green),
+                      child: const Text("FINALISER (Figer)"),
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: _sauvegarder,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15)),
+                  child: const Text("ENREGISTRER",
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 50),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- ONGLET ANALYSE COÛTS ---
+  Widget _buildTabAnalyse() {
+    // Calculer totaux Decimal
+    final totalAchats = _chiffrage.fold<Decimal>(
+      Decimal.zero,
+      (sum, ligne) => sum + (ligne.quantite * ligne.prixAchatUnitaire),
+    );
+
+    final totalVentes = _chiffrage.fold<Decimal>(
+      Decimal.zero,
+      (sum, ligne) => sum + (ligne.quantite * ligne.prixVenteUnitaire),
+    );
+
+    final charges =
+        (totalVentes * _configCharges.tauxTotal) / Decimal.fromInt(100);
+    final chargesDecimal = charges.toDecimal();
+    final solde = totalVentes - totalAchats - chargesDecimal;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // CARTE RENTABILITÉ
+          RentabiliteCard(
+            type: RentabiliteType.materiel,
+            ca: totalVentes,
+            cout: totalAchats,
+            charges: chargesDecimal,
+            solde: solde,
+            tauxUrssaf: _configCharges.tauxTotal,
+          ),
+          const SizedBox(height: 16),
+
+          // SECTION MATIÈRES
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header avec titre et bouton
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Matières Premières",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon:
+                          const Icon(Icons.add_circle, color: AppTheme.primary),
+                      onPressed: _ajouterMatiere,
+                      tooltip: "Ajouter matière",
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Contenu
+                _chiffrage.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            "Aucune matière ajoutée\nCliquez sur + pour commencer",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: _chiffrage.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final ligne = entry.value;
+                          return ChiffrageEditor(
+                            description: ligne.designation,
                             quantite: ligne.quantite,
-                            prixUnitaire: ligne.prixUnitaire,
+                            prixAchat: ligne.prixAchatUnitaire,
+                            prixVente: ligne.prixVenteUnitaire,
                             unite: ligne.unite,
-                            type: ligne.type,
-                            estGras: ligne.estGras,
-                            estItalique: ligne.estItalique,
-                            estSouligne: ligne.estSouligne,
-                            showHandle: true,
-                            onChanged: (desc, qte, pu, unite, type, gras, ital,
-                                soul, avancement) {
+                            tauxUrssaf: _configCharges.tauxTotal,
+                            onChanged: (desc, qte, pa, pv, unite) {
                               setState(() {
-                                _lignes[index] = ligne.copyWith(
-                                  description: desc,
+                                _chiffrage[index] = ligne.copyWith(
+                                  designation: desc,
                                   quantite: qte,
-                                  prixUnitaire: pu,
-                                  totalLigne:
-                                      CalculationsUtils.calculateTotalLigne(
-                                          qte, pu),
+                                  prixAchatUnitaire: pa,
+                                  prixVenteUnitaire: pv,
                                   unite: unite,
-                                  type: type,
-                                  estGras: gras,
-                                  estItalique: ital,
-                                  estSouligne: soul,
                                 );
                               });
                             },
-                            onDelete: () {
-                              setState(() {
-                                _lignes.removeAt(index);
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _ajouterLigne,
-                          icon: const Icon(Icons.add),
-                          label: const Text("Article"),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _ajouterLigneSpeciale('titre'),
-                          icon: const Icon(Icons.title),
-                          label: const Text("Titre"),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _ajouterLigneSpeciale('sous-titre'),
-                          icon: const Icon(Icons.text_fields),
-                          label: const Text("Sous-titre"),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _ajouterLigneSpeciale('texte'),
-                          icon: const Icon(Icons.comment),
-                          label: const Text("Note"),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () => _ajouterLigneSpeciale('saut_page'),
-                          icon: const Icon(
-                              Icons.feed), // "Feed" looks like a page break
-                          label: const Text("Saut Page"),
-                          style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _importerArticle,
-                          icon: const Icon(Icons.library_books),
-                          label: const Text("Importer"),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // TOTAUX
-                    AppCard(
-                      child: Column(
-                        children: [
-                          _rowTotal("Total HT", _totalHT),
-                          const Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text("Remise (%)"),
-                              SizedBox(
-                                width: 100,
-                                child: TextFormField(
-                                  initialValue: _remiseTaux.toString(),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  decoration:
-                                      const InputDecoration(suffixText: "%"),
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _remiseTaux =
-                                          Decimal.tryParse(v) ?? Decimal.zero;
-                                    });
-                                  },
-                                ),
-                              ),
-                              Text("- ${FormatUtils.currency(_totalRemise)}",
-                                  style: const TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                          const Divider(),
-                          _rowTotal("NET COMMERCIAL", _netCommercial,
-                              isBig: true),
-                        ],
+                            onDelete: () => _supprimerMatiere(index),
+                          );
+                        }).toList(),
                       ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ACOMPTE
-                    AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Acompte demandé",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const Divider(),
-                          const Text("Pourcentage de l'acompte :",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            children: [10, 20, 30, 40, 50].map((p) {
-                              final isSelected =
-                                  _acomptePercentage == Decimal.fromInt(p);
-                              return ChoiceChip(
-                                label: Text("$p%"),
-                                selected: isSelected,
-                                onSelected: (selected) {
-                                  if (selected) {
-                                    setState(() {
-                                      _acomptePercentage = Decimal.fromInt(p);
-                                    });
-                                  }
-                                },
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  key: ValueKey(_acomptePercentage.toString()),
-                                  initialValue: _acomptePercentage.toString(),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: "Autre (%)",
-                                    suffixText: "%",
-                                    border: OutlineInputBorder(),
-                                    isDense: true,
-                                  ),
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _acomptePercentage =
-                                          Decimal.tryParse(v) ?? Decimal.zero;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text("Montant calculé :",
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey)),
-                                      Text(
-                                        FormatUtils.currency(_acompteMontant),
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.primary),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // SIGNATURE CLIENT
-                    AppCard(
-                      child: Column(
-                        children: [
-                          const Text("Signature Client",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 16)),
-                          const Divider(),
-                          if (_signatureUrl != null) ...[
-                            Image.network(
-                              _signatureUrl!,
-                              height: 150,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const SizedBox(
-                                      height: 150,
-                                      child: Center(
-                                          child: Text(
-                                              "Erreur chargement signature"))),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
-                              style: const TextStyle(
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.green),
-                            ),
-                            const SizedBox(height: 4),
-                            SelectableText(_signatureUrl ?? 'URL Nulle',
-                                style: const TextStyle(
-                                    fontSize: 10, color: Colors.grey)), // DEBUG
-                          ] else
-                            const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text(
-                                  "Aucune signature client enregistrée pour ce devis."),
-                            ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: _signerClient,
-                              icon: const Icon(Icons.draw),
-                              label: Text(_signatureUrl != null
-                                  ? "Refaire la signature"
-                                  : "Faire signer le client"),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-                    // ACTIONS BAS DE PAGE
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (widget.devisAModifier?.statut == 'brouillon')
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: OutlinedButton(
-                              onPressed: _finaliser,
-                              style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.green),
-                              child: const Text("FINALISER (Figer)"),
-                            ),
-                          ),
-                        ElevatedButton(
-                          onPressed: _sauvegarder,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 30, vertical: 15)),
-                          child: const Text("ENREGISTRER",
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 50),
-                  ],
-                ),
-              ),
+              ],
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // NOTE SUR LES TAUX
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info, color: Colors.blue, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Taux de charges sociales configurables",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      Text(
+                        "Taux actuel: URSSAF ${_configCharges.tauxUrssaf}% + Retraite ${_configCharges.tauxRetraite}% + CFP/CSG ${_configCharges.tauxCfpCsg}%",
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

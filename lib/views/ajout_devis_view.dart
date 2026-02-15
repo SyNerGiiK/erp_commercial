@@ -180,12 +180,18 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   Decimal get _totalHT =>
       _lignes.fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
 
+  Decimal get _totalTVA =>
+      _lignes.fold(Decimal.zero, (sum, l) => sum + l.montantTva);
+
   Decimal get _totalRemise {
-    // CORRECTION RATIONAL : .toDecimal() obligatoire après une division
-    return ((_totalHT * _remiseTaux) / Decimal.fromInt(100)).toDecimal();
+    return CalculationsUtils.calculateCharges(_totalHT, _remiseTaux);
   }
 
   Decimal get _netCommercial => _totalHT - _totalRemise;
+
+  Decimal get _totalTVARemisee =>
+      _totalTVA - CalculationsUtils.calculateCharges(_totalTVA, _remiseTaux);
+  Decimal get _netAPayerFinal => _netCommercial + _totalTVARemisee;
 
   // --- ACTIONS ---
 
@@ -208,6 +214,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         quantite: Decimal.one,
         prixUnitaire: Decimal.zero,
         totalLigne: Decimal.zero,
+        tauxTva: Decimal.fromInt(20),
       ));
     });
   }
@@ -260,6 +267,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
           totalLigne: article.prixUnitaire, // 1 * PU
           unite: article.unite,
           typeActivite: article.typeActivite,
+          tauxTva: article.tauxTva,
         ));
         // Ajout auto au chiffrage pour rentabilité
         _chiffrage.add(LigneChiffrage(
@@ -299,6 +307,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       dateValidite: _dateValidite,
       statut: _statut,
       totalHt: _totalHT,
+      totalTva: _totalTVARemisee,
+      totalTtc: _netAPayerFinal,
       remiseTaux: _remiseTaux,
       acompteMontant: _acompteMontant,
       conditionsReglement: _conditionsCtrl.text,
@@ -655,8 +665,9 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     estItalique: ligne.estItalique,
                     estSouligne: ligne.estSouligne,
                     showHandle: true,
+                    tauxTva: ligne.tauxTva,
                     onChanged: (desc, qte, pu, unite, type, gras, ital, soul,
-                        avancement) {
+                        av, tva) {
                       setState(() {
                         _lignes[index] = ligne.copyWith(
                           description: desc,
@@ -669,6 +680,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                           estGras: gras,
                           estItalique: ital,
                           estSouligne: soul,
+                          tauxTva: tva,
                         );
                       });
                     },
@@ -753,7 +765,16 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     ],
                   ),
                   const Divider(),
-                  _rowTotal("NET COMMERCIAL", _netCommercial, isBig: true),
+                  _rowTotal("NET COMMERCIAL (HT)", _netCommercial,
+                      isBig: false),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Total TVA"),
+                        Text(FormatUtils.currency(_totalTVARemisee)),
+                      ]),
+                  const Divider(),
+                  _rowTotal("NET À PAYER (TTC)", _netAPayerFinal, isBig: true),
                 ],
               ),
             ),

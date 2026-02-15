@@ -38,6 +38,7 @@ class _BibliothequePrixViewState extends State<BibliothequePrixView> {
         text: article?.prixAchat.toDouble().toString() ?? "");
     final uniteCtrl = TextEditingController(text: article?.unite ?? "u");
     String typeActivite = article?.typeActivite ?? 'service';
+    Decimal tauxTva = article?.tauxTva ?? Decimal.fromInt(20);
 
     showDialog(
       context: context,
@@ -67,6 +68,24 @@ class _BibliothequePrixViewState extends State<BibliothequePrixView> {
                         width: 80,
                         child: CustomTextField(
                             label: "Unité", controller: uniteCtrl)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<Decimal>(
+                        initialValue: tauxTva,
+                        decoration: const InputDecoration(labelText: "TVA"),
+                        items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
+                          return DropdownMenuItem(
+                            value: Decimal.parse(t.toString()),
+                            child: Text("$t %"),
+                          );
+                        }).toList(),
+                        onChanged: (v) => tauxTva = v!,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -112,6 +131,7 @@ class _BibliothequePrixViewState extends State<BibliothequePrixView> {
                           : prixAchatCtrl.text.replaceAll(',', '.')),
                   unite: uniteCtrl.text,
                   typeActivite: typeActivite,
+                  tauxTva: tauxTva,
                 );
 
                 final vm =

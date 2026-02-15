@@ -2,6 +2,7 @@
 import 'package:uuid/uuid.dart';
 import 'chiffrage_model.dart';
 import 'config_charges_model.dart';
+import '../utils/calculations_utils.dart';
 
 class LigneDevis {
   final String? id;
@@ -18,8 +19,13 @@ class LigneDevis {
   final bool estItalique;
   final bool estSouligne;
 
-  // Clé stable pour l'UI (Drag & Drop)
+  // MODULE TVA
+  final Decimal tauxTva;
+
   final String uiKey;
+
+  Decimal get montantTva =>
+      (totalLigne * tauxTva / Decimal.fromInt(100)).toDecimal();
 
   LigneDevis({
     this.id,
@@ -35,7 +41,9 @@ class LigneDevis {
     this.estItalique = false,
     this.estSouligne = false,
     String? uiKey,
-  }) : uiKey = uiKey ?? const Uuid().v4();
+    Decimal? tauxTva,
+  })  : uiKey = uiKey ?? const Uuid().v4(),
+        tauxTva = tauxTva ?? Decimal.fromInt(20);
 
   factory LigneDevis.fromMap(Map<String, dynamic> map) {
     return LigneDevis(
@@ -51,6 +59,7 @@ class LigneDevis {
       estGras: map['est_gras'] ?? false,
       estItalique: map['est_italique'] ?? false,
       estSouligne: map['est_souligne'] ?? false,
+      tauxTva: Decimal.parse((map['taux_tva'] ?? 20.0).toString()),
     );
   }
 
@@ -68,6 +77,7 @@ class LigneDevis {
       'est_gras': estGras,
       'est_italique': estItalique,
       'est_souligne': estSouligne,
+      'taux_tva': tauxTva.toString(),
     };
   }
 
@@ -84,6 +94,7 @@ class LigneDevis {
     bool? estGras,
     bool? estItalique,
     bool? estSouligne,
+    Decimal? tauxTva,
   }) {
     return LigneDevis(
       id: id ?? this.id,
@@ -99,6 +110,7 @@ class LigneDevis {
       estGras: estGras ?? this.estGras,
       estItalique: estItalique ?? this.estItalique,
       estSouligne: estSouligne ?? this.estSouligne,
+      tauxTva: tauxTva ?? this.tauxTva,
     );
   }
 }
@@ -116,6 +128,8 @@ class Devis {
   final bool estArchive;
 
   final Decimal totalHt;
+  final Decimal totalTva;
+  final Decimal totalTtc;
   final Decimal remiseTaux;
   final Decimal acompteMontant;
 
@@ -187,6 +201,8 @@ class Devis {
     this.estTransforme = false,
     this.estArchive = false,
     required this.totalHt,
+    Decimal? totalTva,
+    Decimal? totalTtc,
     required this.remiseTaux,
     required this.acompteMontant,
     this.conditionsReglement = '',
@@ -196,7 +212,8 @@ class Devis {
     this.tvaIntra,
     this.lignes = const [],
     this.chiffrage = const [],
-  });
+  })  : totalTva = totalTva ?? Decimal.zero,
+        totalTtc = totalTtc ?? totalHt; // Fallback
 
   factory Devis.fromMap(Map<String, dynamic> map) {
     return Devis(
@@ -215,6 +232,8 @@ class Devis {
           ? DateTime.parse(map['date_signature'])
           : null,
       totalHt: Decimal.parse((map['total_ht'] ?? 0).toString()),
+      totalTva: Decimal.parse((map['total_tva'] ?? 0).toString()),
+      totalTtc: Decimal.parse((map['total_ttc'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
       acompteMontant: Decimal.parse((map['acompte_montant'] ?? 0).toString()),
       conditionsReglement: map['conditions_reglement'] ?? '',
@@ -244,6 +263,8 @@ class Devis {
       'est_transforme': estTransforme,
       'est_archive': estArchive,
       'total_ht': totalHt.toString(),
+      'total_tva': totalTva.toString(),
+      'total_ttc': totalTtc.toString(),
       'remise_taux': remiseTaux.toString(),
       'acompte_montant': acompteMontant.toString(),
       'conditions_reglement': conditionsReglement,
@@ -266,6 +287,8 @@ class Devis {
     bool? estTransforme,
     bool? estArchive,
     Decimal? totalHt,
+    Decimal? totalTva,
+    Decimal? totalTtc,
     Decimal? remiseTaux,
     Decimal? acompteMontant,
     String? conditionsReglement,
@@ -288,6 +311,8 @@ class Devis {
       estTransforme: estTransforme ?? this.estTransforme,
       estArchive: estArchive ?? this.estArchive,
       totalHt: totalHt ?? this.totalHt,
+      totalTva: totalTva ?? this.totalTva,
+      totalTtc: totalTtc ?? this.totalTtc,
       remiseTaux: remiseTaux ?? this.remiseTaux,
       acompteMontant: acompteMontant ?? this.acompteMontant,
       conditionsReglement: conditionsReglement ?? this.conditionsReglement,

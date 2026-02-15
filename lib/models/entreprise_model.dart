@@ -31,6 +31,10 @@ class ProfilEntreprise {
   /// Caisse de retraite (pour professions libérales)
   final CaisseRetraite caisseRetraite;
 
+  /// Assujettissement à la TVA
+  final bool tvaApplicable;
+  final String? numeroTvaIntra;
+
   ProfilEntreprise({
     this.id,
     this.userId,
@@ -51,6 +55,8 @@ class ProfilEntreprise {
     this.typeEntreprise = TypeEntreprise.microEntrepreneurServiceBIC,
     this.regimeFiscal,
     this.caisseRetraite = CaisseRetraite.ssi,
+    this.tvaApplicable = false,
+    this.numeroTvaIntra,
   });
 
   factory ProfilEntreprise.fromMap(Map<String, dynamic> map) {

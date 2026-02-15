@@ -2,6 +2,7 @@
 import 'package:uuid/uuid.dart';
 import 'paiement_model.dart';
 import 'chiffrage_model.dart';
+import '../utils/calculations_utils.dart';
 
 class LigneFacture {
   final String? id;
@@ -18,11 +19,15 @@ class LigneFacture {
   final bool estItalique;
   final bool estSouligne;
 
-  // MODULE 2: Avancement (0-100)
-  final Decimal avancement;
+  // MODULE TVA
+  final Decimal tauxTva;
 
-  // CLÉ STABLE UI
+  // MODULE 2: Situation & UI
+  final Decimal avancement;
   final String uiKey;
+
+  Decimal get montantTva =>
+      CalculationsUtils.calculateCharges(totalLigne, tauxTva);
 
   LigneFacture({
     this.id,
@@ -39,8 +44,10 @@ class LigneFacture {
     this.estSouligne = false,
     Decimal? avancement,
     String? uiKey,
+    Decimal? tauxTva,
   })  : avancement = avancement ?? Decimal.fromInt(100),
-        uiKey = uiKey ?? const Uuid().v4();
+        uiKey = uiKey ?? const Uuid().v4(),
+        tauxTva = tauxTva ?? Decimal.fromInt(20);
 
   factory LigneFacture.fromMap(Map<String, dynamic> map) {
     return LigneFacture(
@@ -57,6 +64,7 @@ class LigneFacture {
       estItalique: map['est_italique'] ?? false,
       estSouligne: map['est_souligne'] ?? false,
       avancement: Decimal.parse((map['avancement'] ?? 100).toString()),
+      tauxTva: Decimal.parse((map['taux_tva'] ?? 20.0).toString()),
     );
   }
 
@@ -75,6 +83,7 @@ class LigneFacture {
       'est_italique': estItalique,
       'est_souligne': estSouligne,
       'avancement': avancement.toString(),
+      'taux_tva': tauxTva.toString(),
     };
   }
 
@@ -92,6 +101,7 @@ class LigneFacture {
     bool? estItalique,
     bool? estSouligne,
     Decimal? avancement,
+    Decimal? tauxTva,
   }) {
     return LigneFacture(
       id: id ?? this.id,
@@ -108,6 +118,7 @@ class LigneFacture {
       estItalique: estItalique ?? this.estItalique,
       estSouligne: estSouligne ?? this.estSouligne,
       avancement: avancement ?? this.avancement,
+      tauxTva: tauxTva ?? this.tauxTva,
     );
   }
 }
@@ -135,6 +146,8 @@ class Facture {
   final DateTime? dateSignature;
 
   final Decimal totalHt;
+  final Decimal totalTva;
+  final Decimal totalTtc;
   final Decimal remiseTaux;
   final Decimal acompteDejaRegle;
 
@@ -145,6 +158,11 @@ class Facture {
   final List<LigneFacture> lignes;
   final List<Paiement> paiements;
   final List<LigneChiffrage> chiffrage;
+
+  Decimal get netAPayer => totalTtc - acompteDejaRegle - totalPaiements;
+  Decimal get totalPaiements =>
+      paiements.fold(Decimal.zero, (prev, element) => prev + element.montant);
+  bool get estSoldee => netAPayer <= Decimal.zero;
 
   Facture({
     this.id,
@@ -164,6 +182,8 @@ class Facture {
     this.signatureUrl,
     this.dateSignature,
     required this.totalHt,
+    Decimal? totalTva,
+    Decimal? totalTtc,
     required this.remiseTaux,
     required this.acompteDejaRegle,
     this.conditionsReglement = '',
@@ -172,7 +192,8 @@ class Facture {
     this.lignes = const [],
     this.paiements = const [],
     this.chiffrage = const [],
-  });
+  })  : totalTva = totalTva ?? Decimal.zero,
+        totalTtc = totalTtc ?? totalHt; // Fallback pour compatibilité
 
   factory Facture.fromMap(Map<String, dynamic> map) {
     return Facture(
@@ -199,6 +220,8 @@ class Facture {
           ? DateTime.parse(map['date_signature'])
           : null,
       totalHt: Decimal.parse((map['total_ht'] ?? 0).toString()),
+      totalTva: Decimal.parse((map['total_tva'] ?? 0).toString()),
+      totalTtc: Decimal.parse((map['total_ttc'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
       acompteDejaRegle:
           Decimal.parse((map['acompte_deja_regle'] ?? 0).toString()),
@@ -239,6 +262,8 @@ class Facture {
       'signature_url': signatureUrl,
       'date_signature': dateSignature?.toIso8601String(),
       'total_ht': totalHt.toString(),
+      'total_tva': totalTva.toString(),
+      'total_ttc': totalTtc.toString(),
       'remise_taux': remiseTaux.toString(),
       'acompte_deja_regle': acompteDejaRegle.toString(),
       'conditions_reglement': conditionsReglement,
@@ -265,6 +290,8 @@ class Facture {
     String? signatureUrl,
     DateTime? dateSignature,
     Decimal? totalHt,
+    Decimal? totalTva,
+    Decimal? totalTtc,
     Decimal? remiseTaux,
     Decimal? acompteDejaRegle,
     String? conditionsReglement,
@@ -292,6 +319,8 @@ class Facture {
       signatureUrl: signatureUrl ?? this.signatureUrl,
       dateSignature: dateSignature ?? this.dateSignature,
       totalHt: totalHt ?? this.totalHt,
+      totalTva: totalTva ?? this.totalTva,
+      totalTtc: totalTtc ?? this.totalTtc,
       remiseTaux: remiseTaux ?? this.remiseTaux,
       acompteDejaRegle: acompteDejaRegle ?? this.acompteDejaRegle,
       conditionsReglement: conditionsReglement ?? this.conditionsReglement,

@@ -8,6 +8,7 @@ class Article {
   final Decimal prixAchat;
   final String unite;
   final String typeActivite; // 'service' ou 'vente'
+  final Decimal tauxTva;
 
   Article({
     this.id,
@@ -17,6 +18,7 @@ class Article {
     required this.prixAchat,
     this.unite = 'u',
     this.typeActivite = 'service',
+    required this.tauxTva,
   });
 
   factory Article.fromMap(Map<String, dynamic> map) {
@@ -28,6 +30,7 @@ class Article {
       prixAchat: Decimal.parse((map['prix_achat'] ?? 0).toString()),
       unite: map['unite'] ?? 'u',
       typeActivite: map['type_activite'] ?? 'service',
+      tauxTva: Decimal.parse((map['taux_tva'] ?? 20.0).toString()),
     );
   }
 
@@ -40,6 +43,7 @@ class Article {
       'prix_achat': prixAchat.toString(),
       'unite': unite,
       'type_activite': typeActivite,
+      'taux_tva': tauxTva.toString(),
     };
   }
 
@@ -51,6 +55,7 @@ class Article {
     Decimal? prixAchat,
     String? unite,
     String? typeActivite,
+    Decimal? tauxTva,
   }) {
     return Article(
       id: id ?? this.id,
@@ -60,6 +65,7 @@ class Article {
       prixAchat: prixAchat ?? this.prixAchat,
       unite: unite ?? this.unite,
       typeActivite: typeActivite ?? this.typeActivite,
+      tauxTva: tauxTva ?? this.tauxTva,
     );
   }
 }

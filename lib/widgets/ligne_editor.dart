@@ -17,6 +17,9 @@ class LigneEditor extends StatefulWidget {
   final bool isSituation;
   final Decimal? avancement; // 0-100 (Nullable to allow default handling)
 
+  // MODULE TVA
+  final Decimal? tauxTva;
+
   // Callback updated with avancement
   final Function(
       String desc,
@@ -27,7 +30,8 @@ class LigneEditor extends StatefulWidget {
       bool estGras,
       bool estItalique,
       bool estSouligne,
-      Decimal avancement) onChanged;
+      Decimal avancement,
+      Decimal tauxTva) onChanged;
 
   final VoidCallback onDelete;
   final bool readOnly;
@@ -49,6 +53,7 @@ class LigneEditor extends StatefulWidget {
     this.showHandle = false,
     this.isSituation = false,
     this.avancement,
+    this.tauxTva,
   });
 
   @override
@@ -61,6 +66,9 @@ class _LigneEditorState extends State<LigneEditor> {
   late TextEditingController _puCtrl;
   late TextEditingController _uniteCtrl;
   late TextEditingController _avancementCtrl;
+
+  // State for Dropdown
+  late Decimal _currentTva;
 
   final FocusNode _puFocus = FocusNode();
   final FocusNode _qteFocus = FocusNode();
@@ -77,6 +85,7 @@ class _LigneEditorState extends State<LigneEditor> {
     _uniteCtrl = TextEditingController(text: widget.unite);
     _avancementCtrl = TextEditingController(
         text: (widget.avancement ?? Decimal.fromInt(100)).toString());
+    _currentTva = widget.tauxTva ?? Decimal.fromInt(20);
   }
 
   @override
@@ -133,6 +142,7 @@ class _LigneEditorState extends State<LigneEditor> {
         widget.estItalique,
         widget.estSouligne,
         av,
+        _currentTva,
       );
     });
   }
@@ -233,7 +243,8 @@ class _LigneEditorState extends State<LigneEditor> {
                             !widget.estGras,
                             widget.estItalique,
                             widget.estSouligne,
-                            av),
+                            av,
+                            _currentTva),
                         child: Icon(Icons.format_bold,
                             size: 16,
                             color: widget.estGras ? Colors.black : Colors.grey),
@@ -249,7 +260,8 @@ class _LigneEditorState extends State<LigneEditor> {
                             widget.estGras,
                             !widget.estItalique,
                             widget.estSouligne,
-                            av),
+                            av,
+                            _currentTva),
                         child: Icon(Icons.format_italic,
                             size: 16,
                             color: widget.estItalique
@@ -259,6 +271,74 @@ class _LigneEditorState extends State<LigneEditor> {
                     ],
                   )
               ],
+            ),
+          ),
+
+          const SizedBox(width: 4),
+
+          // TVA
+          SizedBox(
+            width: 50,
+            child: DropdownButtonFormField<Decimal>(
+              initialValue: _currentTva,
+              icon: const SizedBox(), // Cache l'icone pour gagner place
+              decoration: const InputDecoration(
+                labelText: "TVA",
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                border: InputBorder.none,
+              ),
+              style: const TextStyle(fontSize: 10, color: Colors.black),
+              items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
+                return DropdownMenuItem(
+                  value: Decimal.parse(t.toString()),
+                  child: Text("${t.toInt()}%",
+                      style: const TextStyle(fontSize: 10)),
+                );
+              }).toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() {
+                    _currentTva = v;
+                  });
+                  _notify();
+                }
+              },
+            ),
+          ),
+
+          const SizedBox(width: 4),
+
+          // TVA
+          SizedBox(
+            width: 50,
+            child: DropdownButtonFormField<Decimal>(
+              initialValue: _currentTva,
+              icon: const SizedBox(), // Cache l'icone pour gagner place
+              decoration: const InputDecoration(
+                labelText: "TVA",
+                isDense: true,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                border: InputBorder.none,
+              ),
+              style: const TextStyle(fontSize: 10, color: Colors.black),
+              items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
+                return DropdownMenuItem(
+                  value: Decimal.parse(t.toString()),
+                  child: Text("${t.toDouble()}%",
+                      style: const TextStyle(fontSize: 10)),
+                );
+              }).toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() {
+                    _currentTva = v;
+                  });
+                  _notify();
+                }
+              },
             ),
           ),
 

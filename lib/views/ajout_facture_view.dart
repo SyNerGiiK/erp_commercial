@@ -341,7 +341,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
           }
           _dateSignature = updated.dateSignature;
         });
-      } catch (e) {}
+      } catch (e) {
+        // Ignorer si la facture n'est pas trouvée ou mis à jour
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Erreur lors de la signature")));

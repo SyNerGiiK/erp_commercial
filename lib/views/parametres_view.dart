@@ -346,12 +346,12 @@ class _ParametresViewState extends State<ParametresView>
                 const SizedBox(height: 16),
                 ListTile(
                   title: const Text("PASS 2026"),
-                  trailing: Text(UrssafConfig.pass2026.toString() + " €",
+                  trailing: Text("${UrssafConfig.pass2026} €",
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 ListTile(
                   title: const Text("SMIC Mensuel Brut 2026"),
-                  trailing: Text(UrssafConfig.smicMensuel2026.toString() + " €",
+                  trailing: Text("${UrssafConfig.smicMensuel2026} €",
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -377,7 +377,8 @@ class _ParametresViewState extends State<ParametresView>
                 if (_accreActive) ...[
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
-                    value: _accreAnnee,
+                    key: ValueKey(_accreAnnee),
+                    initialValue: _accreAnnee,
                     decoration: const InputDecoration(
                       labelText: "Année ACCRE",
                       border: OutlineInputBorder(),
@@ -647,7 +648,7 @@ class _ParametresViewState extends State<ParametresView>
       child: TextFormField(
         controller: controller,
         decoration: InputDecoration(
-          labelText: label + " (lecture seule)",
+          labelText: "$label (lecture seule)",
           border: const OutlineInputBorder(),
         ),
         enabled: false,

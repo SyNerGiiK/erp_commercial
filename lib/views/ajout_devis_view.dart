@@ -235,34 +235,10 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     }
   }
 
-  Future<void> _modifierMatiere(int index) async {
-    final result = await showDialog<LigneChiffrage>(
-      context: context,
-      builder: (_) => MatiereDialog(ligneExistante: _chiffrage[index]),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _chiffrage[index] = result;
-      });
-    }
-  }
-
   void _supprimerMatiere(int index) {
     setState(() {
       _chiffrage.removeAt(index);
     });
-  }
-
-  Future<void> _ouvrirConfigCharges() async {
-    // TODO: Créer dialog de config des taux
-    // Pour l'instant, afficher un placeholder
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Configuration des taux bientôt disponible"),
-      ),
-    );
   }
 
   void _ajouterLigneSpeciale(String type) {

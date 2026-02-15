@@ -164,15 +164,15 @@ class UrssafConfig {
   // ==========================================
 
   // CSG-CRDS sur dividendes
-  final Decimal tauxCSGDividendes; // 10.6% (hausse 2026)
+  final Decimal tauxCsgDividendes; // 10.6% (hausse 2026)
 
   // Prélèvement Forfaitaire Unique (Flat Tax)
-  final Decimal tauxPFU_IR; // 12.8%
-  final Decimal tauxPFU_Total; // 30% (17.2% + 12.8%)
+  final Decimal tauxPfuIr; // 12.8%
+  final Decimal tauxPfuTotal; // 30% (17.2% + 12.8%)
 
   // Impôt sur les Sociétés
-  final Decimal tauxIS_Reduit; // 15% (≤ 42 500€)
-  final Decimal tauxIS_Normal; // 25%
+  final Decimal tauxIsReduit; // 15% (≤ 42 500€)
+  final Decimal tauxIsNormal; // 25%
 
   // ==========================================
   // CONSTRUCTEUR
@@ -237,11 +237,11 @@ class UrssafConfig {
     Decimal? tauxReductionMax50,
     Decimal? tauxReductionMax50Plus,
     // Dividendes
-    Decimal? tauxCSGDividendes,
-    Decimal? tauxPFU_IR,
-    Decimal? tauxPFU_Total,
-    Decimal? tauxIS_Reduit,
-    Decimal? tauxIS_Normal,
+    Decimal? tauxCsgDividendes,
+    Decimal? tauxPfuIr,
+    Decimal? tauxPfuTotal,
+    Decimal? tauxIsReduit,
+    Decimal? tauxIsNormal,
   })  : // Micro
         tauxMicroVente = tauxMicroVente ?? tauxMicroVenteStd,
         tauxMicroServiceBIC = tauxMicroServiceBIC ?? tauxMicroServiceBICStd,
@@ -298,11 +298,11 @@ class UrssafConfig {
         tauxReductionMax50Plus =
             tauxReductionMax50Plus ?? Decimal.parse('40.21'),
         // Dividendes
-        tauxCSGDividendes = tauxCSGDividendes ?? Decimal.parse('10.6'),
-        tauxPFU_IR = tauxPFU_IR ?? Decimal.parse('12.8'),
-        tauxPFU_Total = tauxPFU_Total ?? Decimal.parse('30.0'),
-        tauxIS_Reduit = tauxIS_Reduit ?? Decimal.parse('15.0'),
-        tauxIS_Normal = tauxIS_Normal ?? Decimal.parse('25.0');
+        tauxCsgDividendes = tauxCsgDividendes ?? Decimal.parse('10.6'),
+        tauxPfuIr = tauxPfuIr ?? Decimal.parse('12.8'),
+        tauxPfuTotal = tauxPfuTotal ?? Decimal.parse('30.0'),
+        tauxIsReduit = tauxIsReduit ?? Decimal.parse('15.0'),
+        tauxIsNormal = tauxIsNormal ?? Decimal.parse('25.0');
 
   // ==========================================
   // MÉTHODES CALCULÉES - MICRO-ENTREPRENEUR
@@ -533,15 +533,12 @@ class UrssafConfig {
       tauxReductionMax50Plus: _parseDecimal(
           map['taux_reduction_max50plus'], Decimal.parse('40.21')),
       // Dividendes
-      tauxCSGDividendes:
+      tauxCsgDividendes:
           _parseDecimal(map['taux_csg_dividendes'], Decimal.parse('10.6')),
-      tauxPFU_IR: _parseDecimal(map['taux_pfu_ir'], Decimal.parse('12.8')),
-      tauxPFU_Total:
-          _parseDecimal(map['taux_pfu_total'], Decimal.parse('30.0')),
-      tauxIS_Reduit:
-          _parseDecimal(map['taux_is_reduit'], Decimal.parse('15.0')),
-      tauxIS_Normal:
-          _parseDecimal(map['taux_is_normal'], Decimal.parse('25.0')),
+      tauxPfuIr: _parseDecimal(map['taux_pfu_ir'], Decimal.parse('12.8')),
+      tauxPfuTotal: _parseDecimal(map['taux_pfu_total'], Decimal.parse('30.0')),
+      tauxIsReduit: _parseDecimal(map['taux_is_reduit'], Decimal.parse('15.0')),
+      tauxIsNormal: _parseDecimal(map['taux_is_normal'], Decimal.parse('25.0')),
     );
   }
 
@@ -617,11 +614,11 @@ class UrssafConfig {
       'taux_reduction_max50': tauxReductionMax50.toString(),
       'taux_reduction_max50plus': tauxReductionMax50Plus.toString(),
       // Dividendes
-      'taux_csg_dividendes': tauxCSGDividendes.toString(),
-      'taux_pfu_ir': tauxPFU_IR.toString(),
-      'taux_pfu_total': tauxPFU_Total.toString(),
-      'taux_is_reduit': tauxIS_Reduit.toString(),
-      'taux_is_normal': tauxIS_Normal.toString(),
+      'taux_csg_dividendes': tauxCsgDividendes.toString(),
+      'taux_pfu_ir': tauxPfuIr.toString(),
+      'taux_pfu_total': tauxPfuTotal.toString(),
+      'taux_is_reduit': tauxIsReduit.toString(),
+      'taux_is_normal': tauxIsNormal.toString(),
     };
   }
 
@@ -634,6 +631,12 @@ class UrssafConfig {
     String? userId,
     bool? accreActive,
     int? accreAnnee,
+    // Dividendes (Others omitted for brevity as they are unchanged)
+    Decimal? tauxCsgDividendes,
+    Decimal? tauxPfuIr,
+    Decimal? tauxPfuTotal,
+    Decimal? tauxIsReduit,
+    Decimal? tauxIsNormal,
   }) {
     return UrssafConfig(
       id: id ?? this.id,
@@ -646,7 +649,56 @@ class UrssafConfig {
       tauxMicroServiceBNC: tauxMicroServiceBNC,
       tauxMicroLiberalCIPAV: tauxMicroLiberalCIPAV,
       tauxMicroMeubles: tauxMicroMeubles,
-      // ... etc (simplifié pour la longu eur)
+      tauxCfpMicroVente: tauxCfpMicroVente,
+      tauxCfpMicroService: tauxCfpMicroService,
+      tauxCfpMicroLiberal: tauxCfpMicroLiberal,
+      plafondCaMicroVente: plafondCaMicroVente,
+      plafondCaMicroService: plafondCaMicroService,
+      seuilTvaMicroVente: seuilTvaMicroVente,
+      seuilTvaMicroService: seuilTvaMicroService,
+      abattementTNS: abattementTNS,
+      abattementMinTNS: abattementMinTNS,
+      abattementMaxTNS: abattementMaxTNS,
+      tauxMaladieTNSMin: tauxMaladieTNSMin,
+      tauxMaladieTNSMax: tauxMaladieTNSMax,
+      tauxIJTNS: tauxIJTNS,
+      tauxRetraiteBaseTNST1: tauxRetraiteBaseTNST1,
+      tauxRetraiteBaseTNST2: tauxRetraiteBaseTNST2,
+      tauxRetraiteCompTNST1: tauxRetraiteCompTNST1,
+      tauxRetraiteCompTNST2: tauxRetraiteCompTNST2,
+      tauxInvaliditeDecesTNS: tauxInvaliditeDecesTNS,
+      tauxAllocFamTNSMin: tauxAllocFamTNSMin,
+      tauxAllocFamTNSMax: tauxAllocFamTNSMax,
+      tauxCsgCrdsTNS: tauxCsgCrdsTNS,
+      tauxCfpArtisan: tauxCfpArtisan,
+      tauxCfpCommercant: tauxCfpCommercant,
+      tauxVieillesseSalT1: tauxVieillesseSalT1,
+      tauxVieillesseSalT2: tauxVieillesseSalT2,
+      tauxRetraiteCompSalT1: tauxRetraiteCompSalT1,
+      tauxRetraiteCompSalT2: tauxRetraiteCompSalT2,
+      tauxAPECSal: tauxAPECSal,
+      tauxCSGDeductible: tauxCSGDeductible,
+      tauxCSGNonDeductible: tauxCSGNonDeductible,
+      tauxCRDS: tauxCRDS,
+      tauxMaladiePatronal1: tauxMaladiePatronal1,
+      tauxMaladiePatronal2: tauxMaladiePatronal2,
+      tauxVieillessePatT1: tauxVieillessePatT1,
+      tauxVieillessePatT2: tauxVieillessePatT2,
+      tauxAllocFamPatronal1: tauxAllocFamPatronal1,
+      tauxAllocFamPatronal2: tauxAllocFamPatronal2,
+      tauxChomagePatronal: tauxChomagePatronal,
+      tauxRetraiteCompPatT1: tauxRetraiteCompPatT1,
+      tauxRetraiteCompPatT2: tauxRetraiteCompPatT2,
+      tauxAPECPat: tauxAPECPat,
+      tauxAccidentTravail: tauxAccidentTravail,
+      tauxReductionMax50: tauxReductionMax50,
+      tauxReductionMax50Plus: tauxReductionMax50Plus,
+      // Dividendes
+      tauxCsgDividendes: tauxCsgDividendes ?? this.tauxCsgDividendes,
+      tauxPfuIr: tauxPfuIr ?? this.tauxPfuIr,
+      tauxPfuTotal: tauxPfuTotal ?? this.tauxPfuTotal,
+      tauxIsReduit: tauxIsReduit ?? this.tauxIsReduit,
+      tauxIsNormal: tauxIsNormal ?? this.tauxIsNormal,
     );
   }
 }

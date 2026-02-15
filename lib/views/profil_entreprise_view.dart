@@ -252,7 +252,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     // TYPE D'ENTREPRISE
                     DropdownButtonFormField<TypeEntreprise>(
                       key: ValueKey(_typeEntreprise),
-                      value: _typeEntreprise,
+                      initialValue: _typeEntreprise,
                       decoration: InputDecoration(
                         labelText: "Type d'entreprise (régime fiscal)",
                         border: OutlineInputBorder(
@@ -350,7 +350,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     // RÉGIME FISCAL (Optionnel)
                     DropdownButtonFormField<RegimeFiscal?>(
                       key: ValueKey(_regimeFiscal),
-                      value: _regimeFiscal,
+                      initialValue: _regimeFiscal,
                       decoration: InputDecoration(
                         labelText: "Régime fiscal (si différent du type)",
                         hintText: "Déterminé automatiquement",
@@ -362,12 +362,10 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                       items: [
                         const DropdownMenuItem(
                             value: null, child: Text("Auto")),
-                        ...RegimeFiscal.values
-                            .map((r) => DropdownMenuItem(
-                                  value: r,
-                                  child: Text(r.label),
-                                ))
-                            .toList(),
+                        ...RegimeFiscal.values.map((r) => DropdownMenuItem(
+                              value: r,
+                              child: Text(r.label),
+                            )),
                       ],
                       onChanged: (v) => setState(() => _regimeFiscal = v),
                     ),
@@ -376,7 +374,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     // CAISSE RETRAITE
                     DropdownButtonFormField<CaisseRetraite>(
                       key: ValueKey(_caisseRetraite),
-                      value: _caisseRetraite,
+                      initialValue: _caisseRetraite,
                       decoration: InputDecoration(
                         labelText: "Caisse de retraite",
                         border: OutlineInputBorder(

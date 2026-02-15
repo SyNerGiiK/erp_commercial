@@ -2,6 +2,8 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/chiffrage_model.dart';
+import '../../models/article_model.dart';
+import '../../repositories/article_repository.dart';
 import '../custom_text_field.dart';
 
 /// Dialog pour ajouter ou modifier une ligne de matière première
@@ -70,11 +72,22 @@ class _MatiereDialogState extends State<MatiereDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomTextField(
-                label: "Désignation",
-                controller: _designationCtrl,
-                validator: (v) =>
-                    v?.isEmpty ?? true ? "Désignation requise" : null,
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      label: "Désignation",
+                      controller: _designationCtrl,
+                      validator: (v) =>
+                          v?.isEmpty ?? true ? "Désignation requise" : null,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.library_books),
+                    tooltip: "Bibliothèque",
+                    onPressed: _ouvrirBibliotheque,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
@@ -98,7 +111,8 @@ class _MatiereDialogState extends State<MatiereDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _unite,
+                      key: ValueKey(_unite),
+                      initialValue: _unite,
                       decoration: const InputDecoration(
                         labelText: "Unité",
                         border: OutlineInputBorder(),
@@ -173,6 +187,76 @@ class _MatiereDialogState extends State<MatiereDialog> {
       return "${total.toStringAsFixed(2)} €";
     } catch (e) {
       return "-- €";
+    }
+  }
+
+  Future<void> _ouvrirBibliotheque() async {
+    try {
+      // 1. Charger les articles
+      // Idéalement on passerait par un ViewModel, mais ici on fait simple pour le dialog
+      final repo = ArticleRepository();
+      final articles = await repo.getArticles();
+
+      if (!mounted) return;
+
+      // 2. Afficher la liste
+      final Article? selected = await showDialog<Article>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Sélectionner un article"),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: articles.isEmpty
+                ? const Center(
+                    child: Text("Aucun article dans la bibliothèque"))
+                : ListView.separated(
+                    itemCount: articles.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (ctx, i) {
+                      final art = articles[i];
+                      return ListTile(
+                        title: Text(art.designation),
+                        subtitle: Text(
+                            "${art.prixAchat.toStringAsFixed(2)}€ / ${art.unite}"),
+                        onTap: () => Navigator.pop(ctx, art),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Fermer"),
+            ),
+          ],
+        ),
+      );
+
+      // 3. Remplir les champs
+      if (selected != null) {
+        setState(() {
+          _designationCtrl.text = selected.designation;
+          _prixAchatCtrl.text = selected.prixAchat.toStringAsFixed(2);
+
+          // Vérifier si l'unité existe dans la liste, sinon défaut 'u'
+          if (_unites.contains(selected.unite)) {
+            _unite = selected.unite;
+          } else {
+            _unite = 'u';
+          }
+
+          // Focus sur la quantité pour saisie rapide
+          // (Optionnel, nécessite un FocusNode)
+        });
+      }
+    } catch (e) {
+      debugPrint("Erreur biblio: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur chargement articles: $e")),
+        );
+      }
     }
   }
 }

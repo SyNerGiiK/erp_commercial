@@ -76,7 +76,7 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
       menuIndex: 2,
       title: "Mes Factures",
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/ajout_facture'),
+        onPressed: () => context.go('/app/ajout_facture'),
         child: const Icon(Icons.add),
       ),
       appBarBottom: TabBar(
@@ -128,7 +128,7 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
         final itemColor = isPayee ? Colors.green : Colors.orange;
 
         return AppCard(
-          onTap: () => context.go('/ajout_facture/${f.id}', extra: f),
+          onTap: () => context.go('/app/ajout_facture/${f.id}', extra: f),
           statusColor: itemColor,
           child: Row(
             children: [

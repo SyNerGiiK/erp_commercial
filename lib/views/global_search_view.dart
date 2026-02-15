@@ -63,7 +63,7 @@ class _GlobalSearchViewState extends State<GlobalSearchView> {
                       title: Text(c.nomComplet),
                       subtitle: Text(c.ville),
                       onTap: () =>
-                          context.go('/ajout_client/${c.id}', extra: c),
+                          context.go('/app/ajout_client/${c.id}', extra: c),
                     ))),
               ],
               if (vm.facturesResults.isNotEmpty) ...[
@@ -80,7 +80,7 @@ class _GlobalSearchViewState extends State<GlobalSearchView> {
                       title: Text(f.numeroFacture),
                       subtitle: Text(f.objet),
                       onTap: () =>
-                          context.go('/ajout_facture/${f.id}', extra: f),
+                          context.go('/app/ajout_facture/${f.id}', extra: f),
                     ))),
               ],
               if (vm.devisResults.isNotEmpty) ...[
@@ -96,7 +96,8 @@ class _GlobalSearchViewState extends State<GlobalSearchView> {
                           child: Icon(Icons.description, color: Colors.white)),
                       title: Text(d.numeroDevis),
                       subtitle: Text(d.objet),
-                      onTap: () => context.go('/ajout_devis/${d.id}', extra: d),
+                      onTap: () =>
+                          context.go('/app/ajout_devis/${d.id}', extra: d),
                     ))),
               ],
             ]))

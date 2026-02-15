@@ -8,7 +8,7 @@ import '../models/devis_model.dart';
 import '../models/client_model.dart';
 import '../models/depense_model.dart';
 
-import '../views/splash_view.dart';
+import '../views/landing_view.dart';
 import '../views/login_view.dart';
 import '../views/tableau_de_bord_view.dart';
 import '../views/planning_view.dart';
@@ -36,59 +36,101 @@ class AppRouter {
           authViewModel, // Écoute les changements d'auth (Login/Logout)
       debugLogDiagnostics: true,
 
-      // REDIRECTION AUTOMATIQUE (Guard)
+      // REDIRECTION AUTOMATIQUE (Guard) - Architecture SaaS
       redirect: (context, state) {
         final isLoggedIn = authViewModel.currentUser != null;
-        final isLoggingIn = state.matchedLocation == '/login';
-        final isSplash = state.matchedLocation == '/';
+        final isOnAppRoute = state.matchedLocation.startsWith('/app');
+        final isOnLogin = state.matchedLocation == '/login';
+        final isOnLanding = state.matchedLocation == '/';
 
-        // Si pas connecté et pas sur login/splash -> Login
-        if (!isLoggedIn && !isLoggingIn && !isSplash) {
+        // Utilisateur NON connecté tente d'accéder à /app/* → Redirection /login
+        if (!isLoggedIn && isOnAppRoute) {
           return '/login';
         }
 
-        // Si connecté et sur login -> Home
-        if (isLoggedIn && isLoggingIn) {
-          return '/home';
+        // Utilisateur connecté sur / ou /login → Redirection /app/home
+        if (isLoggedIn && (isOnLanding || isOnLogin)) {
+          return '/app/home';
         }
 
-        return null;
+        return null; // Pas de redirection
       },
 
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const SplashView()),
-        GoRoute(path: '/login', builder: (_, __) => const LoginView()),
-        GoRoute(path: '/home', builder: (_, __) => const TableauDeBordView()),
-        GoRoute(path: '/planning', builder: (_, __) => const PlanningView()),
-        GoRoute(path: '/devis', builder: (_, __) => const ListeDevisView()),
+        // ========== ROUTES PUBLIQUES ==========
         GoRoute(
-            path: '/factures', builder: (_, __) => const ListeFacturesView()),
-        GoRoute(path: '/clients', builder: (_, __) => const ListeClientsView()),
+          path: '/',
+          builder: (_, __) => const LandingView(),
+        ),
         GoRoute(
-            path: '/depenses', builder: (_, __) => const ListeDepensesView()),
-        GoRoute(path: '/courses', builder: (_, __) => const ShoppingListView()),
+          path: '/login',
+          builder: (_, __) => const LoginView(),
+        ),
+
+        // ========== ROUTES PRIVÉES (Préfixe /app) ==========
         GoRoute(
-            path: '/parametres', builder: (_, __) => const SettingsRootView()),
+          path: '/app/home',
+          builder: (_, __) => const TableauDeBordView(),
+        ),
         GoRoute(
-            path: '/config_urssaf', builder: (_, __) => const ParametresView()),
+          path: '/app/planning',
+          builder: (_, __) => const PlanningView(),
+        ),
         GoRoute(
-            path: '/profil', builder: (_, __) => const ProfilEntrepriseView()),
+          path: '/app/devis',
+          builder: (_, __) => const ListeDevisView(),
+        ),
         GoRoute(
-            path: '/bibliotheque',
-            builder: (_, __) => const BibliothequePrixView()),
-        GoRoute(path: '/archives', builder: (_, __) => const ArchivesView()),
-        GoRoute(path: '/search', builder: (_, __) => const GlobalSearchView()),
+          path: '/app/factures',
+          builder: (_, __) => const ListeFacturesView(),
+        ),
+        GoRoute(
+          path: '/app/clients',
+          builder: (_, __) => const ListeClientsView(),
+        ),
+        GoRoute(
+          path: '/app/depenses',
+          builder: (_, __) => const ListeDepensesView(),
+        ),
+        GoRoute(
+          path: '/app/courses',
+          builder: (_, __) => const ShoppingListView(),
+        ),
+        GoRoute(
+          path: '/app/parametres',
+          builder: (_, __) => const SettingsRootView(),
+        ),
+        GoRoute(
+          path: '/app/config_urssaf',
+          builder: (_, __) => const ParametresView(),
+        ),
+        GoRoute(
+          path: '/app/profil',
+          builder: (_, __) => const ProfilEntrepriseView(),
+        ),
+        GoRoute(
+          path: '/app/bibliotheque',
+          builder: (_, __) => const BibliothequePrixView(),
+        ),
+        GoRoute(
+          path: '/app/archives',
+          builder: (_, __) => const ArchivesView(),
+        ),
+        GoRoute(
+          path: '/app/search',
+          builder: (_, __) => const GlobalSearchView(),
+        ),
 
         // --- ROUTES DYNAMIQUES (CRUD) ---
-        // Supporte : /ajout_devis (Nouveau) et /ajout_devis/123 (Edit)
+        // Supporte : /app/ajout_devis (Nouveau) et /app/ajout_devis/123 (Edit)
 
         // DEVIS
         GoRoute(
-          path: '/ajout_devis',
+          path: '/app/ajout_devis',
           builder: (context, state) => const AjoutDevisView(),
           routes: [
             GoRoute(
-              path: ':id', // /ajout_devis/123
+              path: ':id', // /app/ajout_devis/123
               builder: (context, state) {
                 final id = state.pathParameters['id'];
                 final devis = state.extra as Devis?;
@@ -100,7 +142,7 @@ class AppRouter {
 
         // FACTURES
         GoRoute(
-          path: '/ajout_facture',
+          path: '/app/ajout_facture',
           builder: (context, state) {
             // Gestion paramètre query : ?source_devis=XYZ (Conversion Devis->Facture)
             final sourceDevisId = state.uri.queryParameters['source_devis'];
@@ -108,7 +150,7 @@ class AppRouter {
           },
           routes: [
             GoRoute(
-              path: ':id', // /ajout_facture/123
+              path: ':id', // /app/ajout_facture/123
               builder: (context, state) {
                 final id = state.pathParameters['id'];
                 final facture = state.extra as Facture?;
@@ -120,7 +162,7 @@ class AppRouter {
 
         // CLIENTS
         GoRoute(
-          path: '/ajout_client',
+          path: '/app/ajout_client',
           builder: (context, state) => const AjoutClientView(),
           routes: [
             GoRoute(
@@ -136,7 +178,7 @@ class AppRouter {
 
         // DEPENSES
         GoRoute(
-          path: '/ajout_depense',
+          path: '/app/ajout_depense',
           builder: (context, state) => const AjoutDepenseView(),
           routes: [
             GoRoute(

@@ -26,7 +26,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           backgroundColor: Colors.white.withValues(alpha: 0.15),
           shape: const CircleBorder(),
         ),
-        onPressed: () => context.push('/search'),
+        onPressed: () => context.push('/app/search'),
       ),
       const SizedBox(width: 8),
       if (actions != null) ...actions!,

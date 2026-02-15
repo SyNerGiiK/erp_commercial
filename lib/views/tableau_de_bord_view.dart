@@ -189,10 +189,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       onTap: (item) {
                         try {
                           if (item is Facture && item.id != null) {
-                            context.push('/ajout_facture/${item.id}',
+                            context.push('/app/ajout_facture/${item.id}',
                                 extra: item);
                           } else if (item is Devis && item.id != null) {
-                            context.push('/ajout_devis/${item.id}',
+                            context.push('/app/ajout_devis/${item.id}',
                                 extra: item);
                           }
                         } catch (e) {

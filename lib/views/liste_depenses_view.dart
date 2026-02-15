@@ -50,7 +50,7 @@ class _ListeDepensesViewState extends State<ListeDepensesView> {
       menuIndex: 5, // INDEX IMPORTANT
       title: "Dépenses",
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/ajout_depense'),
+        onPressed: () => context.go('/app/ajout_depense'),
         child: const Icon(Icons.add),
       ),
       child: Column(children: [
@@ -72,7 +72,7 @@ class _ListeDepensesViewState extends State<ListeDepensesView> {
                       return AppCard(
                         // Navigation URL First
                         onTap: () =>
-                            context.go('/ajout_depense/${d.id}', extra: d),
+                            context.go('/app/ajout_depense/${d.id}', extra: d),
                         leading:
                             Icon(_getIcon(d.categorie), color: Colors.orange),
                         title: Text(d.titre),

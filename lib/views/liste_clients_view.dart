@@ -47,7 +47,7 @@ class _ListeClientsViewState extends State<ListeClientsView> {
       menuIndex: 3, // CORRECTION: Index Clients
       title: "Clients",
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/ajout_client'),
+        onPressed: () => context.go('/app/ajout_client'),
         child: const Icon(Icons.add),
       ),
       child: Column(
@@ -77,7 +77,8 @@ class _ListeClientsViewState extends State<ListeClientsView> {
                     itemBuilder: (context, index) {
                       final client = filteredList[index];
                       return AppCard(
-                        onTap: () => context.go('/ajout_client/${client.id}',
+                        onTap: () => context.go(
+                            '/app/ajout_client/${client.id}',
                             extra: client),
                         leading: CircleAvatar(
                           radius: 24,

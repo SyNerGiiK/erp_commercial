@@ -26,7 +26,7 @@ class _SplashViewState extends State<SplashView> {
     if (mounted) {
       final authVM = Provider.of<AuthViewModel>(context, listen: false);
       if (authVM.currentUser != null) {
-        context.go('/home');
+        context.go('/app/home');
       } else {
         context.go('/login');
       }

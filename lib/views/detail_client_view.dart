@@ -133,7 +133,7 @@ class _DetailClientViewState extends State<DetailClientView>
         IconButton(
           icon: const Icon(Icons.edit),
           tooltip: "Modifier",
-          onPressed: () => context.push('/ajout_client/${widget.client.id}',
+          onPressed: () => context.push('/app/ajout_client/${widget.client.id}',
               extra: widget.client),
         )
       ],

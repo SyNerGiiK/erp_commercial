@@ -95,7 +95,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
       if (!mounted) return;
 
       // Navigation vers AjoutFacture avec l'objet pré-rempli
-      context.push('/ajout_facture', extra: draftFacture);
+      context.push('/app/ajout_facture', extra: draftFacture);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Erreur préparation facture: $e")));
@@ -111,7 +111,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
       menuIndex: 1,
       title: "Mes Devis",
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/ajout_devis'),
+        onPressed: () => context.go('/app/ajout_devis'),
         child: const Icon(Icons.add),
       ),
       appBarBottom: TabBar(
@@ -161,7 +161,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
         if (d.statut == 'envoye') statusColor = Colors.blue;
 
         return AppCard(
-          onTap: () => context.go('/ajout_devis/${d.id}', extra: d),
+          onTap: () => context.go('/app/ajout_devis/${d.id}', extra: d),
           statusColor: statusColor,
           child: Row(
             children: [

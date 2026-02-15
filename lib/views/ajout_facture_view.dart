@@ -99,8 +99,8 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         } catch (_) {}
       });
 
-      // Charger historique règlements si lié à un devis
-      if (f.devisSourceId != null) {
+      // Charger historique règlements si lié à un devis ET si facture existante (id != null)
+      if (f.devisSourceId != null && f.id != null) {
         final vm = Provider.of<FactureViewModel>(context, listen: false);
         final hist =
             await vm.calculateHistoriqueReglements(f.devisSourceId!, f.id!);
@@ -258,11 +258,15 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         statut: widget.factureAModifier?.statut ?? 'brouillon',
         statutJuridique:
             widget.factureAModifier?.statutJuridique ?? 'brouillon',
+        type:
+            _typeFacture, // ✅ FIX: Ajout du champ type (acompte, standard, situation, solde)
         totalHt: _totalHT,
         remiseTaux: _remiseTaux,
         acompteDejaRegle: _acompteDejaRegle,
         conditionsReglement: _conditionsCtrl.text,
         notesPubliques: _notesCtrl.text,
+        tvaIntra: widget.factureAModifier?.tvaIntra ??
+            _selectedClient?.tvaIntra, // ✅ FIX: Ajout tvaIntra
         lignes: _lignes,
         paiements: _paiements,
         chiffrage: _chiffrage, // Important pour stats marge

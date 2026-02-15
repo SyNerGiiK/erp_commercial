@@ -49,6 +49,10 @@ class FactureRepository implements IFactureRepository {
       data['user_id'] = userId;
       data.remove('id'); // L'ID est généré par Supabase
 
+      // 🔍 DEBUG: Log des données envoyées
+      print('🟦 DEBUG createFacture - Données envoyées:');
+      print(data);
+
       // 1. Insertion Facture
       final response =
           await _client.from('factures').insert(data).select().single();
@@ -60,6 +64,7 @@ class FactureRepository implements IFactureRepository {
 
       return Facture.fromMap(response);
     } catch (e) {
+      print('🔴 DEBUG createFacture - Erreur complète: $e');
       throw _handleError(e, 'createFacture');
     }
   }

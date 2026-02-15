@@ -714,6 +714,20 @@
     "key_type": null
   },
   {
+    "table_name": "factures",
+    "column_name": "avancement_global",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "factures",
+    "column_name": "type",
+    "data_type": "text",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
     "table_name": "lignes_chiffrages",
     "column_name": "id",
     "data_type": "uuid",
@@ -962,6 +976,13 @@
     "table_name": "lignes_factures",
     "column_name": "est_souligne",
     "data_type": "boolean",
+    "is_nullable": "YES",
+    "key_type": null
+  },
+  {
+    "table_name": "lignes_factures",
+    "column_name": "avancement",
+    "data_type": "numeric",
     "is_nullable": "YES",
     "key_type": null
   },

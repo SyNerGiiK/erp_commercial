@@ -17,6 +17,20 @@ class DevisViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  // Stockage temporaire du draft facture pour la transformation
+  Facture? _pendingDraftFacture;
+  Facture? get pendingDraftFacture => _pendingDraftFacture;
+
+  /// Méthode pour définir le draft facture pending
+  void setPendingDraftFacture(Facture? draft) {
+    _pendingDraftFacture = draft;
+  }
+
+  /// Clear le draft facture après récupération
+  void clearPendingDraftFacture() {
+    _pendingDraftFacture = null;
+  }
+
   Future<void> fetchDevis() async {
     await _executeOperation(() async {
       _devis = await _repository.getDevis(archives: false);

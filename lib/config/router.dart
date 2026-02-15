@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/devis_viewmodel.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 import '../models/client_model.dart';
@@ -144,8 +145,25 @@ class AppRouter {
         GoRoute(
           path: '/app/ajout_facture',
           builder: (context, state) {
-            // Gestion paramètre query : ?source_devis=XYZ (Conversion Devis->Facture)
             final sourceDevisId = state.uri.queryParameters['source_devis'];
+            final fromTransformation =
+                state.uri.queryParameters['from_transformation'] == 'true';
+
+            // Si transformation devis, on récupère le draft depuis le ViewModel
+            if (fromTransformation) {
+              final devisVM =
+                  Provider.of<DevisViewModel>(context, listen: false);
+              final draftFacture = devisVM.pendingDraftFacture;
+
+              // Clear le draft après récupération
+              devisVM.clearPendingDraftFacture();
+
+              if (draftFacture != null) {
+                return AjoutFactureView(factureAModifier: draftFacture);
+              }
+            }
+
+            // Ancien système query param ou mode vierge
             return AjoutFactureView(sourceDevisId: sourceDevisId);
           },
           routes: [

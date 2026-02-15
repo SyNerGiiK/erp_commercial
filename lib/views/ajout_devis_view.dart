@@ -66,7 +66,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
   Decimal get _acompteMontant =>
       ((_netCommercial * _acomptePercentage) / Decimal.fromInt(100))
           .toDecimal();
-  Decimal _acomptePercentage = Decimal.zero; // Nouveau state pour le %
+  Decimal _acomptePercentage = Decimal.fromInt(30); // Défaut : 30%
 
   bool _isLoading = false;
 
@@ -97,7 +97,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView> {
             ((d.totalHt * d.remiseTaux) / Decimal.fromInt(100)).toDecimal();
         if (net > Decimal.zero) {
           _acomptePercentage =
-              CalculationsUtils.calculateTauxFromMontant(net, _acompteMontant);
+              CalculationsUtils.calculateTauxFromMontant(net, d.acompteMontant);
         }
       }
 

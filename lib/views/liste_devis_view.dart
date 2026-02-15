@@ -94,8 +94,11 @@ class _ListeDevisViewState extends State<ListeDevisView>
 
       if (!mounted) return;
 
-      // Navigation vers AjoutFacture avec l'objet pré-rempli
-      context.push('/app/ajout_facture', extra: draftFacture);
+      // Stocker le draft dans le ViewModel au lieu de le passer via extra
+      vm.setPendingDraftFacture(draftFacture);
+
+      // Navigation avec flag simple
+      context.push('/app/ajout_facture?from_transformation=true');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Erreur préparation facture: $e")));

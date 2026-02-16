@@ -10,6 +10,7 @@ import '../models/entreprise_model.dart'; // Added
 import '../services/pdf_service.dart'; // Added
 import 'dart:async'; // Added
 import '../config/supabase_config.dart'; // Added
+import '../services/local_storage_service.dart'; // Auto-Save
 
 class DevisViewModel extends ChangeNotifier {
   final IDevisRepository _repository = DevisRepository();
@@ -28,6 +29,11 @@ class DevisViewModel extends ChangeNotifier {
   // For now simple debounce.
   Timer? _pdfDebounce;
 
+  // --- AUTO-SAVE STATE ---
+  Timer? _saveDebounce;
+  bool _isRestoringDraft = false;
+  bool get isRestoringDraft => _isRestoringDraft;
+
   void toggleRealTimePreview(bool value) {
     _isRealTimePreviewEnabled = value;
     notifyListeners();
@@ -41,7 +47,42 @@ class DevisViewModel extends ChangeNotifier {
     // Actually, safest to reset to false to avoid unwanted load on entry?
     // Let's reset to false to be safe and clean.
     _isRealTimePreviewEnabled = false;
+    _isRealTimePreviewEnabled = false;
     _pdfDebounce?.cancel();
+    _saveDebounce?.cancel();
+  }
+
+  // --- AUTO-SAVE LOGIC ---
+
+  /// Tente de charger un brouillon local
+  Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
+    _isRestoringDraft = true;
+    notifyListeners();
+
+    final key = LocalStorageService.generateKey('devis', id);
+    final data = await LocalStorageService.getDraft(key);
+
+    _isRestoringDraft = false;
+    notifyListeners();
+    return data;
+  }
+
+  /// Sauvegarde locale déclenchée par l'UI (Debounce 2s)
+  void autoSaveDraft(String? id, Map<String, dynamic> data) {
+    if (_saveDebounce?.isActive ?? false) _saveDebounce!.cancel();
+
+    _saveDebounce = Timer(const Duration(seconds: 2), () async {
+      final key = LocalStorageService.generateKey('devis', id);
+      await LocalStorageService.saveDraft(key, data);
+      developer.log("Auto-saved draft: $key");
+    });
+  }
+
+  /// Nettoyage explicite (après validation)
+  Future<void> clearLocalDraft(String? id) async {
+    _saveDebounce?.cancel();
+    final key = LocalStorageService.generateKey('devis', id);
+    await LocalStorageService.clearDraft(key);
   }
 
   void triggerPdfUpdate(

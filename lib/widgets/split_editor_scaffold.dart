@@ -183,7 +183,18 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
               maxPageWidth: 700,
             )
           else
-            const Center(child: Text("Aucun aperçu disponible. Actualisez.")),
+            // Squelette de chargement (Shimmer-like)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text("Chargement de l'aperçu...",
+                      style: TextStyle(color: Colors.grey[500])),
+                ],
+              ),
+            ),
 
           // LOADING OVERLAY
           if (widget.isPdfLoading)

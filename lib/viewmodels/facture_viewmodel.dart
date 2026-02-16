@@ -10,6 +10,7 @@ import '../services/pdf_service.dart'; // Added
 import 'dart:async'; // Added
 import '../repositories/facture_repository.dart';
 import '../config/supabase_config.dart';
+import '../services/local_storage_service.dart';
 
 class FactureViewModel extends ChangeNotifier {
   final IFactureRepository _repository = FactureRepository();
@@ -27,6 +28,11 @@ class FactureViewModel extends ChangeNotifier {
 
   Timer? _pdfDebounce;
 
+  // --- AUTO-SAVE STATE ---
+  Timer? _saveDebounce;
+  bool _isRestoringDraft = false;
+  bool get isRestoringDraft => _isRestoringDraft;
+
   void toggleRealTimePreview(bool value) {
     _isRealTimePreviewEnabled = value;
     notifyListeners();
@@ -36,7 +42,34 @@ class FactureViewModel extends ChangeNotifier {
     _currentPdfData = null;
     _isGeneratingPdf = false;
     _isRealTimePreviewEnabled = false;
+    _isRealTimePreviewEnabled = false;
     _pdfDebounce?.cancel();
+    _saveDebounce?.cancel();
+  }
+
+  // --- AUTO-SAVE LOGIC ---
+  Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
+    _isRestoringDraft = true;
+    notifyListeners();
+    final key = LocalStorageService.generateKey('facture', id);
+    final data = await LocalStorageService.getDraft(key);
+    _isRestoringDraft = false;
+    notifyListeners();
+    return data;
+  }
+
+  void autoSaveDraft(String? id, Map<String, dynamic> data) {
+    if (_saveDebounce?.isActive ?? false) _saveDebounce!.cancel();
+    _saveDebounce = Timer(const Duration(seconds: 2), () async {
+      final key = LocalStorageService.generateKey('facture', id);
+      await LocalStorageService.saveDraft(key, data);
+    });
+  }
+
+  Future<void> clearLocalDraft(String? id) async {
+    _saveDebounce?.cancel();
+    final key = LocalStorageService.generateKey('facture', id);
+    await LocalStorageService.clearDraft(key);
   }
 
   void triggerPdfUpdate(

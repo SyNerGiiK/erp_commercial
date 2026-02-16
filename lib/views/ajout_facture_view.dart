@@ -73,6 +73,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
   String? _signatureUrl;
   DateTime? _dateSignature;
 
+  String _statut = 'brouillon';
   String _typeFacture = 'standard';
 
   Decimal _remiseTaux = Decimal.zero;
@@ -88,7 +89,56 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<FactureViewModel>(context, listen: false).clearPdfState();
     });
-    _initData();
+
+    _checkDraftAndInit();
+  }
+
+  Future<void> _checkDraftAndInit() async {
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+    final drafts = await vm.checkLocalDraft(widget.id);
+
+    if (drafts != null && mounted) {
+      _restoreDraft(drafts);
+    } else {
+      _initData();
+    }
+  }
+
+  void _restoreDraft(Map<String, dynamic> json) {
+    setState(() {
+      try {
+        final facture = Facture.fromMap(json);
+
+        _numeroCtrl.text = facture.numeroFacture;
+        _objetCtrl.text = facture.objet;
+        _notesCtrl.text = facture.notesPubliques ?? '';
+        _conditionsCtrl.text = facture.conditionsReglement ?? '';
+        _dateEmission = facture.dateEmission;
+        _dateEcheance = facture.dateEcheance;
+        _statut = facture.statut;
+        _typeFacture = facture.type;
+        _acompteDejaRegle = facture.acompteDejaRegle;
+
+        // Lignes
+        _lignes =
+            facture.lignes.map((l) => LigneFacture.fromMap(l.toMap())).toList();
+
+        // Client
+        if (facture.clientId != null) {
+          final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+          try {
+            _selectedClient =
+                clientVM.clients.firstWhere((c) => c.id == facture.clientId);
+          } catch (_) {}
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Brouillon facture restauré"),
+            duration: Duration(seconds: 2)));
+      } catch (e) {
+        _initData();
+      }
+    });
   }
 
   void _initData() async {
@@ -268,7 +318,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
           widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
       dateEmission: _dateEmission,
       dateEcheance: _dateEcheance,
-      statut: widget.factureAModifier?.statut ?? 'brouillon',
+      statut: _statut,
       statutJuridique: widget.factureAModifier?.statutJuridique ?? 'brouillon',
       type: _typeFacture,
       totalHt: _totalHT,
@@ -372,6 +422,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
     setState(() => _isLoading = false);
 
     if (success) {
+      await vm.clearLocalDraft(widget.id);
       context.go('/app/factures');
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Facture enregistrée !")));
@@ -470,6 +521,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
     // TRIGGER AUTO-UPDATE
     final vm = Provider.of<FactureViewModel>(context);
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+
+    // AUTO-SAVE
+    vm.autoSaveDraft(widget.id, draftData.toMap());
 
     vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: isTvaApplicable);

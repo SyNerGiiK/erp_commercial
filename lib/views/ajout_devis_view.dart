@@ -101,7 +101,65 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       Provider.of<DevisViewModel>(context, listen: false).clearPdfState();
     });
 
-    _initData();
+    _checkDraftAndInit();
+  }
+
+  Future<void> _checkDraftAndInit() async {
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
+
+    // 1. Vérif Draft Local
+    final drafts = await vm.checkLocalDraft(widget.id);
+
+    if (drafts != null && mounted) {
+      // SI DRAFT EXISTE : On l'utilise
+      _restoreDraft(drafts);
+    } else {
+      // SINON : Comportement normal (DB ou New)
+      _initData();
+    }
+  }
+
+  void _restoreDraft(Map<String, dynamic> json) {
+    setState(() {
+      // Restauration des champs basiques
+      // Note: Cela dépend de la structure exacte du JSON.
+      // On suppose que c'est le JSON du Devis.
+      try {
+        final devis = Devis.fromMap(json);
+
+        _numeroCtrl.text = devis.numeroDevis;
+        _objetCtrl.text = devis.objet;
+        _notesCtrl.text = devis.notesPubliques ?? '';
+        _conditionsCtrl.text = devis.conditionsReglement ?? '';
+        _dateEmission = devis.dateEmission;
+        _dateValidite = devis.dateValidite;
+        _statut = devis.statut;
+
+        // Lignes
+        _lignes =
+            devis.lignes.map((l) => LigneDevis.fromMap(l.toMap())).toList();
+
+        // Client (Complexe car on a que l'ID ou le snapshot)
+        // Idéalement on garde l'ID et on fetch, ou on utilise le snapshot client
+        // Pour MVP Auto-Save: on essaie de retrouver le client par ID si présent
+        if (devis.clientId != null) {
+          final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+          try {
+            _selectedClient =
+                clientVM.clients.firstWhere((c) => c.id == devis.clientId);
+          } catch (_) {
+            // Client pas trouvé en local, peut-être fetch nécessaire ou ignorer
+          }
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Brouillon restauré automatiquement"),
+            duration: Duration(seconds: 2)));
+      } catch (e) {
+        print("Erreur restauration draft: $e");
+        _initData(); // Fallback
+      }
+    });
   }
 
   void _initData() {
@@ -320,7 +378,12 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     if (!mounted) return;
     setState(() => _isLoading = false);
 
+    setState(() => _isLoading = false);
+
     if (success) {
+      // Clear Draft
+      await vm.clearLocalDraft(widget.id);
+
       context.go('/app/devis');
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
@@ -436,6 +499,14 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
     vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: entVM.isTvaApplicable);
+
+    // AUTO-SAVE TRIGGER
+    // On convertit en JSON
+    final json = draftData.toMap();
+
+    // On envoie au VM
+    final devisVM = Provider.of<DevisViewModel>(context, listen: false);
+    devisVM.autoSaveDraft(widget.id, json);
 
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",

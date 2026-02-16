@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 
 import '../repositories/dashboard_repository.dart';
 import '../models/facture_model.dart';
+import '../models/devis_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
@@ -179,5 +180,44 @@ class DashboardViewModel extends ChangeNotifier {
         break;
     }
     return {'start': start, 'end': end};
+  }
+
+  // --- STATS GLOBALES (Calculées sychronement depuis les listes chargées) ---
+
+  Decimal calculateImpayes(List<Facture> factures) {
+    Decimal totalImpaye = Decimal.zero;
+
+    for (var f in factures) {
+      if (f.statut == 'validee') {
+        // Calcul du total réglé
+        final totalRegle =
+            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+
+        // Calcul du net commercial
+        final remiseAmount = (f.totalHt * f.remiseTaux) / Decimal.fromInt(100);
+        final netCommercial = f.totalHt - remiseAmount.toDecimal();
+
+        // Reste = Net - AcompteInitial - TotalReglé
+        final reste = netCommercial - f.acompteDejaRegle - totalRegle;
+
+        if (reste > Decimal.zero) {
+          totalImpaye += reste;
+        }
+      }
+    }
+    return totalImpaye;
+  }
+
+  Decimal calculateConversion(List<Devis> devis) {
+    if (devis.isEmpty) return Decimal.zero;
+
+    final signes =
+        devis.where((d) => d.statut == 'signe' || d.statut == 'facture');
+    final totalSignes = signes.length;
+    final totalDevis = devis.length;
+
+    return ((Decimal.fromInt(totalSignes) * Decimal.fromInt(100)) /
+            Decimal.fromInt(totalDevis))
+        .toDecimal();
   }
 }

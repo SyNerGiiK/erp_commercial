@@ -183,7 +183,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             title: "Impayés",
                             subtitle: "Reste à recouvrer",
                             value: FormatUtils.currency(
-                                _calculateImpayesFromLoaded(factVM.factures)),
+                                dashVM.calculateImpayes(factVM.factures)),
                             icon: Icons.warning_amber,
                             color: Colors.orange,
                           ),
@@ -194,7 +194,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             title: "Transformation",
                             subtitle: "Devis signés",
                             value:
-                                "${_calculateConversionFromLoaded(devisVM.devis).toStringAsFixed(1)} %",
+                                "${dashVM.calculateConversion(devisVM.devis).toStringAsFixed(1)} %",
                             icon: Icons.check_circle_outline,
                             color: Colors.purple,
                           ),
@@ -244,44 +244,5 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       case DashboardPeriod.annee:
         return "Cette année";
     }
-  }
-
-  /// Calcule les impayés de manière synchrone sur les factures déjà chargées
-  Decimal _calculateImpayesFromLoaded(List<Facture> factures) {
-    Decimal totalImpaye = Decimal.zero;
-
-    for (var f in factures) {
-      if (f.statut == 'validee') {
-        // Calcul du total réglé
-        final totalRegle =
-            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-        // Calcul du net commercial
-        final remiseAmount = (f.totalHt * f.remiseTaux) / Decimal.fromInt(100);
-        final netCommercial = f.totalHt - remiseAmount.toDecimal();
-
-        // Reste = Net - AcompteInitial - TotalReglé
-        final reste = netCommercial - f.acompteDejaRegle - totalRegle;
-
-        if (reste > Decimal.zero) {
-          totalImpaye += reste;
-        }
-      }
-    }
-    return totalImpaye;
-  }
-
-  /// Calcule le taux de conversion de manière synchrone sur les devis déjà chargés
-  Decimal _calculateConversionFromLoaded(List<Devis> devis) {
-    if (devis.isEmpty) return Decimal.zero;
-
-    final signes =
-        devis.where((d) => d.statut == 'signe' || d.statut == 'facture');
-    final totalSignes = signes.length;
-    final totalDevis = devis.length;
-
-    return ((Decimal.fromInt(totalSignes) * Decimal.fromInt(100)) /
-            Decimal.fromInt(totalDevis))
-        .toDecimal();
   }
 }

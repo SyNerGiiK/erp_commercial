@@ -109,4 +109,11 @@ class EntrepriseViewModel extends ChangeNotifier {
     }
     return "";
   }
+
+  /// Indique si la TVA est applicable pour cette entreprise
+  // Si Micro-Entrepreneur -> Pas de TVA (Franchise en base)
+  bool get isTvaApplicable {
+    if (_profil == null) return true; // Par défaut on affiche
+    return !_profil!.typeEntreprise.isMicroEntrepreneur;
+  }
 }

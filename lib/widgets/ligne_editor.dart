@@ -19,6 +19,7 @@ class LigneEditor extends StatefulWidget {
 
   // MODULE TVA
   final Decimal? tauxTva;
+  final bool showTva; // NEW
 
   // Callback updated with avancement
   final Function(
@@ -54,6 +55,7 @@ class LigneEditor extends StatefulWidget {
     this.isSituation = false,
     this.avancement,
     this.tauxTva,
+    this.showTva = true,
   });
 
   @override
@@ -85,7 +87,12 @@ class _LigneEditorState extends State<LigneEditor> {
     _uniteCtrl = TextEditingController(text: widget.unite);
     _avancementCtrl = TextEditingController(
         text: (widget.avancement ?? Decimal.fromInt(100)).toString());
-    _currentTva = widget.tauxTva ?? Decimal.fromInt(20);
+
+    if (!widget.showTva) {
+      _currentTva = Decimal.zero;
+    } else {
+      _currentTva = widget.tauxTva ?? Decimal.fromInt(20);
+    }
   }
 
   @override
@@ -276,37 +283,38 @@ class _LigneEditorState extends State<LigneEditor> {
 
           const SizedBox(width: 4),
 
-          // TVA
-          SizedBox(
-            width: 50,
-            child: DropdownButtonFormField<Decimal>(
-              initialValue: _currentTva,
-              icon: const SizedBox(), // Cache l'icone pour gagner place
-              decoration: const InputDecoration(
-                labelText: "TVA",
-                isDense: true,
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-                border: InputBorder.none,
+          // TVA - HIDDEN if showTva is false
+          if (widget.showTva)
+            SizedBox(
+              width: 50,
+              child: DropdownButtonFormField<Decimal>(
+                initialValue: _currentTva,
+                icon: const SizedBox(), // Cache l'icone pour gagner place
+                decoration: const InputDecoration(
+                  labelText: "TVA",
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(fontSize: 10, color: Colors.black),
+                items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
+                  return DropdownMenuItem(
+                    value: Decimal.parse(t.toString()),
+                    child: Text("${t.toDouble()}%",
+                        style: const TextStyle(fontSize: 10)),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _currentTva = v;
+                    });
+                    _notify();
+                  }
+                },
               ),
-              style: const TextStyle(fontSize: 10, color: Colors.black),
-              items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
-                return DropdownMenuItem(
-                  value: Decimal.parse(t.toString()),
-                  child: Text("${t.toInt()}%",
-                      style: const TextStyle(fontSize: 10)),
-                );
-              }).toList(),
-              onChanged: (v) {
-                if (v != null) {
-                  setState(() {
-                    _currentTva = v;
-                  });
-                  _notify();
-                }
-              },
             ),
-          ),
 
           const SizedBox(width: 4),
 

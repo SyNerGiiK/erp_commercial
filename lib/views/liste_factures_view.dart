@@ -58,7 +58,8 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
 
     if (!mounted) return;
 
-    final bytes = await PdfService.generateFacture(f, client, entVM.profil);
+    final bytes = await PdfService.generateDocument(f, client, entVM.profil,
+        docType: "FACTURE", isTvaApplicable: entVM.isTvaApplicable);
 
     if (!mounted) return;
 

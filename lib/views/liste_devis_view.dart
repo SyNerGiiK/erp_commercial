@@ -64,7 +64,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
     if (!mounted) return;
 
     final bytes = await PdfService.generateDocument(d, client, entVM.profil,
-        docType: docType);
+        docType: docType, isTvaApplicable: entVM.isTvaApplicable);
 
     if (!mounted) return;
 

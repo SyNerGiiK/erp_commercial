@@ -312,13 +312,16 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   // --- ACTIONS ---
 
   void _ajouterLigne() {
+    final isTvaApplicable =
+        Provider.of<EntrepriseViewModel>(context, listen: false)
+            .isTvaApplicable;
     setState(() {
       _lignes.add(LigneFacture(
         description: "",
         quantite: Decimal.one,
         prixUnitaire: Decimal.zero,
         totalLigne: Decimal.zero,
-        tauxTva: Decimal.fromInt(20),
+        tauxTva: isTvaApplicable ? Decimal.fromInt(20) : Decimal.zero,
       ));
     });
   }
@@ -395,8 +398,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         );
 
     final facture = _buildFactureFromState();
-    return await PdfService.generateFacture(
-        facture, client, entrepriseVM.profil);
+    return await PdfService.generateDocument(
+        facture, client, entrepriseVM.profil,
+        docType: "FACTURE", isTvaApplicable: entrepriseVM.isTvaApplicable);
   }
 
   Future<void> _signerClient() async {
@@ -481,6 +485,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   Widget build(BuildContext context) {
     // Draft Data for Minimize
     final draftData = _buildFactureFromState();
+
+    final isTvaApplicable =
+        Provider.of<EntrepriseViewModel>(context).isTvaApplicable;
 
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouvelle Facture" : "Modifier Facture",
@@ -624,8 +631,10 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                         estSouligne: ligne.estSouligne,
                         avancement: ligne.avancement,
                         tauxTva: ligne.tauxTva,
-                        isSituation: isSituation,
+                        isSituation: widget.sourceDevisId != null &&
+                            _typeFacture == 'situation', // TODO: affiner
                         showHandle: true,
+                        showTva: isTvaApplicable,
                         onChanged: (desc, qte, pu, unite, type, gras, ital,
                             soul, av, tva) {
                           setState(() {
@@ -683,12 +692,13 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                             Text("- ${FormatUtils.currency(_totalRemise)}",
                                 style: const TextStyle(color: Colors.red)),
                           ]),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Total TVA"),
-                          Text(FormatUtils.currency(_totalTVARemisee)),
-                        ]),
+                    if (isTvaApplicable)
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Total TVA"),
+                            Text(FormatUtils.currency(_totalTVARemisee)),
+                          ]),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -724,8 +734,12 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                     Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("NET À PAYER (TTC)",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                              isTvaApplicable
+                                  ? "NET À PAYER (TTC)"
+                                  : "NET À PAYER",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           Text(FormatUtils.currency(_netAPayerFinal),
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 18))

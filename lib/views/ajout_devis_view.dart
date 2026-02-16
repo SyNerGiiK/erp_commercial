@@ -228,18 +228,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     }
   }
 
-  void _ajouterLigne() {
-    setState(() {
-      _lignes.add(LigneDevis(
-        description: "",
-        quantite: Decimal.one,
-        prixUnitaire: Decimal.zero,
-        totalLigne: Decimal.zero,
-        tauxTva: Decimal.fromInt(20),
-      ));
-    });
-  }
-
   // --- GESTION MATIÈRES PREMIÈRES ---
 
   Future<void> _ajouterMatiere() async {
@@ -345,6 +333,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     if (entrepriseVM.profil == null) {
       await entrepriseVM.fetchProfil();
     }
+    final isTvaApplicable = entrepriseVM.isTvaApplicable;
 
     // On utilise un client temporaire si pas sélectionné pour éviter crash
     final client = _selectedClient ??
@@ -360,7 +349,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
     final devis = _buildDevisFromState();
 
-    return await PdfService.generateDevis(devis, client, entrepriseVM.profil);
+    return await PdfService.generateDocument(devis, client, entrepriseVM.profil,
+        docType: "DEVIS", isTvaApplicable: isTvaApplicable);
   }
 
   Future<void> _finaliser() async {
@@ -641,6 +631,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     estSouligne: ligne.estSouligne,
                     showHandle: true,
                     tauxTva: ligne.tauxTva,
+                    showTva: Provider.of<EntrepriseViewModel>(context)
+                        .isTvaApplicable,
                     onChanged: (desc, qte, pu, unite, type, gras, ital, soul,
                         av, tva) {
                       setState(() {
@@ -674,7 +666,23 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
               child: Row(
                 children: [
                   ElevatedButton.icon(
-                    onPressed: _ajouterLigne,
+                    onPressed: () {
+                      final isTvaApplicable = Provider.of<EntrepriseViewModel>(
+                              context,
+                              listen: false)
+                          .isTvaApplicable;
+                      setState(() {
+                        _lignes.add(LigneDevis(
+                          description: "",
+                          quantite: Decimal.one,
+                          prixUnitaire: Decimal.zero,
+                          totalLigne: Decimal.zero,
+                          tauxTva: isTvaApplicable
+                              ? Decimal.fromInt(20)
+                              : Decimal.zero,
+                        ));
+                      });
+                    },
                     icon: const Icon(Icons.add),
                     label: const Text("Article"),
                   ),
@@ -747,14 +755,20 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                   const Divider(),
                   _rowTotal("NET COMMERCIAL (HT)", _netCommercial,
                       isBig: false),
-                  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Total TVA"),
-                        Text(FormatUtils.currency(_totalTVARemisee)),
-                      ]),
+                  if (Provider.of<EntrepriseViewModel>(context).isTvaApplicable)
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Total TVA"),
+                          Text(FormatUtils.currency(_totalTVARemisee)),
+                        ]),
                   const Divider(),
-                  _rowTotal("NET À PAYER (TTC)", _netAPayerFinal, isBig: true),
+                  _rowTotal(
+                      Provider.of<EntrepriseViewModel>(context).isTvaApplicable
+                          ? "NET À PAYER (TTC)"
+                          : "NET À PAYER",
+                      _netAPayerFinal,
+                      isBig: true),
                 ],
               ),
             ),

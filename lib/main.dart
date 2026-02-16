@@ -1,6 +1,7 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/gestures.dart'; // Pour PointerDeviceKind
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -43,6 +44,7 @@ class ArtisanApp extends StatelessWidget {
       title: 'Artisan 3.0',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      scrollBehavior: AppScrollBehavior(),
 
       // Configuration GoRouter
       routerConfig: router,
@@ -54,5 +56,22 @@ class ArtisanApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('fr', 'FR')],
     );
+  }
+}
+
+/// Comportement de Scroll optimisé pour Web & Desktop
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
+
+  // Supprime l'effet "Glow" (Vague bleue) sur Android/Chrome
+  @override
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
   }
 }

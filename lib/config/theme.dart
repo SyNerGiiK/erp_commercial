@@ -123,9 +123,36 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: primary, width: 2),
         ),
-        labelStyle: const TextStyle(color: textLight),
         prefixIconColor: primary,
       ),
+
+      // Transitions de pages
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+          TargetPlatform.macOS: NoTransitionsBuilder(),
+          TargetPlatform.windows: NoTransitionsBuilder(),
+          TargetPlatform.linux: NoTransitionsBuilder(),
+        },
+      ),
     );
+  }
+}
+
+/// Une transition instantanée pour le Web et Desktop
+/// Permet une navigation "Snappy" sans effet de slide inutile
+class NoTransitionsBuilder extends PageTransitionsBuilder {
+  const NoTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T>? route,
+    BuildContext? context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
   }
 }

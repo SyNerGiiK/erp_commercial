@@ -53,7 +53,7 @@ class AjoutDevisView extends StatefulWidget {
 }
 
 class _AjoutDevisViewState extends State<AjoutDevisView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   // TabController pour les onglets Devis / Analyse Coûts
@@ -94,7 +94,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _tabController = TabController(length: 2, vsync: this);
 
     // Clear previous PDF state

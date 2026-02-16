@@ -52,7 +52,8 @@ class AjoutFactureView extends StatefulWidget {
   State<AjoutFactureView> createState() => _AjoutFactureViewState();
 }
 
-class _AjoutFactureViewState extends State<AjoutFactureView> {
+class _AjoutFactureViewState extends State<AjoutFactureView>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _numeroCtrl;

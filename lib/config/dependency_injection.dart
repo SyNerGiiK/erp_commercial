@@ -14,6 +14,7 @@ import '../viewmodels/article_viewmodel.dart';
 import '../viewmodels/planning_viewmodel.dart';
 import '../viewmodels/shopping_viewmodel.dart';
 import '../viewmodels/global_search_viewmodel.dart';
+import '../viewmodels/editor_state_provider.dart';
 
 class DependencyInjection {
   static List<SingleChildWidget> get providers {
@@ -30,6 +31,7 @@ class DependencyInjection {
       ChangeNotifierProvider(create: (_) => PlanningViewModel()),
       ChangeNotifierProvider(create: (_) => ShoppingViewModel()),
       ChangeNotifierProvider(create: (_) => GlobalSearchViewModel()),
+      ChangeNotifierProvider(create: (_) => EditorStateProvider()),
     ];
   }
 }

@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/facture_viewmodel.dart';
 import '../viewmodels/devis_viewmodel.dart';
+import '../viewmodels/editor_state_provider.dart'; // IMPORT ADDED
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 
@@ -54,6 +55,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     final factVM = Provider.of<FactureViewModel>(context);
     final devisVM = Provider.of<DevisViewModel>(context);
 
+    // Listen to EditorStateProvider
+    final editorState = Provider.of<EditorStateProvider>(context);
+
     // Prepare Graph Data
     final List<Decimal> graphData = List<Decimal>.filled(12, Decimal.zero);
     dashVM.graphData.forEach((month, value) {
@@ -79,6 +83,41 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       menuIndex: 0,
       title: "Cockpit",
       subtitle: "Vue d'ensemble de l'activité",
+
+      // RESTORE DRAFT FAB
+      floatingActionButton: editorState.hasDraft
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                final data = editorState.restore();
+                if (data != null) {
+                  final type = data['type'];
+                  final id = data['id'];
+                  final draft = data['draft'];
+                  // sourceDevisId handling handled inside draft object usually or distinct
+
+                  if (type == 'devis') {
+                    if (id != null) {
+                      context.push('/app/ajout_devis/$id', extra: draft);
+                    } else {
+                      context.push('/app/ajout_devis', extra: draft);
+                    }
+                  } else if (type == 'facture') {
+                    if (id != null) {
+                      context.push('/app/ajout_facture/$id', extra: draft);
+                    } else {
+                      context.push('/app/ajout_facture', extra: draft);
+                    }
+                  }
+                }
+              },
+              icon: const Icon(Icons.restore_page, color: Colors.white),
+              label: Text(
+                  "Reprendre ${editorState.draftType == 'devis' ? 'Devis' : 'Facture'}",
+                  style: const TextStyle(color: Colors.white)),
+              backgroundColor: Colors.orange,
+            )
+          : null,
+
       headerActions: [
         DropdownButton<DashboardPeriod>(
           value: dashVM.selectedPeriod,

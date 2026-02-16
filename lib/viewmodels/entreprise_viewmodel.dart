@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../models/entreprise_model.dart';
+import '../models/enums/entreprise_enums.dart';
 import '../repositories/entreprise_repository.dart';
 
 class EntrepriseViewModel extends ChangeNotifier {
@@ -98,5 +99,14 @@ class EntrepriseViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Suggère les mentions légales obligatoires selon le type d'entreprise
+  String getLegalMentionsSuggestion(TypeEntreprise type) {
+    if (type.isMicroEntrepreneur) {
+      return "TVA non applicable, art. 293 B du CGI.\n"
+          "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).";
+    }
+    return "";
   }
 }

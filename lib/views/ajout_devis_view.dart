@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
-import 'package:printing/printing.dart';
+import 'package:printing/printing.dart'; // Pour PdfPageFormat
+import 'package:pdf/pdf.dart'; // ADDED for PdfPageFormat
 import 'dart:typed_data';
+
 import '../widgets/dialogs/signature_dialog.dart';
 import '../widgets/dialogs/matiere_dialog.dart';
 
@@ -14,7 +16,6 @@ import '../models/devis_model.dart';
 import '../models/article_model.dart';
 import '../models/client_model.dart';
 import '../models/chiffrage_model.dart';
-// import '../models/config_charges_model.dart'; // Removed
 import '../viewmodels/devis_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
@@ -24,11 +25,12 @@ import '../models/enums/entreprise_enums.dart';
 
 // Services
 import '../services/pdf_service.dart';
-import '../services/preferences_service.dart';
+// import '../services/preferences_service.dart';
 
 // Widgets
-import '../widgets/base_screen.dart';
-import '../widgets/app_card.dart'; // Import ajouté
+// import '../widgets/base_screen.dart'; // REMOVED
+import '../widgets/split_editor_scaffold.dart'; // ADDED
+import '../widgets/app_card.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
@@ -120,9 +122,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       _lignes = List.from(d.lignes);
       _chiffrage = List.from(d.chiffrage);
       _remiseTaux = d.remiseTaux;
-      // _acompteMontant is now computed, so we don't assign it.
-      // We calculate percentage from d.acompteMontant and d.totalHt
-      // Reverse calc percentage
+
       if (d.totalHt > Decimal.zero) {
         // On base le % sur le Net Commercial (HT - Remise)
         final net = d.totalHt -
@@ -133,33 +133,27 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         }
       }
 
-      // Init Statut
       _statut = d.statut;
-      // Init Signature (Clean URL handled display-side)
       _signatureUrl = d.signatureUrl;
+      // Clean URL logic
       if (_signatureUrl != null && !_signatureUrl!.contains('?')) {
-        // Add timestamp for display only
         _signatureUrl =
             "$_signatureUrl?t=${DateTime.now().millisecondsSinceEpoch}";
       }
       _dateSignature = d.dateSignature;
 
-      // Charger le client si on a l'ID
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
         try {
           final client =
               clientVM.clients.firstWhere((c) => c.id == d!.clientId);
           setState(() => _selectedClient = client);
-        } catch (_) {
-          // Client non trouvé (peut-être supprimé ou liste non chargée)
-          // On ne fait rien, l'utilisateur devra resélectionner si besoin
-        }
+        } catch (_) {}
       });
     } else {
       _numeroCtrl = TextEditingController(text: "Brouillon");
       _objetCtrl = TextEditingController();
-      _notesCtrl = TextEditingController(); // Fixed duplicate line
+      _notesCtrl = TextEditingController();
       _conditionsCtrl = TextEditingController(text: "Paiement à réception");
       _statut = 'brouillon';
     }
@@ -173,6 +167,34 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     super.dispose();
+  }
+
+  // --- HELPER: BUILD OBJECT ---
+  Devis _buildDevisFromState() {
+    return Devis(
+      id: widget.id, // Null si création
+      userId: SupabaseConfig.userId,
+      numeroDevis: _numeroCtrl.text,
+      objet: _objetCtrl.text,
+      clientId: _selectedClient?.id ??
+          "temp_client", // ID temporaire si pas encore sélect
+      dateEmission: _dateEmission,
+      dateValidite: _dateValidite,
+      statut: _statut,
+      totalHt: _totalHT,
+      totalTva: _totalTVARemisee,
+      totalTtc: _netAPayerFinal,
+      remiseTaux: _remiseTaux,
+      acompteMontant: _acompteMontant,
+      conditionsReglement: _conditionsCtrl.text,
+      notesPubliques: _notesCtrl.text,
+      lignes: _lignes,
+      chiffrage: _chiffrage,
+      signatureUrl: _signatureUrl?.split('?').first,
+      dateSignature: _dateSignature,
+      estTransforme: widget.devisAModifier?.estTransforme ?? false,
+      estArchive: widget.devisAModifier?.estArchive ?? false,
+    );
   }
 
   // --- CALCULS ---
@@ -199,7 +221,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     final client = await showDialog<Client>(
         context: context, builder: (_) => const ClientSelectionDialog());
 
-    // Async Safety
     if (!mounted) return;
 
     if (client != null) {
@@ -244,7 +265,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     setState(() {
       _lignes.add(LigneDevis(
         description: "",
-        quantite: Decimal.zero, // Pas de quantité pour les titres/textes
+        quantite: Decimal.zero,
         prixUnitaire: Decimal.zero,
         totalLigne: Decimal.zero,
         type: type,
@@ -264,12 +285,11 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
           description: article.designation,
           quantite: Decimal.one,
           prixUnitaire: article.prixUnitaire,
-          totalLigne: article.prixUnitaire, // 1 * PU
+          totalLigne: article.prixUnitaire,
           unite: article.unite,
           typeActivite: article.typeActivite,
           tauxTva: article.tauxTva,
         ));
-        // Ajout auto au chiffrage pour rentabilité
         _chiffrage.add(LigneChiffrage(
           designation: article.designation,
           quantite: Decimal.one,
@@ -296,33 +316,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     setState(() => _isLoading = true);
 
     final vm = Provider.of<DevisViewModel>(context, listen: false);
-
-    final devisToSave = Devis(
-      id: widget.id, // Null si création
-      userId: SupabaseConfig.userId, // Sera géré par le Repo
-      numeroDevis: _numeroCtrl.text,
-      objet: _objetCtrl.text,
-      clientId: _selectedClient!.id!,
-      dateEmission: _dateEmission,
-      dateValidite: _dateValidite,
-      statut: _statut,
-      totalHt: _totalHT,
-      totalTva: _totalTVARemisee,
-      totalTtc: _netAPayerFinal,
-      remiseTaux: _remiseTaux,
-      acompteMontant: _acompteMontant,
-      conditionsReglement: _conditionsCtrl.text,
-      notesPubliques: _notesCtrl.text,
-      lignes: _lignes,
-      chiffrage: _chiffrage,
-      // On conserve les champs non éditables ici
-      // On utilise les variables d'état qui peuvent avoir été mises à jour par _signerClient
-      // IMPORTANT : On nettoie l'URL de tout paramètre (timestamp) avant sauvegarde
-      signatureUrl: _signatureUrl?.split('?').first,
-      dateSignature: _dateSignature,
-      estTransforme: widget.devisAModifier?.estTransforme ?? false,
-      estArchive: widget.devisAModifier?.estArchive ?? false,
-    );
+    final devisToSave = _buildDevisFromState();
 
     bool success;
     if (widget.id == null) {
@@ -331,14 +325,11 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       success = await vm.updateDevis(devisToSave);
     }
 
-    // Async Safety
     if (!mounted) return;
-
     setState(() => _isLoading = false);
 
     if (success) {
-      context.go(
-          '/app/devis'); // ✅ FIX: Utiliser go() au lieu de pop() pour éviter "nothing to pop"
+      context.go('/app/devis');
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
     } else {
@@ -347,40 +338,29 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     }
   }
 
-  Future<void> _genererPDF() async {
-    if (widget.devisAModifier == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Veuillez d'abord enregistrer le devis.")));
-      return;
-    }
-
+  /// callback pour SplitEditorScaffold
+  Future<Uint8List> _generatePreviewPdf(PdfPageFormat format) async {
     final entrepriseVM =
         Provider.of<EntrepriseViewModel>(context, listen: false);
-    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
-
-    // Ensure entreprise is loaded
     if (entrepriseVM.profil == null) {
       await entrepriseVM.fetchProfil();
     }
 
-    try {
-      final client = clientVM.clients
-          .firstWhere((c) => c.id == widget.devisAModifier!.clientId);
+    // On utilise un client temporaire si pas sélectionné pour éviter crash
+    final client = _selectedClient ??
+        Client(
+          nomComplet: "Client (En attente)",
+          adresse: "",
+          codePostal: "",
+          ville: "",
+          telephone: "",
+          email: "",
+          typeClient: "particulier",
+        );
 
-      // Appel au service PDF (implémenté dans pdf_service.dart)
-      final pdfBytes = await PdfService.generateDevis(
-          widget.devisAModifier!, client, entrepriseVM.profil);
+    final devis = _buildDevisFromState();
 
-      if (!mounted) return;
-
-      await Printing.layoutPdf(
-          onLayout: (format) async => pdfBytes,
-          name: "Devis_${widget.devisAModifier!.numeroDevis}.pdf");
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Erreur génération PDF : $e")));
-    }
+    return await PdfService.generateDevis(devis, client, entrepriseVM.profil);
   }
 
   Future<void> _finaliser() async {
@@ -413,7 +393,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
     if (!mounted) return;
     setState(() => _isLoading = false);
-    context.pop(); // Retour liste
+    context.pop();
   }
 
   Future<void> _signerClient() async {
@@ -443,14 +423,10 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signature enregistrée !")));
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Signature enregistrée !")));
 
-      // Récupérer le devis mis à jour depuis le VM pour avoir l'URL correcte
       try {
         final updatedDevis = vm.devis.firstWhere((d) => d.id == widget.id);
         setState(() {
-          // On ajoute un timestamp pour forcer le rafraîchissement du cache navigateur
           if (updatedDevis.signatureUrl != null) {
             _signatureUrl =
                 "${updatedDevis.signatureUrl}?t=${DateTime.now().millisecondsSinceEpoch}";
@@ -461,7 +437,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
           _statut = updatedDevis.statut;
         });
       } catch (e) {
-        // Fallback si pas trouvé (rare)
+        debugPrint("Erreur signature: $e");
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -471,50 +447,48 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
   @override
   Widget build(BuildContext context) {
-    return BaseScreen(
+    // On construit les données pour le draft (Minimisation)
+    final draftData = _buildDevisFromState();
+
+    return SplitEditorScaffold(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
-      menuIndex: 1,
-      useFullWidth: true,
-      headerActions: [
-        if (widget.devisAModifier != null)
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            tooltip: "Voir PDF",
-            onPressed: _genererPDF,
-          )
-      ],
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // TAB BAR
-                Container(
-                  color: Colors.white,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: AppTheme.primary,
-                    labelColor: AppTheme.primary,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: const [
-                      Tab(icon: Icon(Icons.description), text: "Devis"),
-                      Tab(
-                          icon: Icon(Icons.analytics),
-                          text: "Coûts & Rentabilité"),
-                    ],
-                  ),
-                ),
-                // TAB BAR VIEW
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildTabDevis(),
-                      _buildTabAnalyse(),
-                    ],
-                  ),
-                ),
+      onSave: _sauvegarder,
+      isSaving: _isLoading,
+      draftData: draftData,
+      draftType: 'devis',
+      draftId: widget.id,
+      // La fonction qui génère le PDF preview
+      onGeneratePdf: _generatePreviewPdf,
+
+      // FORMULAIRE (Partie Gauche)
+      editorForm: Column(
+        children: [
+          // TAB BAR (Reste visible en haut de la colonne gauche)
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: AppTheme.primary,
+              labelColor: AppTheme.primary,
+              unselectedLabelColor: Colors.grey,
+              tabs: const [
+                Tab(icon: Icon(Icons.description), text: "Devis"),
+                Tab(icon: Icon(Icons.analytics), text: "Coûts & Rentabilité"),
               ],
             ),
+          ),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildTabDevis(),
+                _buildTabAnalyse(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -523,6 +497,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -694,44 +669,49 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
               },
             ),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _ajouterLigne,
-                  icon: const Icon(Icons.add),
-                  label: const Text("Article"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _ajouterLigneSpeciale('titre'),
-                  icon: const Icon(Icons.title),
-                  label: const Text("Titre"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _ajouterLigneSpeciale('sous-titre'),
-                  icon: const Icon(Icons.text_fields),
-                  label: const Text("Sous-titre"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _ajouterLigneSpeciale('texte'),
-                  icon: const Icon(Icons.comment),
-                  label: const Text("Note"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _ajouterLigneSpeciale('saut_page'),
-                  icon:
-                      const Icon(Icons.feed), // "Feed" looks like a page break
-                  label: const Text("Saut Page"),
-                  style:
-                      OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _importerArticle,
-                  icon: const Icon(Icons.library_books),
-                  label: const Text("Importer"),
-                ),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _ajouterLigne,
+                    icon: const Icon(Icons.add),
+                    label: const Text("Article"),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _ajouterLigneSpeciale('titre'),
+                    icon: const Icon(Icons.title),
+                    label: const Text("Titre"),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _ajouterLigneSpeciale('sous-titre'),
+                    icon: const Icon(Icons.text_fields),
+                    label: const Text("Sous-titre"),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _ajouterLigneSpeciale('texte'),
+                    icon: const Icon(Icons.comment),
+                    label: const Text("Note"),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _ajouterLigneSpeciale('saut_page'),
+                    icon: const Icon(Icons.feed),
+                    label: const Text("Saut Page"),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: _importerArticle,
+                    icon: const Icon(Icons.library_books),
+                    label: const Text("Importer"),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -801,8 +781,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                       return ChoiceChip(
                         label: Text("$p%"),
                         selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
+                        onSelected: (val) {
+                          if (val) {
                             setState(() {
                               _acomptePercentage = Decimal.fromInt(p);
                             });
@@ -813,136 +793,77 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                   ),
                   const SizedBox(height: 15),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          key: ValueKey(_acomptePercentage.toString()),
-                          initialValue: _acomptePercentage.toString(),
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: "Autre (%)",
-                            suffixText: "%",
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          onChanged: (v) {
-                            setState(() {
-                              _acomptePercentage =
-                                  Decimal.tryParse(v) ?? Decimal.zero;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text("Montant calculé :",
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey)),
-                              Text(
-                                FormatUtils.currency(_acompteMontant),
-                                style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      const Text("Montant acompte :"),
+                      Text(FormatUtils.currency(_acompteMontant),
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
-            // SIGNATURE CLIENT
+            // PIED DE PAGE & SIGNATURE
             AppCard(
               child: Column(
                 children: [
-                  const Text("Signature Client",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const Divider(),
-                  if (_signatureUrl != null) ...[
-                    Image.network(
-                      _signatureUrl!,
-                      height: 150,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox(
-                              height: 150,
-                              child: Center(
-                                  child: Text("Erreur chargement signature"))),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
-                      style: const TextStyle(
-                          fontStyle: FontStyle.italic, color: Colors.green),
-                    ),
-                    const SizedBox(height: 4),
-                    SelectableText(_signatureUrl ?? 'URL Nulle',
-                        style: const TextStyle(
-                            fontSize: 10, color: Colors.grey)), // DEBUG
-                  ] else
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                          "Aucune signature client enregistrée pour ce devis."),
-                    ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _signerClient,
-                      icon: const Icon(Icons.draw),
-                      label: Text(_signatureUrl != null
-                          ? "Refaire la signature"
-                          : "Faire signer le client"),
-                    ),
+                  CustomTextField(
+                    label: "Conditions de règlement",
+                    controller: _conditionsCtrl,
                   ),
+                  const SizedBox(height: 10),
+                  CustomTextField(
+                    label: "Notes (Visibles sur le PDF)",
+                    controller: _notesCtrl,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+                  if (widget.id != null) ...[
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Signature Client :"),
+                        if (_signatureUrl != null)
+                          Tooltip(
+                            message:
+                                "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                            child: const Chip(
+                                label: Text("Signé"),
+                                avatar: Icon(Icons.check_circle,
+                                    color: Colors.green)),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _signerClient,
+                            icon: const Icon(Icons.draw),
+                            label: const Text("Faire signer le client"),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
 
-            const SizedBox(height: 30),
-            // ACTIONS BAS DE PAGE
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (widget.devisAModifier?.statut == 'brouillon')
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: OutlinedButton(
-                      onPressed: _finaliser,
-                      style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green),
-                      child: const Text("FINALISER (Figer)"),
-                    ),
-                  ),
-                ElevatedButton(
-                  onPressed: _sauvegarder,
+            const SizedBox(height: 50),
+            if (widget.id != null)
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: _finaliser,
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 15)),
-                  child: const Text("ENREGISTRER",
-                      style: TextStyle(color: Colors.white)),
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 15),
+                  ),
+                  icon: const Icon(Icons.check),
+                  label: const Text("FINALISER LE DEVIS (Définitif)"),
                 ),
-              ],
-            ),
+              ),
             const SizedBox(height: 50),
           ],
         ),
@@ -950,192 +871,175 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     );
   }
 
-  // --- ONGLET ANALYSE COÛTS ---
+  // --- ONGLET ANALYSE ---
   Widget _buildTabAnalyse() {
-    // Récupération configuration URSSAF & Profil
-    final urssafVM = Provider.of<UrssafViewModel>(context);
-    final entrepriseVM = Provider.of<EntrepriseViewModel>(context);
-
-    final config = urssafVM.config;
-    final profil = entrepriseVM.profil;
-
-    // Calcul du taux applicable (Priorité Micro-Entrepreneur Vente pour les matières)
-    Decimal tauxApplicable = Decimal.zero;
-    String detailsTaux = "Non configuré";
-
-    if (config != null && profil != null) {
-      if (profil.typeEntreprise.isMicroEntrepreneur) {
-        // Pour les matières premières, c'est de la Vente de Marchandises
-        final tauxBase = config.tauxMicroVente;
-        final tauxEffectif = config.getTauxMicroEffectif(tauxBase);
-        final cfp = config.tauxCfpMicroVente;
-
-        tauxApplicable = tauxEffectif + cfp;
-        detailsTaux =
-            "Micro-Entreprise Vente : ${tauxEffectif.toDouble()}% (Cotis.) + ${cfp.toDouble()}% (CFP) = ${tauxApplicable.toDouble()}%";
-        if (config.accreActive) {
-          detailsTaux += " [ACRE Année ${config.accreAnnee}]";
-        }
-      } else {
-        // Autres régimes (TNS, SASU...)
-        // Le calcul est beaucoup plus complexe (sur bénéfice), on affiche 0 pour l'instant
-        // ou on pourrait mettre une estimation si demandé.
-        detailsTaux =
-            "Régime Réel / TNS : Calcul sur bénéfice (Non simulé ici)";
-        tauxApplicable = Decimal.zero;
-      }
-    } else {
-      detailsTaux = "Profil entreprise ou Config URSSAF manquant";
-    }
-
-    // Calculer totaux Decimal
-    final totalAchats = _chiffrage.fold<Decimal>(
-      Decimal.zero,
-      (sum, ligne) => sum + (ligne.quantite * ligne.prixAchatUnitaire),
-    );
-
-    final totalVentes = _chiffrage.fold<Decimal>(
-      Decimal.zero,
-      (sum, ligne) => sum + (ligne.quantite * ligne.prixVenteUnitaire),
-    );
-
-    final charges = (totalVentes * tauxApplicable) / Decimal.fromInt(100);
-    final chargesDecimal = charges.toDecimal();
-    final solde = totalVentes - totalAchats - chargesDecimal;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // CARTE RENTABILITÉ
-          RentabiliteCard(
-            type: RentabiliteType.materiel,
-            ca: totalVentes,
-            cout: totalAchats,
-            charges: chargesDecimal,
-            solde: solde,
-            tauxUrssaf: tauxApplicable,
+          const Row(
+            children: [
+              Icon(Icons.analytics, color: AppTheme.primary),
+              SizedBox(width: 10),
+              Text("Analyse de rentabilité",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary)),
+            ],
           ),
-          const SizedBox(height: 16),
-
-          // SECTION MATIÈRES
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header avec titre et bouton
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Matières Premières",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon:
-                          const Icon(Icons.add_circle, color: AppTheme.primary),
-                      onPressed: _ajouterMatiere,
-                      tooltip: "Ajouter matière",
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Contenu
-                _chiffrage.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(
-                          child: Text(
-                            "Aucune matière ajoutée\nCliquez sur + pour commencer",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ),
-                      )
-                    : Column(
-                        children: _chiffrage.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final ligne = entry.value;
-                          return ChiffrageEditor(
-                            description: ligne.designation,
-                            quantite: ligne.quantite,
-                            prixAchat: ligne.prixAchatUnitaire,
-                            prixVente: ligne.prixVenteUnitaire,
-                            unite: ligne.unite,
-                            tauxUrssaf: tauxApplicable,
-                            onChanged: (desc, qte, pa, pv, unite) {
-                              setState(() {
-                                _chiffrage[index] = ligne.copyWith(
-                                  designation: desc,
-                                  quantite: qte,
-                                  prixAchatUnitaire: pa,
-                                  prixVenteUnitaire: pv,
-                                  unite: unite,
-                                );
-                              });
-                            },
-                            onDelete: () => _supprimerMatiere(index),
-                          );
-                        }).toList(),
-                      ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          const Text(
+            "Ce tableau vous aide à calculer vos marges réelles. Il n'est pas visible par le client.",
+            style: TextStyle(color: Colors.grey),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // NOTE SUR LES TAUX
+          // TABLEAU CHIFFRAGE
           Container(
-            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8)),
+            child: Column(
               children: [
-                const Icon(Icons.info, color: Colors.blue, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Header
+                Container(
+                  color: Colors.grey[100],
+                  padding: const EdgeInsets.all(10),
+                  child: const Row(
                     children: [
-                      const Text(
-                        "Information Taux & Charges",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                      Text(
-                        detailsTaux,
-                        style:
-                            const TextStyle(fontSize: 11, color: Colors.indigo),
-                      ),
+                      Expanded(flex: 3, child: Text("Désignation")),
+                      Expanded(flex: 1, child: Text("Qté")),
+                      Expanded(flex: 1, child: Text("P. Achat")),
+                      Expanded(flex: 1, child: Text("P. Vente")),
+                      SizedBox(width: 40),
                     ],
                   ),
                 ),
+                // Lignes
+                if (_chiffrage.isEmpty)
+                  const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text("Aucun élément de coût.")),
+                Consumer<UrssafViewModel>(builder: (context, urssafVM, child) {
+                  final taux =
+                      urssafVM.config?.tauxMicroVente ?? Decimal.parse('12.3');
+                  return Column(
+                    children: List.generate(_chiffrage.length, (index) {
+                      final item = _chiffrage[index];
+                      return ChiffrageEditor(
+                        description: item.designation,
+                        quantite: item.quantite,
+                        prixAchat: item.prixAchatUnitaire,
+                        prixVente: item.prixVenteUnitaire,
+                        unite: item.unite,
+                        tauxUrssaf: taux,
+                        onChanged: (desc, qte, pa, pv, unit) {
+                          setState(() {
+                            _chiffrage[index] = item.copyWith(
+                              designation: desc,
+                              quantite: qte,
+                              prixAchatUnitaire: pa,
+                              prixVenteUnitaire: pv,
+                              unite: unit,
+                            );
+                          });
+                        },
+                        onDelete: () => _supprimerMatiere(index),
+                      );
+                    }),
+                  );
+                }),
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          ElevatedButton.icon(
+            onPressed: _ajouterMatiere,
+            icon: const Icon(Icons.add),
+            label: const Text("Ajouter charge / matière"),
+          ),
+          const SizedBox(height: 30),
+
+          // RENTABILITÉ CARD
+          // RENTABILITÉ CARD
+          Consumer<UrssafViewModel>(builder: (context, urssafVM, child) {
+            // Calcul des coûts (Achat Matériel/Sous-traitance)
+            final totalAchat = _chiffrage.fold(Decimal.zero,
+                (sum, item) => sum + (item.prixAchatUnitaire * item.quantite));
+
+            // Calcul des charges URSSAF basées sur les lignes du devis (Service vs Vente)
+            // Note: On utilise le Net Commercial (HT remisé) au prorata des lignes ?
+            // Simplification V1 : On applique les taux sur le total HT par type, puis on proratise la remise globale.
+
+            final config = urssafVM.config;
+            final tauxPrestation =
+                config?.tauxMicroServiceBIC ?? Decimal.parse('21.2');
+            final tauxVente = config?.tauxMicroVente ?? Decimal.parse('12.3');
+
+            Decimal totalServiceHT = Decimal.zero;
+            Decimal totalVenteHT = Decimal.zero;
+
+            for (var l in _lignes) {
+              if (l.typeActivite == 'vente') {
+                totalVenteHT += l.totalLigne;
+              } else {
+                totalServiceHT += l.totalLigne;
+              }
+            }
+
+            // Appliquer remise globale
+            if (_remiseTaux > Decimal.zero && _totalHT > Decimal.zero) {
+              final ratio = Decimal.fromInt(1) -
+                  (_remiseTaux / Decimal.fromInt(100)).toDecimal();
+              totalServiceHT = totalServiceHT * ratio;
+              totalVenteHT = totalVenteHT * ratio;
+            }
+
+            final chargesService = CalculationsUtils.calculateCharges(
+                totalServiceHT, tauxPrestation);
+            final chargesVente =
+                CalculationsUtils.calculateCharges(totalVenteHT, tauxVente);
+            final totalCharges = chargesService + chargesVente;
+
+            final solde = _netCommercial - totalAchat - totalCharges;
+
+            // Taux moyen pour l'affichage (indicatif)
+            Decimal tauxAffiche = tauxPrestation;
+            if (totalVenteHT > totalServiceHT) tauxAffiche = tauxVente;
+
+            return RentabiliteCard(
+              type: RentabiliteType.chantier,
+              ca: _netCommercial,
+              cout: totalAchat,
+              charges: totalCharges,
+              solde: solde,
+              tauxUrssaf: tauxAffiche,
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _rowTotal(String label, Decimal val, {bool isBig = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: TextStyle(
-                fontWeight: isBig ? FontWeight.bold : FontWeight.normal,
-                fontSize: isBig ? 18 : 14)),
-        Text(FormatUtils.currency(val),
-            style: TextStyle(
-                fontWeight: isBig ? FontWeight.bold : FontWeight.normal,
-                fontSize: isBig ? 18 : 14,
-                color: AppTheme.primary)),
-      ],
+  Widget _rowTotal(String label, Decimal amount, {bool isBig = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontWeight: isBig ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isBig ? 18 : 14)),
+          Text(FormatUtils.currency(amount),
+              style: TextStyle(
+                  fontWeight: isBig ? FontWeight.bold : FontWeight.bold,
+                  fontSize: isBig ? 18 : 14,
+                  color: isBig ? AppTheme.primary : Colors.black)),
+        ],
+      ),
     );
   }
 }

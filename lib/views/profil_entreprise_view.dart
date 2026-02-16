@@ -266,7 +266,18 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                                 child: Text(type.label),
                               ))
                           .toList(),
-                      onChanged: (v) => setState(() => _typeEntreprise = v!),
+                      onChanged: (v) {
+                        setState(() {
+                          _typeEntreprise = v!;
+                          // Auto-fill Mentions si vide
+                          if (_mentionsController.text.isEmpty) {
+                            final vm = Provider.of<EntrepriseViewModel>(context,
+                                listen: false);
+                            _mentionsController.text =
+                                vm.getLegalMentionsSuggestion(v);
+                          }
+                        });
+                      },
                     ),
                     const SizedBox(height: 10),
                     CustomTextField(

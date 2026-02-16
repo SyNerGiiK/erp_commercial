@@ -129,7 +129,12 @@ class AppRouter {
         // DEVIS
         GoRoute(
           path: '/app/ajout_devis',
-          builder: (context, state) => const AjoutDevisView(),
+          builder: (context, state) {
+            if (state.extra is Devis) {
+              return AjoutDevisView(devisAModifier: state.extra as Devis);
+            }
+            return const AjoutDevisView();
+          },
         ),
         GoRoute(
           path: '/app/ajout_devis/:id',
@@ -144,6 +149,11 @@ class AppRouter {
         GoRoute(
           path: '/app/ajout_facture',
           builder: (context, state) {
+            // Check extra for restored draft
+            if (state.extra is Facture) {
+              return AjoutFactureView(factureAModifier: state.extra as Facture);
+            }
+
             final sourceDevisId = state.uri.queryParameters['source_devis'];
             final sourceFactureId = state.uri.queryParameters['source_facture'];
             final fromTransformation =

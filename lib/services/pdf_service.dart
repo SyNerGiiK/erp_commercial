@@ -11,6 +11,7 @@ import '../models/client_model.dart';
 import '../models/facture_model.dart';
 import '../models/entreprise_model.dart';
 import '../models/paiement_model.dart';
+import '../models/enums/entreprise_enums.dart';
 import '../utils/format_utils.dart';
 
 class PdfService {
@@ -484,6 +485,24 @@ class PdfService {
                   pw.Text("Notes :",
                       style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   pw.Text(notes, style: const pw.TextStyle(fontSize: 10)),
+                ],
+                // MENTIONS LÉGALES OBLIGATOIRES (MICRO-ENTREPRENEUR)
+                if (ent?.typeEntreprise.isMicroEntrepreneur == true) ...[
+                  pw.SizedBox(height: 10),
+                  if (!(ent?.mentionsLegales?.contains("TVA non applicable") ??
+                      false))
+                    pw.Text(
+                      "TVA non applicable, art. 293 B du CGI.",
+                      style: pw.TextStyle(
+                          fontSize: 8, fontStyle: pw.FontStyle.italic),
+                    ),
+                  // Autre mention obligatoire dispenses
+                  if (!(ent?.mentionsLegales?.contains("Dispensé") ?? false))
+                    pw.Text(
+                      "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).",
+                      style: pw.TextStyle(
+                          fontSize: 8, fontStyle: pw.FontStyle.italic),
+                    ),
                 ]
               ]),
         ),

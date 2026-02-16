@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
+import 'package:pdf/pdf.dart'; // ADDED
+import 'dart:typed_data';
 
 import '../config/theme.dart';
 import '../models/facture_model.dart';
@@ -20,15 +22,16 @@ import '../config/supabase_config.dart';
 
 import '../services/pdf_service.dart';
 
-import '../widgets/base_screen.dart';
+// Widgets
+import '../widgets/split_editor_scaffold.dart'; // ADDED
 import '../widgets/app_card.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/client_selection_dialog.dart';
 import '../widgets/article_selection_dialog.dart';
 import '../widgets/ligne_editor.dart';
-import '../widgets/dialogs/paiement_dialog.dart'; // NEW: Import Dialog Paiement
-import '../widgets/dialogs/signature_dialog.dart'; // NEW: Import Dialog Signature
-import 'dart:typed_data';
+import '../widgets/dialogs/paiement_dialog.dart';
+import '../widgets/dialogs/signature_dialog.dart';
+
 import '../utils/format_utils.dart';
 import '../utils/calculations_utils.dart';
 
@@ -72,6 +75,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   String _typeFacture = 'standard';
 
   Decimal _remiseTaux = Decimal.zero;
+  // Stockage de l'acompte déjà réglé (venant du devis par ex)
+  Decimal _acompteDejaRegle = Decimal.zero;
+
   bool _isLoading = false;
 
   @override
@@ -107,11 +113,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _paiements = List.from(f.paiements);
 
       _remiseTaux = f.remiseTaux;
+      _acompteDejaRegle = f.acompteDejaRegle;
 
-      // Init Signature (Clean URL handled display-side)
+      // Init Signature
       _signatureUrl = f.signatureUrl;
       if (_signatureUrl != null && !_signatureUrl!.contains('?')) {
-        // Add timestamp for display only
         _signatureUrl =
             "$_signatureUrl?t=${DateTime.now().millisecondsSinceEpoch}";
       }
@@ -154,12 +160,13 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 estGras: ld.estGras,
                 estItalique: ld.estItalique,
                 estSouligne: ld.estSouligne,
-                tauxTva: ld.tauxTva)) // MAPPING TVA
+                tauxTva: ld.tauxTva))
             .toList();
 
         _chiffrage = List.from(devis.chiffrage);
-
         _remiseTaux = devis.remiseTaux;
+        // On récupère l'acompte du devis comme "Déjà réglé"
+        _acompteDejaRegle = devis.acompteMontant;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -192,7 +199,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
         _dateEmission = DateTime.now();
         _dateEcheance = DateTime.now().add(const Duration(days: 30));
 
-        // On copie les lignes à l'identique
         _lignes = source.lignes
             .map((l) => LigneFacture(
                 description: l.description,
@@ -206,11 +212,12 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
                 estGras: l.estGras,
                 estItalique: l.estItalique,
                 estSouligne: l.estSouligne,
-                tauxTva: l.tauxTva)) // Copie taux TVA
+                tauxTva: l.tauxTva))
             .toList();
 
         _chiffrage = List.from(source.chiffrage);
         _remiseTaux = source.remiseTaux;
+        _acompteDejaRegle = source.acompteDejaRegle;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -246,7 +253,35 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     super.dispose();
   }
 
-  // --- CALCULS ---
+  // --- BUILD OBJECT ---
+  Facture _buildFactureFromState() {
+    return Facture(
+      id: widget.id,
+      userId: SupabaseConfig.userId,
+      numeroFacture: _numeroCtrl.text,
+      objet: _objetCtrl.text,
+      clientId: _selectedClient?.id ?? "temp-client",
+      devisSourceId:
+          widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
+      dateEmission: _dateEmission,
+      dateEcheance: _dateEcheance,
+      statut: widget.factureAModifier?.statut ?? 'brouillon',
+      statutJuridique: widget.factureAModifier?.statutJuridique ?? 'brouillon',
+      type: _typeFacture,
+      totalHt: _totalHT,
+      totalTva: _totalTVARemisee,
+      totalTtc: _netAPayerFinal,
+      remiseTaux: _remiseTaux,
+      acompteDejaRegle: _acompteDejaRegle,
+      conditionsReglement: _conditionsCtrl.text,
+      notesPubliques: _notesCtrl.text,
+      lignes: _lignes,
+      chiffrage: _chiffrage,
+      paiements: _paiements,
+      signatureUrl: _signatureUrl?.split('?').first,
+      dateSignature: _dateSignature,
+    );
+  }
 
   // --- CALCULS ---
 
@@ -262,19 +297,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
 
   Decimal get _netCommercial => _totalHT - _totalRemise;
 
-  // La logique comptable standard : Remise s'applique sur HT.
-  // La TVA se calcule sur le (_totalHT - _totalRemise) ?
-  // OUI. La base imposable diminue.
-  // Donc il faut recalculer la TVA Globale pondérée... C'est complexe avec des taux multiples.
-  // APPROCHE EXACTE : On applique la remise au prorata sur chaque ligne ? NON.
-  // APPROCHE MOYENNE : Si remise globale, on doit réduire la base HT de chaque taux.
-  // Simplifions : On interdit la remise globale si multiples taux TVA pour l'instant ? ou on fait un prorata.
-  // Pour la V1 "Universalité", on va appliquer la remise sur le TOTAL HT, et on estime que la TVA diminue d'autant en % global.
-  // C'est mathématiquement pas 100% exact si mix 5.5% et 20%, mais c'est acceptable pour des devis simples.
-  // RECTIFICATION : Pour faire propre, on devrait appliquer la remise ligne par ligne.
-  // Pour l'instant, on calcule : _netCommercial + (TVA * (1 - TauxRemise/100))
-  // Ça fait une TVA remisée.
-
   Decimal get _totalTVARemisee =>
       _totalTVA - CalculationsUtils.calculateCharges(_totalTVA, _remiseTaux);
   Decimal get _netAPayerFinal => _netCommercial + _totalTVARemisee;
@@ -283,10 +305,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       _paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
   Decimal get _resteAPayer {
-    return _netAPayerFinal - _totalRegle;
+    // Reste = NetFinal - AcompteDéjàReglé (venant devis) - PaiementsReçusSurFacture
+    return _netAPayerFinal - _acompteDejaRegle - _totalRegle;
   }
 
-  // ... (ACTIONS methods skipped for brevity, make sure to update _ajouterLigne etc)
+  // --- ACTIONS ---
 
   void _ajouterLigne() {
     setState(() {
@@ -299,380 +322,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       ));
     });
   }
-
-  // ...
-
-  @override
-  Widget build(BuildContext context) {
-    return BaseScreen(
-        title: widget.factureAModifier != null
-            ? "Modifier Facture"
-            : "Nouvelle Facture",
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    AppCard(
-                      title: const Text("INFORMATIONS"),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: _numeroCtrl,
-                                  label: "Numéro",
-                                  readOnly: true,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: _objetCtrl,
-                                  label: "Objet",
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                                _selectedClient?.nomComplet ??
-                                    "Sélectionner un client",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedClient == null
-                                        ? Colors.red
-                                        : Colors.black)),
-                            subtitle: Text(_selectedClient?.email ?? ""),
-                            trailing:
-                                const Icon(Icons.arrow_forward_ios, size: 16),
-                            onTap: () async {
-                              final client = await showDialog<Client>(
-                                  context: context,
-                                  builder: (_) =>
-                                      const ClientSelectionDialog());
-                              if (client != null) {
-                                setState(() => _selectedClient = client);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          Row(children: [
-                            Expanded(
-                                child: Text(
-                                    "Date: ${DateFormat('dd/MM/yyyy').format(_dateEmission)}")),
-                            Expanded(
-                                child: Text(
-                                    "Echéance: ${DateFormat('dd/MM/yyyy').format(_dateEcheance)}")),
-                          ])
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    AppCard(
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("ELEMENTS"),
-                          IconButton(
-                              onPressed: _ajouterLigne,
-                              icon: const Icon(Icons.add_circle,
-                                  color: AppTheme.primary)),
-                        ],
-                      ),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _lignes.length,
-                        itemBuilder: (context, index) {
-                          final ligne = _lignes[index];
-                          final isSituation = _typeFacture == 'situation';
-
-                          return Card(
-                            key: ValueKey(ligne.uiKey),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: LigneEditor(
-                              description: ligne.description,
-                              quantite: ligne.quantite,
-                              prixUnitaire: ligne.prixUnitaire,
-                              unite: ligne.unite,
-                              type: ligne.type,
-                              estGras: ligne.estGras,
-                              estItalique: ligne.estItalique,
-                              estSouligne: ligne.estSouligne,
-                              avancement: ligne.avancement,
-                              tauxTva: ligne.tauxTva,
-                              isSituation: isSituation,
-                              showHandle: true,
-                              onChanged: (desc, qte, pu, unite, type, gras,
-                                  ital, soul, av, tva) {
-                                setState(() {
-                                  Decimal total;
-                                  if (isSituation) {
-                                    total =
-                                        ((qte * pu * av) / Decimal.fromInt(100))
-                                            .toDecimal();
-                                  } else {
-                                    total =
-                                        CalculationsUtils.calculateTotalLigne(
-                                            qte, pu);
-                                  }
-
-                                  _lignes[index] = ligne.copyWith(
-                                    description: desc,
-                                    quantite: qte,
-                                    prixUnitaire: pu,
-                                    totalLigne: total,
-                                    unite: unite,
-                                    type: type,
-                                    estGras: gras,
-                                    estItalique: ital,
-                                    estSouligne: soul,
-                                    avancement: av,
-                                    tauxTva: tva,
-                                  );
-                                });
-                              },
-                              onDelete: () {
-                                setState(() {
-                                  _lignes.removeAt(index);
-                                });
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ...
-
-                    // SECTION TOTAUX
-                    AppCard(
-                      child: Column(
-                        children: [
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Total HT"),
-                                Text(FormatUtils.currency(_totalHT)),
-                              ]),
-                          if (_totalRemise > Decimal.zero)
-                            Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text("Remise"),
-                                  Text(
-                                      "- ${FormatUtils.currency(_totalRemise)}",
-                                      style:
-                                          const TextStyle(color: Colors.red)),
-                                ]),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Total TVA"),
-                                Text(FormatUtils.currency(_totalTVARemisee)),
-                              ]),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Remise (%) / Acompte déjà réglé"),
-                                SizedBox(
-                                    width: 80,
-                                    child: TextFormField(
-                                        initialValue: _remiseTaux.toString(),
-                                        keyboardType: const TextInputType
-                                            .numberWithOptions(decimal: true),
-                                        onChanged: (v) => setState(() =>
-                                            _remiseTaux = Decimal.tryParse(v) ??
-                                                Decimal.zero))),
-                              ]),
-                          const Divider(),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("NET À PAYER (TTC)",
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold)),
-                                Text(FormatUtils.currency(_netAPayerFinal),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18))
-                              ]),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // NEW: SECTION PAIEMENTS / RÈGLEMENTS
-                    AppCard(
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              const Text("RÈGLEMENTS / PAIEMENTS REÇUS",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: AppTheme.textDark)),
-                              const Spacer(),
-                              TextButton.icon(
-                                onPressed: _ajouterPaiement,
-                                icon: const Icon(Icons.add, size: 16),
-                                label: const Text("Ajouter"),
-                              )
-                            ],
-                          ),
-                          const Divider(),
-                          if (_paiements.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text("Aucun règlement enregistré",
-                                  style: TextStyle(color: Colors.grey)),
-                            )
-                          else
-                            ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _paiements.length,
-                              separatorBuilder: (_, __) => const Divider(),
-                              itemBuilder: (context, index) {
-                                final p = _paiements[index];
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(
-                                      "${FormatUtils.currency(p.montant)} (${p.typePaiement})"),
-                                  subtitle: Text(
-                                      "${DateFormat('dd/MM/yyyy').format(p.datePaiement)} - ${p.commentaire}"),
-                                  trailing: IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red, size: 20),
-                                    onPressed: () => _supprimerPaiement(index),
-                                  ),
-                                );
-                              },
-                            ),
-                          const Divider(),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Total Règlements : "),
-                                Text("- ${FormatUtils.currency(_totalRegle)}")
-                              ]),
-                          const SizedBox(height: 10),
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                const Text("RESTE À PAYER : ",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16)),
-                                Text(FormatUtils.currency(_resteAPayer),
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        color: _resteAPayer > Decimal.zero
-                                            ? Colors.orange
-                                            : Colors.green))
-                              ])
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // NEW: SECTION SIGNATURE CLIENT
-                    AppCard(
-                      title: const Text("SIGNATURE CLIENT"),
-                      child: Column(
-                        children: [
-                          if (_signatureUrl != null)
-                            Column(
-                              children: [
-                                Container(
-                                  height: 100,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    border:
-                                        Border.all(color: Colors.grey.shade300),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Image.network(_signatureUrl!,
-                                      fit: BoxFit.contain),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                    "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
-                                    style: const TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold)),
-                              ],
-                            )
-                          else
-                            Column(
-                              children: [
-                                const Text("Aucune signature client",
-                                    style: TextStyle(color: Colors.grey)),
-                                const SizedBox(height: 10),
-                                ElevatedButton.icon(
-                                  onPressed: _signerClient,
-                                  icon: const Icon(Icons.draw),
-                                  label: const Text("Faire signer le client"),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primary,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-                    // BOUTONS
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (widget.factureAModifier?.statut == 'brouillon')
-                          OutlinedButton(
-                            onPressed: _finaliser,
-                            child: const Text("VALIDER FACTURE"),
-                          ),
-                        const SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: _sauvegarder,
-                          child: const Text("ENREGISTRER"),
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 50),
-                  ],
-                ),
-              ),
-            ),
-            if (_isLoading)
-              const Positioned.fill(
-                child: ColoredBox(
-                  color: Colors.black54,
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ),
-          ],
-        ));
-  }
-
-  // --- ACTIONS PAIEMENTS ---
 
   Future<void> _ajouterPaiement() async {
     final result = await showDialog<Paiement>(
@@ -693,7 +342,62 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     });
   }
 
-  // --- ACTIONS FACTURE ---
+  Future<void> _sauvegarder() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedClient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Veuillez sélectionner un client")));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+
+    final factureToSave = _buildFactureFromState();
+
+    bool success;
+    if (widget.id == null) {
+      success = await vm.addFacture(factureToSave);
+    } else {
+      success = await vm.updateFacture(factureToSave);
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      context.go('/app/factures');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Facture enregistrée !")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+    }
+  }
+
+  // Preview PDF (Callback)
+  Future<Uint8List> _generatePreviewPdf(PdfPageFormat format) async {
+    final entrepriseVM =
+        Provider.of<EntrepriseViewModel>(context, listen: false);
+    if (entrepriseVM.profil == null) {
+      await entrepriseVM.fetchProfil();
+    }
+
+    final client = _selectedClient ??
+        Client(
+          nomComplet: "Client (En attente)",
+          adresse: "",
+          codePostal: "",
+          ville: "",
+          telephone: "",
+          email: "",
+          typeClient: "particulier",
+        );
+
+    final facture = _buildFactureFromState();
+    return await PdfService.generateFacture(
+        facture, client, entrepriseVM.profil);
+  }
 
   Future<void> _signerClient() async {
     if (widget.id == null) {
@@ -722,7 +426,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signature enregistrée !")));
 
-      // Refresh signature URL
       try {
         final updated = vm.factures.firstWhere((f) => f.id == widget.id);
         setState(() {
@@ -774,63 +477,424 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  Future<void> _sauvegarder() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_selectedClient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Veuillez sélectionner un client")));
-      return;
-    }
+  @override
+  Widget build(BuildContext context) {
+    // Draft Data for Minimize
+    final draftData = _buildFactureFromState();
 
-    setState(() => _isLoading = true);
-    final vm = Provider.of<FactureViewModel>(context, listen: false);
+    return SplitEditorScaffold(
+      title: widget.id == null ? "Nouvelle Facture" : "Modifier Facture",
+      draftData: draftData,
+      draftType: 'facture',
+      draftId: widget.id,
+      // Pass source info for restore
+      sourceDevisId: widget.sourceDevisId,
+      onSave: _sauvegarder,
+      isSaving: _isLoading,
+      onGeneratePdf: _generatePreviewPdf,
+      editorForm: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // INFORMATIONS
+              AppCard(
+                title: const Text("INFORMATIONS"),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: _numeroCtrl,
+                            label: "Numéro",
+                            readOnly: true,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: CustomTextField(
+                            controller: _objetCtrl,
+                            label: "Objet",
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                          _selectedClient?.nomComplet ??
+                              "Sélectionner un client",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _selectedClient == null
+                                  ? Colors.red
+                                  : Colors.black)),
+                      subtitle: Text(_selectedClient?.email ?? ""),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () async {
+                        final client = await showDialog<Client>(
+                            context: context,
+                            builder: (_) => const ClientSelectionDialog());
+                        if (client != null) {
+                          setState(() => _selectedClient = client);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      Expanded(
+                          child: InkWell(
+                        onTap: () async {
+                          final d = await showDatePicker(
+                              context: context,
+                              initialDate: _dateEmission,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030));
+                          if (d != null && mounted) {
+                            setState(() => _dateEmission = d);
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration:
+                              const InputDecoration(labelText: "Date Emission"),
+                          child: Text(
+                              DateFormat('dd/MM/yyyy').format(_dateEmission)),
+                        ),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: InkWell(
+                        onTap: () async {
+                          final d = await showDatePicker(
+                              context: context,
+                              initialDate: _dateEcheance,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030));
+                          if (d != null && mounted) {
+                            setState(() => _dateEcheance = d);
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration:
+                              const InputDecoration(labelText: "Échéance"),
+                          child: Text(
+                              DateFormat('dd/MM/yyyy').format(_dateEcheance)),
+                        ),
+                      )),
+                    ])
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
-    final factureToSave = Facture(
-      id: widget.id,
-      userId: SupabaseConfig.userId,
-      numeroFacture: _numeroCtrl.text,
-      objet: _objetCtrl.text,
-      clientId: _selectedClient!.id!,
-      devisSourceId:
-          widget.sourceDevisId ?? widget.factureAModifier?.devisSourceId,
-      dateEmission: _dateEmission,
-      dateEcheance: _dateEcheance,
-      statut: widget.factureAModifier?.statut ?? 'brouillon',
-      statutJuridique: widget.factureAModifier?.statutJuridique ?? 'brouillon',
-      type: _typeFacture,
-      totalHt: _totalHT,
-      totalTva: _totalTVARemisee, // CORRECTION API
-      totalTtc: _netAPayerFinal, // CORRECTION API
-      remiseTaux: _remiseTaux,
-      acompteDejaRegle: Decimal.zero, // Deprecated/Unused logic
-      conditionsReglement: _conditionsCtrl.text,
-      notesPubliques: _notesCtrl.text,
-      tvaIntra: widget.factureAModifier?.tvaIntra ?? _selectedClient?.tvaIntra,
-      lignes: _lignes,
-      paiements: _paiements,
-      chiffrage: _chiffrage,
-      estArchive: widget.factureAModifier?.estArchive ?? false,
-      signatureUrl: _signatureUrl?.split('?').first,
-      dateSignature: _dateSignature,
+              // ELEMENTS (LIGNES)
+              AppCard(
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("ELEMENTS"),
+                    IconButton(
+                        onPressed: _ajouterLigne,
+                        icon: const Icon(Icons.add_circle,
+                            color: AppTheme.primary)),
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _lignes.length,
+                  itemBuilder: (context, index) {
+                    final ligne = _lignes[index];
+                    final isSituation = _typeFacture == 'situation';
+
+                    return Card(
+                      key: ValueKey(ligne.uiKey),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: LigneEditor(
+                        description: ligne.description,
+                        quantite: ligne.quantite,
+                        prixUnitaire: ligne.prixUnitaire,
+                        unite: ligne.unite,
+                        type: ligne.type,
+                        estGras: ligne.estGras,
+                        estItalique: ligne.estItalique,
+                        estSouligne: ligne.estSouligne,
+                        avancement: ligne.avancement,
+                        tauxTva: ligne.tauxTva,
+                        isSituation: isSituation,
+                        showHandle: true,
+                        onChanged: (desc, qte, pu, unite, type, gras, ital,
+                            soul, av, tva) {
+                          setState(() {
+                            Decimal total;
+                            if (isSituation) {
+                              total = ((qte * pu * av) / Decimal.fromInt(100))
+                                  .toDecimal();
+                            } else {
+                              total = CalculationsUtils.calculateTotalLigne(
+                                  qte, pu);
+                            }
+
+                            _lignes[index] = ligne.copyWith(
+                              description: desc,
+                              quantite: qte,
+                              prixUnitaire: pu,
+                              totalLigne: total,
+                              unite: unite,
+                              type: type,
+                              estGras: gras,
+                              estItalique: ital,
+                              estSouligne: soul,
+                              avancement: av,
+                              tauxTva: tva,
+                            );
+                          });
+                        },
+                        onDelete: () {
+                          setState(() {
+                            _lignes.removeAt(index);
+                          });
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // SECTION TOTAUX
+              AppCard(
+                child: Column(
+                  children: [
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Total HT"),
+                          Text(FormatUtils.currency(_totalHT)),
+                        ]),
+                    if (_totalRemise > Decimal.zero)
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Remise"),
+                            Text("- ${FormatUtils.currency(_totalRemise)}",
+                                style: const TextStyle(color: Colors.red)),
+                          ]),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Total TVA"),
+                          Text(FormatUtils.currency(_totalTVARemisee)),
+                        ]),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Remise (%)"),
+                          SizedBox(
+                              width: 80,
+                              child: TextFormField(
+                                  initialValue: _remiseTaux.toString(),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  onChanged: (v) => setState(() => _remiseTaux =
+                                      Decimal.tryParse(v) ?? Decimal.zero))),
+                        ]),
+                    // Affichage Acompte déjà réglé
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Acompte déjà réglé (ex: Devis)"),
+                          SizedBox(
+                              width: 100,
+                              child: TextFormField(
+                                  initialValue: _acompteDejaRegle.toString(),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  onChanged: (v) => setState(() =>
+                                      _acompteDejaRegle = Decimal.tryParse(v) ??
+                                          Decimal.zero))),
+                        ]),
+
+                    const Divider(),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("NET À PAYER (TTC)",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(FormatUtils.currency(_netAPayerFinal),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 18))
+                        ]),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // NEW: SECTION PAIEMENTS / RÈGLEMENTS
+              AppCard(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Text("RÈGLEMENTS / PAIEMENTS REÇUS",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppTheme.textDark)),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: _ajouterPaiement,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text("Ajouter"),
+                        )
+                      ],
+                    ),
+                    const Divider(),
+                    if (_paiements.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text("Aucun règlement enregistré",
+                            style: TextStyle(color: Colors.grey)),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _paiements.length,
+                        separatorBuilder: (_, __) => const Divider(),
+                        itemBuilder: (context, index) {
+                          final p = _paiements[index];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                                "${FormatUtils.currency(p.montant)} (${p.typePaiement})"),
+                            subtitle: Text(
+                                "${DateFormat('dd/MM/yyyy').format(p.datePaiement)} - ${p.commentaire}"),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.red, size: 20),
+                              onPressed: () => _supprimerPaiement(index),
+                            ),
+                          );
+                        },
+                      ),
+                    const Divider(),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Total Règlements : "),
+                          Text("- ${FormatUtils.currency(_totalRegle)}")
+                        ]),
+                    const SizedBox(height: 10),
+                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                      const Text("RESTE À PAYER : ",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(FormatUtils.currency(_resteAPayer),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: _resteAPayer > Decimal.zero
+                                  ? Colors.orange
+                                  : Colors.green))
+                    ])
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // NEW: SECTION SIGNATURE CLIENT
+              AppCard(
+                title: const Text("SIGNATURE CLIENT"),
+                child: Column(
+                  children: [
+                    if (_signatureUrl != null)
+                      Column(
+                        children: [
+                          Container(
+                            height: 100,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Image.network(_signatureUrl!,
+                                fit: BoxFit.contain),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                              "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      )
+                    else
+                      Column(
+                        children: [
+                          const Text("Aucune signature client",
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: _signerClient,
+                            icon: const Icon(Icons.draw),
+                            label: const Text("Faire signer le client"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              // PIED DE PAGE & NOTES
+              AppCard(
+                  child: Column(children: [
+                CustomTextField(
+                  label: "Conditions de règlement",
+                  controller: _conditionsCtrl,
+                ),
+                const SizedBox(height: 10),
+                CustomTextField(
+                  label: "Notes (Visibles sur le PDF)",
+                  controller: _notesCtrl,
+                  maxLines: 3,
+                ),
+              ])),
+              const SizedBox(height: 20),
+
+              // BOUTONS VALIDATION
+              if (widget.factureAModifier?.statut == 'brouillon' ||
+                  widget.factureAModifier?.statut == null)
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _finaliser,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
+                    ),
+                    icon: const Icon(Icons.check),
+                    label: const Text("VALIDER FACTURE (DÉFINITIF)"),
+                  ),
+                ),
+              const SizedBox(height: 50),
+            ],
+          ),
+        ),
+      ),
     );
-
-    bool success;
-    if (widget.id == null) {
-      success = await vm.addFacture(factureToSave);
-    } else {
-      success = await vm.updateFacture(factureToSave);
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (success) {
-      context.pop();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Facture enregistrée")));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
-    }
   }
 }

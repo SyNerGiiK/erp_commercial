@@ -281,9 +281,12 @@ class PdfService {
                 _buildHeaderCell("Désignation",
                     alignment: pw.Alignment.centerLeft),
                 _buildHeaderCell(isSituation ? "Marché" : "Qté"),
-                if (!isBL) _buildHeaderCell(isSituation ? "Avct %" : "P.U."),
+                if (!isBL)
+                  _buildHeaderCell(isSituation
+                      ? "Avct %"
+                      : (showTva ? "P.U. HT" : "Prix Unit.")),
                 if (showTva && !isBL && !isSituation) _buildHeaderCell("TVA"),
-                if (!isBL) _buildHeaderCell("Total"),
+                if (!isBL) _buildHeaderCell(showTva ? "Total HT" : "Total Net"),
               ]),
           ...chunk.map((l) => _buildRow(l,
               isSituation: isSituation, isBL: isBL, showTva: showTva)),
@@ -383,7 +386,7 @@ class PdfService {
       child: pw.Container(
         width: 200,
         child: pw.Column(children: [
-          _buildTotalRow("Total HT", totalHt),
+          if (showTva) _buildTotalRow("Total HT", totalHt),
           if (remise > Decimal.zero)
             _buildTotalRow("Remise ($remise%)", remiseMontant,
                 isNegative: true),
@@ -394,7 +397,7 @@ class PdfService {
           ],
 
           pw.Divider(),
-          _buildTotalRow(showTva ? "Total TTC" : "Net à payer", netAPayer,
+          _buildTotalRow(showTva ? "Total TTC" : "NET À PAYER", netAPayer,
               isBold: true),
 
           // Pour DEVIS uniquement : Acompte demandé

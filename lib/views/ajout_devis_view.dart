@@ -101,15 +101,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   void _initData() {
     Devis? d = widget.devisAModifier;
 
-    // Tentative de récupération de la version la plus récente depuis le ViewModel
-    if (widget.id != null) {
+    // Si on a un devis passé en paramètre (ex: Brouillon ou Navigation depuis liste avec objet), on l'utilise en priorité.
+    // Sinon, si on a un ID, on essaie de le récupérer depuis le VM.
+    if (d == null && widget.id != null) {
       final vm = Provider.of<DevisViewModel>(context, listen: false);
       try {
-        final fresh = vm.devis.firstWhere((element) => element.id == widget.id);
-        d = fresh;
-      } catch (_) {
-        // Pas trouvé dans le VM (peut-être pas encore chargé), on garde widget.devisAModifier
-      }
+        d = vm.devis.firstWhere((element) => element.id == widget.id);
+      } catch (_) {}
     }
 
     if (d != null) {

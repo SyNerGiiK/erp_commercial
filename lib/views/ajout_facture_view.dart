@@ -91,13 +91,11 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     if (widget.factureAModifier != null) {
       Facture f = widget.factureAModifier!;
 
-      // Tentative de récupération fraîche
-      if (widget.id != null) {
+      // Si on a un draft, on le garde. Sinon on cherche dans le VM.
+      if (widget.factureAModifier == null && widget.id != null) {
         final vm = Provider.of<FactureViewModel>(context, listen: false);
         try {
-          final fresh =
-              vm.factures.firstWhere((element) => element.id == widget.id);
-          f = fresh;
+          f = vm.factures.firstWhere((element) => element.id == widget.id);
         } catch (_) {}
       }
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'dart:typed_data';
+import 'package:go_router/go_router.dart';
 import '../viewmodels/editor_state_provider.dart';
 
 class SplitEditorScaffold extends StatefulWidget {
@@ -47,7 +48,11 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
       id: widget.draftId,
       sourceDevisId: widget.sourceDevisId,
     );
-    Navigator.pop(context); // Retour dashboard
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/app/home');
+    }
   }
 
   void _refreshPdf() {
@@ -66,7 +71,13 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
         title: Text(widget.title),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/app/home');
+            }
+          },
           tooltip: "Annuler et fermer",
         ),
         actions: [

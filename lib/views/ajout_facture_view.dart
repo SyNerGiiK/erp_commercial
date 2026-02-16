@@ -706,8 +706,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
                         estSouligne: ligne.estSouligne,
                         avancement: ligne.avancement,
                         tauxTva: ligne.tauxTva,
-                        isSituation: widget.sourceDevisId != null &&
-                            _typeFacture == 'situation', // TODO: affiner
+                        isSituation: isSituation,
                         showHandle: true,
                         showTva: isTvaApplicable,
                         onChanged: (desc, qte, pu, unite, type, gras, ital,

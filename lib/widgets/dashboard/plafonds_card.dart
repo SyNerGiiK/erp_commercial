@@ -24,24 +24,6 @@ class PlafondsCard extends StatelessWidget {
     final caVente = this.caVente; // Use the class member
     final caService = caPrestaBIC + caPrestaBNC; // Use class members
 
-    // Plafonds 2026 (Hardcoded ou depuis Config)
-    final plafondMicroVente = config.plafondCaMicroVente;
-    final plafondMicroService = config.plafondCaMicroService;
-
-    // franchise TVA
-    final franchiseBaseVente = config.seuilTvaMicroVente;
-    final franchiseMajoreVente = config.seuilTvaMicroVenteMaj;
-    // For the purpose of this card, we'll display TVA thresholds based on Vente,
-    // as the current structure doesn't easily allow for separate TVA gauges for service.
-
-    // Pour la franchise TVA, c'est plus complexe en mixte, mais on affiche les 2 jauges
-    // Base Vente: 91900, Maj Vente: 101000
-    // Base Service: 36800, Maj Service: 39100
-
-    // TODO: Idéalement, il faudrait passer le CA Vente et CA Service séparément
-    // Pour l'instant, on affiche les jauges avec le CA Global comme approximation
-    // ou 0 si on n'a pas le détail (à améliorer dans le ViewModel)
-
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -63,7 +45,7 @@ class PlafondsCard extends StatelessWidget {
             _buildGauge(
               context,
               "Plafond Micro Vente",
-              caCumule, // Should be CA Vente only
+              caVente,
               config.plafondCaMicroVente,
               Colors.purple,
             ),
@@ -73,7 +55,7 @@ class PlafondsCard extends StatelessWidget {
             _buildGauge(
               context,
               "Plafond Micro Service",
-              caCumule, // Should be CA Service only
+              caService,
               config.plafondCaMicroService,
               Colors.purpleAccent,
             ),
@@ -83,9 +65,8 @@ class PlafondsCard extends StatelessWidget {
             _buildGauge(
               context,
               "Franchise TVA (Base)",
-              caCumule,
-              config
-                  .seuilTvaMicroVente, // Simplification: display Vente threshold generally
+              caVente + caService, // Total turnover for global threshold
+              config.seuilTvaMicroVente,
               Colors.orange,
             ),
             const SizedBox(height: 16),
@@ -94,7 +75,7 @@ class PlafondsCard extends StatelessWidget {
             _buildGauge(
               context,
               "Franchise TVA (Majoré)",
-              caCumule,
+              caVente + caService,
               config.seuilTvaMicroVenteMaj,
               Colors.redAccent,
             ),

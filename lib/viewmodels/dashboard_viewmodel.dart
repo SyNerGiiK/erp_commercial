@@ -187,13 +187,9 @@ class DashboardViewModel extends ChangeNotifier {
     if (_caEncaissePeriode > Decimal.zero && _urssafConfig != null) {
       final config = _urssafConfig!;
 
-      // TODO: Pour l'instant on considère tout le CA comme Vente si on n'a pas le détail
-      // A l'avenir, il faudra ventiler le CA par type (Vente vs Service) depuis les factures
-      // Simplification MVP : On applique le type principal défini dans la config
-
-      // Ventilation sommaire basée sur la config (Idéalement devrait venir des lignes de facture)
-      // Si Mixte, on divise arbitrairement pour la démo ou on prend tout en Vente ?
-      // Pour être safe et ne pas bloquer, on met tout dans la catégorie principale
+      // Ventilation MVP : On applique le type principal défini dans la config.
+      // NOTE : À l'avenir, il faudra ventiler le CA par type (Vente vs Service) depuis les factures
+      // si des métadonnées plus précises sont disponibles.
       switch (config.typeActivite) {
         case TypeActiviteMicro.bicVente:
           _caVente = _caEncaissePeriode;

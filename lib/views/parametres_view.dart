@@ -268,8 +268,10 @@ class _ParametresViewState extends State<ParametresView> {
           groupValue: _statut,
           // ignore: deprecated_member_use
           onChanged: (v) {
-            setState(() => _statut = v!);
-            _applyStatutDefaults(v);
+            if (v != null) {
+              setState(() => _statut = v);
+              _applyStatutDefaults(v);
+            }
           },
         );
       }).toList(),

@@ -52,7 +52,7 @@ class ProfilEntreprise {
     this.logoUrl,
     this.signatureUrl,
     this.mentionsLegales,
-    this.typeEntreprise = TypeEntreprise.microEntrepreneurServiceBIC,
+    this.typeEntreprise = TypeEntreprise.microEntrepreneurService,
     this.regimeFiscal,
     this.caisseRetraite = CaisseRetraite.ssi,
     this.tvaApplicable = false,
@@ -86,14 +86,14 @@ class ProfilEntreprise {
   }
 
   static TypeEntreprise _parseTypeEntreprise(dynamic value) {
-    if (value == null) return TypeEntreprise.microEntrepreneurServiceBIC;
+    if (value == null) return TypeEntreprise.microEntrepreneurService;
     try {
       return TypeEntreprise.values.firstWhere(
         (e) => e.name == value,
-        orElse: () => TypeEntreprise.microEntrepreneurServiceBIC,
+        orElse: () => TypeEntreprise.microEntrepreneurService,
       );
     } catch (_) {
-      return TypeEntreprise.microEntrepreneurServiceBIC;
+      return TypeEntreprise.microEntrepreneurService;
     }
   }
 

@@ -10,12 +10,16 @@ abstract class IUrssafRepository {
 }
 
 class UrssafRepository implements IUrssafRepository {
-  final SupabaseClient _client = SupabaseConfig.client;
+  // Instance singleton pour éviter les soucis de scope
+  SupabaseClient get _client => Supabase.instance.client;
 
   @override
   Future<UrssafConfig> getConfig() async {
     try {
-      final userId = SupabaseConfig.userId;
+      final session = _client.auth.currentSession;
+      if (session == null) return UrssafConfig(userId: '');
+
+      final userId = session.user.id;
       final response = await _client
           .from('urssaf_configs')
           .select()
@@ -25,22 +29,30 @@ class UrssafRepository implements IUrssafRepository {
       if (response != null) {
         return UrssafConfig.fromMap(response);
       }
-      return UrssafConfig(); // Retourne config par défaut si pas trouvée
-    } catch (e) {
-      // Log sans crash critique, retourne défaut
-      developer.log("⚠️ UrssafRepo: Pas de config chargée", error: e);
-      return UrssafConfig();
+      // Retourne config par défaut avec l'ID user actuel
+      return UrssafConfig(userId: userId);
+    } catch (e, s) {
+      developer.log("⚠️ UrssafRepo: Pas de config chargée",
+          error: e, stackTrace: s);
+      // Fallback safe
+      return UrssafConfig(userId: _client.auth.currentUser?.id ?? '', id: '');
     }
   }
 
   @override
   Future<void> saveConfig(UrssafConfig config) async {
     try {
-      final userId = SupabaseConfig.userId;
-      final data = config.toMap();
-      data.remove('id'); // On ne touche pas à l'ID directement
+      final session = _client.auth.currentSession;
+      if (session == null) throw Exception("Utilisateur non connecté");
 
-      // Stratégie "Check existence" pour gérer l'ID correctement
+      final userId = session.user.id;
+      final data = config.toMap();
+
+      // Nettoyage sécurité
+      data.remove('id');
+      data.remove('user_id'); // On ne peut pas update le user_id
+
+      // Check existence
       final existing = await _client
           .from('urssaf_configs')
           .select('id')
@@ -49,23 +61,19 @@ class UrssafRepository implements IUrssafRepository {
 
       if (existing != null) {
         // UPDATE
-        data.remove('user_id'); // Sécurité RLS
         await _client
             .from('urssaf_configs')
             .update(data)
             .eq('id', existing['id']);
       } else {
         // INSERT
-        data['user_id'] = userId;
+        data['user_id'] = userId; // Nécessaire pour l'insert
         await _client.from('urssaf_configs').insert(data);
       }
-    } catch (e) {
-      throw _handleError(e, 'saveConfig');
+    } catch (e, s) {
+      developer.log("🔴 UrssafRepo Error (saveConfig)",
+          error: e, stackTrace: s);
+      throw Exception("Erreur sauvegarde Urssaf: $e");
     }
-  }
-
-  Exception _handleError(Object error, String method) {
-    developer.log("🔴 UrssafRepo Error ($method)", error: error);
-    return Exception("Erreur Urssaf ($method): $error");
   }
 }

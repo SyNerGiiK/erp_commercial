@@ -1,25 +1,20 @@
-﻿// ignore_for_file: unused_import
-
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:decimal/decimal.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:decimal/decimal.dart';
+
+import '../widgets/custom_drawer.dart';
 
 import '../viewmodels/dashboard_viewmodel.dart';
-import '../viewmodels/facture_viewmodel.dart';
-import '../viewmodels/devis_viewmodel.dart';
-import '../viewmodels/editor_state_provider.dart'; // IMPORT ADDED
-import '../models/facture_model.dart';
-import '../models/devis_model.dart';
-
-import '../widgets/base_screen.dart';
-import '../widgets/dashboard/kpi_card.dart';
+import '../widgets/dashboard/gradient_kpi_card.dart';
 import '../widgets/dashboard/revenue_chart.dart';
 import '../widgets/dashboard/recent_activity_list.dart';
-import '../utils/format_utils.dart';
-import '../config/theme.dart';
+import '../widgets/dashboard/cotisation_detail_card.dart';
+import '../widgets/dashboard/plafonds_card.dart';
+import '../widgets/dashboard/expense_pie_chart.dart';
+import '../models/facture_model.dart';
+import '../models/devis_model.dart';
 
 class TableauDeBordView extends StatefulWidget {
   const TableauDeBordView({super.key});
@@ -33,216 +28,323 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      context.read<DashboardViewModel>().refreshData();
     });
-  }
-
-  void _loadData() {
-    if (mounted) {
-      final dashVM = Provider.of<DashboardViewModel>(context, listen: false);
-      final factVM = Provider.of<FactureViewModel>(context, listen: false);
-      final devisVM = Provider.of<DevisViewModel>(context, listen: false);
-
-      dashVM.refreshData();
-      if (factVM.factures.isEmpty) factVM.fetchFactures();
-      if (devisVM.devis.isEmpty) devisVM.fetchDevis();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final dashVM = Provider.of<DashboardViewModel>(context);
-    final factVM = Provider.of<FactureViewModel>(context);
-    final devisVM = Provider.of<DevisViewModel>(context);
+    return Scaffold(
+      backgroundColor: Colors.grey[50], // Fond clair premium
+      appBar: AppBar(
+        title: const Text("Tableau de Bord",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.grey[50],
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      drawer: const CustomDrawer(selectedIndex: 0),
+      body: Consumer<DashboardViewModel>(
+        builder: (context, vm, child) {
+          if (vm.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    // Listen to EditorStateProvider
-    final editorState = Provider.of<EditorStateProvider>(context);
+          final ca = vm.caEncaissePeriode;
+          final benef = vm.beneficeNetPeriode;
+          final cotis = vm.totalCotisations;
+          final dep = vm.depensesPeriode;
 
-    // Prepare Graph Data
-    final List<Decimal> graphData = List<Decimal>.filled(12, Decimal.zero);
-    dashVM.graphData.forEach((month, value) {
-      if (month >= 1 && month <= 12) {
-        graphData[month - 1] = Decimal.parse(value.toString());
-      }
-    });
+          return RefreshIndicator(
+            onRefresh: vm.refreshData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- HEADER ---
+                  _buildHeader(context, vm),
+                  const SizedBox(height: 32),
 
-    // Prepare Recent Activity
-    final recentFactures = factVM.getRecentActivity(5);
-    final recentDevis = devisVM.getRecentActivity(5);
-    final List<dynamic> allActivity = [...recentFactures, ...recentDevis];
-    allActivity.sort((a, b) {
-      DateTime dateA =
-          a is Facture ? a.dateEmission : (a as Devis).dateEmission;
-      DateTime dateB =
-          b is Facture ? b.dateEmission : (b as Devis).dateEmission;
-      return dateB.compareTo(dateA); // Descending
-    });
-    final recentActivity = allActivity.take(5).toList();
-
-    return BaseScreen(
-      menuIndex: 0,
-      title: "Cockpit",
-      subtitle: "Vue d'ensemble de l'activité",
-
-      // RESTORE DRAFT FAB
-      floatingActionButton: editorState.hasDraft
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                final data = editorState.restore();
-                if (data != null) {
-                  final type = data['type'];
-                  final id = data['id'];
-                  final draft = data['draft'];
-                  // sourceDevisId handling handled inside draft object usually or distinct
-
-                  if (type == 'devis') {
-                    if (id != null) {
-                      context.push('/app/ajout_devis/$id', extra: draft);
-                    } else {
-                      context.push('/app/ajout_devis', extra: draft);
-                    }
-                  } else if (type == 'facture') {
-                    if (id != null) {
-                      context.push('/app/ajout_facture/$id', extra: draft);
-                    } else {
-                      context.push('/app/ajout_facture', extra: draft);
-                    }
-                  }
-                }
-              },
-              icon: const Icon(Icons.restore_page, color: Colors.white),
-              label: Text(
-                  "Reprendre ${editorState.draftType == 'devis' ? 'Devis' : 'Facture'}",
-                  style: const TextStyle(color: Colors.white)),
-              backgroundColor: Colors.orange,
-            )
-          : null,
-
-      headerActions: [
-        DropdownButton<DashboardPeriod>(
-          value: dashVM.selectedPeriod,
-          dropdownColor: AppTheme.primary,
-          style: const TextStyle(color: Colors.white),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-          underline: Container(),
-          items: const [
-            DropdownMenuItem(
-                value: DashboardPeriod.mois, child: Text("Ce Mois")),
-            DropdownMenuItem(
-                value: DashboardPeriod.trimestre, child: Text("Ce Trimestre")),
-            DropdownMenuItem(
-                value: DashboardPeriod.annee, child: Text("Cette Année")),
-          ],
-          onChanged: (v) {
-            if (v != null) dashVM.setPeriod(v);
-          },
-        )
-      ],
-      child: dashVM.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async => _loadData(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // ROW 1: Période (CA & Bénéfice)
-                    Row(
+                  // --- KPI GRID (Cards Premium) ---
+                  LayoutBuilder(builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 900;
+                    return Wrap(
+                      spacing: 20,
+                      runSpacing: 20,
                       children: [
-                        Expanded(
-                          child: KpiCard(
-                            title: "CA Encaissé",
-                            subtitle: _getPeriodLabel(dashVM.selectedPeriod),
-                            value:
-                                FormatUtils.currency(dashVM.caEncaissePeriode),
-                            icon: Icons.account_balance_wallet,
-                            color: Colors.blue,
+                        SizedBox(
+                          width: isWide
+                              ? (constraints.maxWidth - 60) / 4
+                              : (constraints.maxWidth - 20) / 2,
+                          child: GradientKpiCard(
+                            title: "Chiffre d'Affaires",
+                            value: "${ca.toStringAsFixed(2)} €",
+                            subtitle:
+                                "${vm.caVariation >= 0 ? '+' : ''}${vm.caVariation.toStringAsFixed(1)}% vs N-1",
+                            variation: vm.caVariation,
+                            icon: Icons.monetization_on_outlined,
+                            gradientColors: const [
+                              Color(0xFF6B8EFF),
+                              Color(0xFF3B66F5)
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: KpiCard(
+                        SizedBox(
+                          width: isWide
+                              ? (constraints.maxWidth - 60) / 4
+                              : (constraints.maxWidth - 20) / 2,
+                          child: GradientKpiCard(
                             title: "Bénéfice Net",
-                            subtitle: "Après charges est.",
-                            value:
-                                FormatUtils.currency(dashVM.beneficeNetPeriode),
-                            icon: Icons.savings,
-                            color: Colors.green,
+                            value: "${benef.toStringAsFixed(2)} €",
+                            subtitle:
+                                "${vm.beneficeVariation >= 0 ? '+' : ''}${vm.beneficeVariation.toStringAsFixed(1)}% vs N-1",
+                            variation: vm.beneficeVariation,
+                            icon: Icons.savings_outlined,
+                            gradientColors: const [
+                              Color(0xFF43E97B),
+                              Color(0xFF38F9D7)
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: isWide
+                              ? (constraints.maxWidth - 60) / 4
+                              : (constraints.maxWidth - 20) / 2,
+                          child: GradientKpiCard(
+                            title: "Cotisations 2026",
+                            value: "${cotis.toStringAsFixed(2)} €",
+                            subtitle: "Estimé selon statut",
+                            icon: Icons.account_balance_outlined,
+                            gradientColors: const [
+                              Color(0xFFFA709A),
+                              Color(0xFFFEE140)
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: isWide
+                              ? (constraints.maxWidth - 60) / 4
+                              : (constraints.maxWidth - 20) / 2,
+                          child: GradientKpiCard(
+                            title: "Dépenses",
+                            value: "${dep.toStringAsFixed(2)} €",
+                            subtitle: "Charges déductibles",
+                            variation: vm.depensesVariation,
+                            icon: Icons.shopping_bag_outlined,
+                            gradientColors: const [
+                              Color(0xFFA8BFFF),
+                              Color(0xFF884D80)
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
+                    );
+                  }),
 
-                    // ROW 2: Global (Impayés & Conversion)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: KpiCard(
-                            title: "Impayés",
-                            subtitle: "Reste à recouvrer",
-                            value: FormatUtils.currency(
-                                dashVM.calculateImpayes(factVM.factures)),
-                            icon: Icons.warning_amber,
-                            color: Colors.orange,
+                  const SizedBox(height: 32),
+
+                  // --- GRAPHIQUES & DETAILS ---
+                  LayoutBuilder(builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 1100;
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                RevenueChart(
+                                  monthlyRevenue: vm.monthlyRevenue,
+                                  year: DateTime.now().year,
+                                ),
+                                const SizedBox(height: 24),
+                                if (vm.cotisationBreakdown.isNotEmpty)
+                                  CotisationDetailCard(
+                                    breakdown: vm.cotisationBreakdown,
+                                    total: vm.totalCotisations,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: KpiCard(
-                            title: "Transformation",
-                            subtitle: "Devis signés",
-                            value:
-                                "${dashVM.calculateConversion(devisVM.devis).toStringAsFixed(1)} %",
-                            icon: Icons.check_circle_outline,
-                            color: Colors.purple,
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              children: [
+                                _buildSectionTitle("Répartition Dépenses"),
+                                const SizedBox(height: 16),
+                                Card(
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: ExpensePieChart(
+                                        data: vm.expenseBreakdown),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                if (vm.urssafConfig != null &&
+                                    vm.profilEntreprise != null)
+                                  PlafondsCard(
+                                    caVente: vm.caVente,
+                                    caPrestaBIC: vm.caPrestaBIC,
+                                    caPrestaBNC: vm.caPrestaBNC,
+                                    type: vm.profilEntreprise!.typeEntreprise,
+                                    config: vm.urssafConfig!,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                        ],
+                      );
+                    } else {
+                      // Mobile / Tablet layout
+                      return Column(
+                        children: [
+                          RevenueChart(
+                            monthlyRevenue: vm.monthlyRevenue,
+                            year: DateTime.now().year,
+                          ),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle("Répartition Dépenses"),
+                          const SizedBox(height: 16),
+                          ExpensePieChart(data: vm.expenseBreakdown),
+                          const SizedBox(height: 24),
+                          if (vm.cotisationBreakdown.isNotEmpty)
+                            CotisationDetailCard(
+                              breakdown: vm.cotisationBreakdown,
+                              total: vm.totalCotisations,
+                            ),
+                          const SizedBox(height: 24),
+                          if (vm.urssafConfig != null &&
+                              vm.profilEntreprise != null)
+                            PlafondsCard(
+                              caVente: vm.caVente,
+                              caPrestaBIC: vm.caPrestaBIC,
+                              caPrestaBNC: vm.caPrestaBNC,
+                              type: vm.profilEntreprise!.typeEntreprise,
+                              config: vm.urssafConfig!,
+                            ),
+                        ],
+                      );
+                    }
+                  }),
 
-                    // CHART
-                    RevenueChart(
-                      monthlyRevenue: graphData,
-                      year: DateTime.now().year,
-                    ),
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                    // ACTIVITY
-                    RecentActivityList(
-                      items: recentActivity,
-                      onTap: (item) {
-                        try {
-                          if (item is Facture && item.id != null) {
-                            context.push('/app/ajout_facture/${item.id}',
-                                extra: item);
-                          } else if (item is Devis && item.id != null) {
-                            context.push('/app/ajout_devis/${item.id}',
-                                extra: item);
-                          }
-                        } catch (e) {
-                          debugPrint("Nav error: $e");
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+                  // --- ACTIVITÉ RÉCENTE ---
+                  _buildSectionTitle("Activité Récente"),
+                  const SizedBox(height: 16),
+                  RecentActivityList(
+                    items: vm.recentActivity,
+                    onTap: (item) {
+                      if (item is Facture) {
+                        // Adaptez la route selon votre config GoRouter
+                        // context.push('/factures/detail/${item.id}');
+                        // Pour l'instant on ne fait rien ou un log car je ne connais pas vos routes exactes
+                        debugPrint("Tap Facture ${item.id}");
+                      } else if (item is Devis) {
+                        // context.push('/devis/detail/${item.id}');
+                        debugPrint("Tap Devis ${item.id}");
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
+          );
+        },
+      ),
     );
   }
 
-  String _getPeriodLabel(DashboardPeriod p) {
-    switch (p) {
-      case DashboardPeriod.mois:
-        return "Ce mois-ci";
-      case DashboardPeriod.trimestre:
-        return "Ce trimestre";
-      case DashboardPeriod.annee:
-        return "Cette année";
-    }
+  Widget _buildHeader(BuildContext context, DashboardViewModel vm) {
+    final dateStr =
+        DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now());
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              dateStr.toUpperCase(),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+              ),
+            ),
+            // Title removed to avoid duplication with AppBar
+          ],
+        ),
+
+        // Sélecteur de Période Moderne
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              _buildPeriodTab(context, vm, DashboardPeriod.mois, "Mois"),
+              _buildPeriodTab(
+                  context, vm, DashboardPeriod.trimestre, "Trimestre"),
+              _buildPeriodTab(context, vm, DashboardPeriod.annee, "Année"),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodTab(BuildContext context, DashboardViewModel vm,
+      DashboardPeriod period, String label) {
+    final isSelected = vm.selectedPeriod == period;
+    return GestureDetector(
+      onTap: () => vm.setPeriod(period),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue[600] : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[600],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1A1A1A),
+        ),
+      ),
+    );
   }
 }

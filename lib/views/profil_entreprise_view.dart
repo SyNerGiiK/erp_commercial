@@ -37,7 +37,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _mentionsController = TextEditingController();
 
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
-  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurServiceBIC;
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurService;
   RegimeFiscal? _regimeFiscal;
   CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
 

@@ -4,7 +4,7 @@ import 'package:decimal/decimal.dart';
 import '../../utils/format_utils.dart';
 
 class RevenueChart extends StatelessWidget {
-  final List<Decimal> monthlyRevenue; // 12 elements
+  final List<double> monthlyRevenue; // 12 elements
   final int year;
 
   const RevenueChart({
@@ -18,7 +18,7 @@ class RevenueChart extends StatelessWidget {
     // Find max value for Y-axis scaling
     double maxVal = 0;
     for (var d in monthlyRevenue) {
-      if (d.toDouble() > maxVal) maxVal = d.toDouble();
+      if (d > maxVal) maxVal = d;
     }
     // Add 20% buffer
     maxVal = maxVal * 1.2;
@@ -128,7 +128,7 @@ class RevenueChart extends StatelessWidget {
                         barRods: [
                           BarChartRodData(
                             toY: monthlyRevenue.length > index
-                                ? monthlyRevenue[index].toDouble()
+                                ? monthlyRevenue[index]
                                 : 0,
                             color: const Color(0xFF1E5572),
                             width: 16,

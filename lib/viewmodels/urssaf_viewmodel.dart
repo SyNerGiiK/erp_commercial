@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/urssaf_model.dart';
 import '../repositories/urssaf_repository.dart';
 
@@ -18,7 +19,9 @@ class UrssafViewModel extends ChangeNotifier {
       _config = await _repository.getConfig();
     } catch (e) {
       // En cas d'erreur fatale, on init une config vide par sécurité
-      _config = UrssafConfig();
+      // Initial state
+      _config = UrssafConfig(
+          userId: Supabase.instance.client.auth.currentUser?.id ?? '', id: '');
     } finally {
       _isLoading = false;
       notifyListeners();

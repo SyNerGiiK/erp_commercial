@@ -21,21 +21,73 @@ class DashboardViewModel extends ChangeNotifier {
   DashboardPeriod _selectedPeriod = DashboardPeriod.mois;
   DashboardPeriod get selectedPeriod => _selectedPeriod;
 
-  // KPI
+  // KPI Actuels
   Decimal _caEncaissePeriode = Decimal.zero;
   Decimal _depensesPeriode = Decimal.zero;
   Decimal _totalCotisations = Decimal.zero;
 
-  // Getters
+  // KPI Précédents (N-1) pour variations
+  Decimal _caEncaissePrecedent = Decimal.zero;
+  Decimal _depensesPrecedent = Decimal.zero;
+
+  // Getters KPI
   Decimal get caEncaissePeriode => _caEncaissePeriode;
   Decimal get depensesPeriode => _depensesPeriode;
   Decimal get totalCotisations => _totalCotisations;
   Decimal get beneficeNetPeriode =>
       _caEncaissePeriode - _depensesPeriode - _totalCotisations;
 
-  // Graphiques (Mois 1-12 -> Montant)
+  Decimal _caVente = Decimal.zero;
+  Decimal get caVente => _caVente;
+
+  Decimal _caPrestaBIC = Decimal.zero;
+  Decimal get caPrestaBIC => _caPrestaBIC;
+
+  Decimal _caPrestaBNC = Decimal.zero;
+  Decimal get caPrestaBNC => _caPrestaBNC;
+
+  // Variations (%)
+  double get caVariation =>
+      _calculateVariation(_caEncaissePeriode, _caEncaissePrecedent);
+  double get depensesVariation =>
+      _calculateVariation(_depensesPeriode, _depensesPrecedent);
+  double get beneficeVariation => _calculateVariation(
+      beneficeNetPeriode,
+      (_caEncaissePrecedent -
+          _depensesPrecedent)); // Approx pour N-1 (sans recalculer cotis N-1)
+
+  // Graphiques & Analyses
   final Map<int, double> _graphData = {};
   Map<int, double> get graphData => _graphData;
+
+  // Helper pour le Chart Widget qui attend une liste
+  List<double> get monthlyRevenue {
+    final list = <double>[];
+    for (int i = 1; i <= 12; i++) {
+      list.add(_graphData[i] ?? 0.0);
+    }
+    return list;
+  }
+
+  List<Map<String, dynamic>> _topClients = [];
+  List<Map<String, dynamic>> get topClients => _topClients;
+
+  Map<String, double> _expenseBreakdown = {};
+  Map<String, double> get expenseBreakdown => _expenseBreakdown;
+
+  // Activité Récente
+  List<dynamic> _recentActivity = [];
+  List<dynamic> get recentActivity => _recentActivity;
+
+  // Cotisations Détail
+  Map<String, Decimal> _cotisationBreakdown = {};
+  Map<String, Decimal> get cotisationBreakdown => _cotisationBreakdown;
+
+  // Conf
+  UrssafConfig? _urssafConfig;
+  ProfilEntreprise? _profilEntreprise;
+  ProfilEntreprise? get profilEntreprise => _profilEntreprise;
+  UrssafConfig? get urssafConfig => _urssafConfig;
 
   // --- ACTIONS ---
 
@@ -51,26 +103,41 @@ class DashboardViewModel extends ChangeNotifier {
     try {
       final now = DateTime.now();
       final dates = _getDatesForPeriod(_selectedPeriod, now);
+      final datesPrev =
+          _getDatesForPreviousPeriod(_selectedPeriod, dates['start']!);
 
       // --- OPTIMISATION PERFORMANCE ---
-      // Lancement des 4 requêtes en PARALLÈLE
+      // Lancement des requêtes en PARALLÈLE
       final results = await Future.wait([
+        _repository.getFacturesPeriod(dates['start']!, dates['end']!), // 0
+        _repository.getDepensesPeriod(dates['start']!, dates['end']!), // 1
+        _repository.getUrssafConfig(), // 2
+        _repository.getProfilEntreprise(), // 3
         _repository.getFacturesPeriod(
-            dates['start']!, dates['end']!), // Index 0
+            datesPrev['start']!, datesPrev['end']!), // 4
         _repository.getDepensesPeriod(
-            dates['start']!, dates['end']!), // Index 1
-        _repository.getUrssafConfig(), // Index 2
-        _repository.getProfilEntreprise(), // Index 3
+            datesPrev['start']!, datesPrev['end']!), // 5
+        _repository.getRecentActivity(), // 6
+        _repository
+            .getAllFacturesYear(now.year), // 7: Pour le graphe annuel complet
       ]);
 
       final factures = results[0] as List<Facture>;
       final depenses = results[1] as List<Depense>;
-      final urssafConfig = results[2] as UrssafConfig;
-      final profilEntreprise = results[3] as ProfilEntreprise?;
+      _urssafConfig = results[2] as UrssafConfig;
+      _profilEntreprise = results[3] as ProfilEntreprise?;
+      final facturesPrev = results[4] as List<Facture>;
+      final depensesPrev = results[5] as List<Depense>;
+      _recentActivity = results[6] as List<dynamic>;
+      final allFacturesYear = results[7] as List<Facture>;
 
-      // --- CALCULS LOCAUX ---
-      _calculateKPI(factures, depenses, urssafConfig, profilEntreprise, dates);
-      _generateGraphData(factures);
+      // --- CALCULS ---
+      _calculateKPI(factures, depenses, dates, isCurrent: true);
+      _calculateKPI(facturesPrev, depensesPrev, datesPrev, isCurrent: false);
+
+      _generateGraphData(allFacturesYear); // Sur l'année entière
+      _generateTopClients(factures);
+      _generateExpenseBreakdown(depenses);
     } catch (e, s) {
       developer.log("🔴 Erreur Dashboard VM", error: e, stackTrace: s);
     } finally {
@@ -79,67 +146,81 @@ class DashboardViewModel extends ChangeNotifier {
     }
   }
 
-  void _calculateKPI(
-      List<Facture> factures,
-      List<Depense> depenses,
-      UrssafConfig urssaf,
-      ProfilEntreprise? profil,
-      Map<String, DateTime> dates) {
+  void _calculateKPI(List<Facture> factures, List<Depense> depenses,
+      Map<String, DateTime> dates,
+      {required bool isCurrent}) {
     final start = dates['start']!;
     final end = dates['end']!;
 
-    _caEncaissePeriode = Decimal.zero;
-    _depensesPeriode = Decimal.zero;
-    _totalCotisations = Decimal.zero;
+    Decimal ca = Decimal.zero;
+    Decimal dep = Decimal.zero;
 
-    // 1. CA Encaissé (Basé sur les paiements effectifs)
+    // 1. CA Encaissé
     for (var f in factures) {
       for (var p in f.paiements) {
         if (p.datePaiement.isAfter(start) && p.datePaiement.isBefore(end)) {
-          _caEncaissePeriode += p.montant;
+          ca += p.montant;
         }
       }
     }
 
-    // 2. Calcul des cotisations selon le type d'entreprise
-    if (_caEncaissePeriode > Decimal.zero && profil != null) {
-      final type = profil.typeEntreprise;
+    // 2. Dépenses
+    dep = depenses.fold(Decimal.zero, (sum, d) => sum + d.montant);
 
-      if (type.isMicroEntrepreneur) {
-        // Micro-entrepreneur : calculer sur CA
-        _totalCotisations =
-            urssaf.calculerCotisationsMicro(_caEncaissePeriode, type);
-      } else if (type.isTNS) {
-        // TNS : calculer sur revenu net (CA - charges)
-        final revenuNet = _caEncaissePeriode - _depensesPeriode;
-        if (revenuNet > Decimal.zero) {
-          _totalCotisations = urssaf.calculerCotisationsTNS(revenuNet);
-        }
-      } else if (type.isAssimileSalarie) {
-        // Assimilé salarié : estimation 30% (cotisations patronales + salariales)
-        final revenu = _caEncaissePeriode - _depensesPeriode;
-        if (revenu > Decimal.zero) {
-          _totalCotisations =
-              (revenu * Decimal.fromInt(30) / Decimal.fromInt(100)).toDecimal();
-        }
-      } else {
-        // Fallback : 22% (taux micro moyen)
-        _totalCotisations =
-            (_caEncaissePeriode * Decimal.fromInt(22) / Decimal.fromInt(100))
-                .toDecimal();
-      }
+    if (isCurrent) {
+      _caEncaissePeriode = ca;
+      _depensesPeriode = dep;
+      _calculateCotisationsCurrent();
     } else {
-      // Pas de profil : utiliser estimation par défaut
-      if (_caEncaissePeriode > Decimal.zero) {
-        _totalCotisations =
-            (_caEncaissePeriode * Decimal.fromInt(22) / Decimal.fromInt(100))
-                .toDecimal();
-      }
+      _caEncaissePrecedent = ca;
+      _depensesPrecedent = dep;
     }
-
-    // 3. Dépenses
-    _depensesPeriode = depenses.fold(Decimal.zero, (sum, d) => sum + d.montant);
   }
+
+  void _calculateCotisationsCurrent() {
+    _totalCotisations = Decimal.zero;
+    _cotisationBreakdown = {};
+    _caVente = Decimal.zero;
+    _caPrestaBIC = Decimal.zero;
+    _caPrestaBNC = Decimal.zero;
+
+    if (_caEncaissePeriode > Decimal.zero && _urssafConfig != null) {
+      final config = _urssafConfig!;
+
+      // TODO: Pour l'instant on considère tout le CA comme Vente si on n'a pas le détail
+      // A l'avenir, il faudra ventiler le CA par type (Vente vs Service) depuis les factures
+      // Simplification MVP : On applique le type principal défini dans la config
+
+      // Ventilation sommaire basée sur la config (Idéalement devrait venir des lignes de facture)
+      // Si Mixte, on divise arbitrairement pour la démo ou on prend tout en Vente ?
+      // Pour être safe et ne pas bloquer, on met tout dans la catégorie principale
+      switch (config.typeActivite) {
+        case TypeActiviteMicro.bicVente:
+          _caVente = _caEncaissePeriode;
+          break;
+        case TypeActiviteMicro.bicPrestation:
+          _caPrestaBIC = _caEncaissePeriode;
+          break;
+        case TypeActiviteMicro.bncPrestation:
+          _caPrestaBNC = _caEncaissePeriode;
+          break;
+        case TypeActiviteMicro.mixte:
+          // Cas complexe : Sans métadonnées sur les factures, impossible de savoir.
+          // On met 50/50 pour l'exemple ou tout en Vente par défaut
+          _caVente = (_caEncaissePeriode / Decimal.fromInt(2)).toDecimal();
+          _caPrestaBIC = (_caEncaissePeriode - _caVente);
+          break;
+      }
+
+      final result =
+          config.calculerCotisations(_caVente, _caPrestaBIC, _caPrestaBNC);
+
+      _totalCotisations = result['total'] ?? Decimal.zero;
+      _cotisationBreakdown = result;
+    }
+  }
+
+  // --- ANALYTICS ---
 
   void _generateGraphData(List<Facture> factures) {
     _graphData.clear();
@@ -160,6 +241,22 @@ class DashboardViewModel extends ChangeNotifier {
       }
     }
   }
+
+  void _generateTopClients(List<Facture> factures) {
+    // MVP: On laisse vide pour l'instant
+    _topClients = [];
+  }
+
+  void _generateExpenseBreakdown(List<Depense> depenses) {
+    _expenseBreakdown = {};
+    for (var d in depenses) {
+      final cat = d.categorie;
+      _expenseBreakdown[cat] =
+          (_expenseBreakdown[cat] ?? 0.0) + d.montant.toDouble();
+    }
+  }
+
+  // --- HELPERS DATES ---
 
   Map<String, DateTime> _getDatesForPeriod(
       DashboardPeriod period, DateTime now) {
@@ -182,42 +279,37 @@ class DashboardViewModel extends ChangeNotifier {
     return {'start': start, 'end': end};
   }
 
-  // --- STATS GLOBALES (Calculées sychronement depuis les listes chargées) ---
-
-  Decimal calculateImpayes(List<Facture> factures) {
-    Decimal totalImpaye = Decimal.zero;
-
-    for (var f in factures) {
-      if (f.statut == 'validee') {
-        // Calcul du total réglé
-        final totalRegle =
-            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-        // Calcul du net commercial
-        final remiseAmount = (f.totalHt * f.remiseTaux) / Decimal.fromInt(100);
-        final netCommercial = f.totalHt - remiseAmount.toDecimal();
-
-        // Reste = Net - AcompteInitial - TotalReglé
-        final reste = netCommercial - f.acompteDejaRegle - totalRegle;
-
-        if (reste > Decimal.zero) {
-          totalImpaye += reste;
-        }
-      }
+  Map<String, DateTime> _getDatesForPreviousPeriod(
+      DashboardPeriod period, DateTime currentStart) {
+    // Reculer d'une période par rapport au début de la période courante
+    DateTime start, end;
+    switch (period) {
+      case DashboardPeriod.mois:
+        // Mois précédent
+        start = DateTime(currentStart.year, currentStart.month - 1, 1);
+        end = DateTime(currentStart.year, currentStart.month, 0, 23, 59, 59);
+        break;
+      case DashboardPeriod.trimestre:
+        // Trimestre précédent (-3 mois)
+        start = DateTime(currentStart.year, currentStart.month - 3, 1);
+        final endDate = DateTime(currentStart.year, currentStart.month, 1)
+            .subtract(const Duration(days: 1));
+        end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+        break;
+      case DashboardPeriod.annee:
+        // Année précédente
+        start = DateTime(currentStart.year - 1, 1, 1);
+        end = DateTime(currentStart.year - 1, 12, 31, 23, 59, 59);
+        break;
     }
-    return totalImpaye;
+    return {'start': start, 'end': end};
   }
 
-  Decimal calculateConversion(List<Devis> devis) {
-    if (devis.isEmpty) return Decimal.zero;
-
-    final signes =
-        devis.where((d) => d.statut == 'signe' || d.statut == 'facture');
-    final totalSignes = signes.length;
-    final totalDevis = devis.length;
-
-    return ((Decimal.fromInt(totalSignes) * Decimal.fromInt(100)) /
-            Decimal.fromInt(totalDevis))
-        .toDecimal();
+  double _calculateVariation(Decimal current, Decimal previous) {
+    if (previous == Decimal.zero) return 0.0;
+    // Explicit conversion to double to avoid Rational type issues
+    final double curr = current.toDouble();
+    final double prev = previous.toDouble();
+    return ((curr - prev) / prev) * 100.0;
   }
 }

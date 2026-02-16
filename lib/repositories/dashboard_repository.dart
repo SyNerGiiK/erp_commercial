@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import '../config/supabase_config.dart';
 import '../models/facture_model.dart';
+import '../models/devis_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
@@ -13,6 +14,7 @@ abstract class IDashboardRepository {
   Future<List<Depense>> getDepensesPeriod(DateTime start, DateTime end);
   Future<UrssafConfig> getUrssafConfig();
   Future<ProfilEntreprise?> getProfilEntreprise();
+  Future<List<dynamic>> getRecentActivity();
 }
 
 class DashboardRepository implements IDashboardRepository {
@@ -67,10 +69,12 @@ class DashboardRepository implements IDashboardRepository {
           .eq('user_id', userId)
           .maybeSingle();
 
-      return response != null ? UrssafConfig.fromMap(response) : UrssafConfig();
+      return response != null
+          ? UrssafConfig.fromMap(response)
+          : UrssafConfig(userId: 'dashboard_mock'); // Fallback si pas de config
     } catch (e) {
-      developer.log("⚠️ Pas de config URSSAF trouvée, utilisation défaut.");
-      return UrssafConfig();
+      developer.log("⚠️ DashboardRepo: Pas de config Urssaf", error: e);
+      return UrssafConfig(userId: 'dashboard_mock');
     }
   }
 
@@ -88,6 +92,48 @@ class DashboardRepository implements IDashboardRepository {
     } catch (e) {
       developer.log("⚠️ Pas de profil entreprise trouvé.", error: e);
       return null;
+    }
+  }
+
+  @override
+  Future<List<dynamic>> getRecentActivity() async {
+    try {
+      final userId = SupabaseConfig.userId;
+
+      // Fetch last 5 factures
+      var facturesData = await _client
+          .from('factures')
+          .select('*, paiements(*)')
+          .eq('user_id', userId)
+          .order('date_emission', ascending: false)
+          .limit(5);
+
+      // Fetch last 5 devis
+      var devisData = await _client
+          .from('devis')
+          .select()
+          .eq('user_id', userId)
+          .order('date_emission', ascending: false)
+          .limit(5);
+
+      final factures =
+          (facturesData as List).map((e) => Facture.fromMap(e)).toList();
+      final devis = (devisData as List).map((e) => Devis.fromMap(e)).toList();
+
+      // Merge and sort
+      final all = <dynamic>[...factures, ...devis];
+      all.sort((a, b) {
+        DateTime dateA =
+            a is Facture ? a.dateEmission : (a as Devis).dateEmission;
+        DateTime dateB =
+            b is Facture ? b.dateEmission : (b as Devis).dateEmission;
+        return dateB.compareTo(dateA); // Descending
+      });
+
+      return all.take(5).toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur Recent Activity", error: e);
+      return [];
     }
   }
 

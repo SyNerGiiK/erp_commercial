@@ -1,0 +1,151 @@
+Analyzing erp_commercial...                                     
+
+  error - Expected an initializer - lib\models\urssaf_model.dart:306:61 - missing_initializer
+   info - Empty constructor bodies should be written using a ';' rather than '{}' - lib\models\urssaf_model.dart:307:5 - empty_constructor_bodies
+  error - '' isn't a field in the enclosing class - lib\models\urssaf_model.dart:307:5 - initializer_for_non_existent_field
+  error - A function body must be provided - lib\models\urssaf_model.dart:307:5 - missing_function_body
+  error - Expected a class member - lib\models\urssaf_model.dart:307:5 - expected_class_member
+  error - Expected a class member - lib\models\urssaf_model.dart:307:6 - expected_class_member
+  error - Can't have modifier 'static' here - lib\models\urssaf_model.dart:310:3 - extraneous_modifier
+warning - The declaration '_parseDecimal' isn't referenced - lib\models\urssaf_model.dart:310:18 - unused_element
+  error - Undefined name 'id' - lib\models\urssaf_model.dart:325:11 - undefined_identifier
+  error - Undefined name 'id' - lib\models\urssaf_model.dart:325:29 - undefined_identifier
+  error - Undefined name 'userId' - lib\models\urssaf_model.dart:326:18 - undefined_identifier
+  error - Undefined name 'accreActive' - lib\models\urssaf_model.dart:327:23 - undefined_identifier
+  error - Undefined name 'accreAnnee' - lib\models\urssaf_model.dart:328:22 - undefined_identifier
+  error - Undefined name 'tauxMicroVente' - lib\models\urssaf_model.dart:330:27 - undefined_identifier
+  error - Undefined name 'tauxMicroServiceBIC' - lib\models\urssaf_model.dart:331:33 - undefined_identifier
+  error - Undefined name 'tauxMicroServiceBNC' - lib\models\urssaf_model.dart:332:33 - undefined_identifier
+  error - Undefined name 'tauxMicroLiberalCIPAV' - lib\models\urssaf_model.dart:333:35 - undefined_identifier
+  error - Undefined name 'tauxMicroMeubles' - lib\models\urssaf_model.dart:334:29 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroVente' - lib\models\urssaf_model.dart:335:31 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroService' - lib\models\urssaf_model.dart:336:33 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroLiberal' - lib\models\urssaf_model.dart:337:33 - undefined_identifier
+  error - Undefined name 'plafondCaMicroVente' - lib\models\urssaf_model.dart:338:33 - undefined_identifier
+  error - Undefined name 'plafondCaMicroService' - lib\models\urssaf_model.dart:339:35 - undefined_identifier
+  error - Undefined name 'seuilTvaMicroVente' - lib\models\urssaf_model.dart:340:32 - undefined_identifier
+  error - Undefined name 'seuilTvaMicroService' - lib\models\urssaf_model.dart:341:34 - undefined_identifier
+  error - Undefined name 'abattementTNS' - lib\models\urssaf_model.dart:343:25 - undefined_identifier
+  error - Undefined name 'abattementMinTNS' - lib\models\urssaf_model.dart:344:29 - undefined_identifier
+  error - Undefined name 'abattementMaxTNS' - lib\models\urssaf_model.dart:345:29 - undefined_identifier
+  error - Undefined name 'tauxMaladieTNSMin' - lib\models\urssaf_model.dart:346:31 - undefined_identifier
+  error - Undefined name 'tauxMaladieTNSMax' - lib\models\urssaf_model.dart:347:31 - undefined_identifier
+  error - Undefined name 'tauxIJTNS' - lib\models\urssaf_model.dart:348:22 - undefined_identifier
+  error - Undefined name 'tauxRetraiteBaseTNST1' - lib\models\urssaf_model.dart:349:36 - undefined_identifier
+  error - Undefined name 'tauxRetraiteBaseTNST2' - lib\models\urssaf_model.dart:350:36 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompTNST1' - lib\models\urssaf_model.dart:351:36 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompTNST2' - lib\models\urssaf_model.dart:352:36 - undefined_identifier
+  error - Undefined name 'tauxInvaliditeDecesTNS' - lib\models\urssaf_model.dart:353:36 - undefined_identifier
+  error - Undefined name 'tauxAllocFamTNSMin' - lib\models\urssaf_model.dart:354:33 - undefined_identifier
+  error - Undefined name 'tauxAllocFamTNSMax' - lib\models\urssaf_model.dart:355:33 - undefined_identifier
+  error - Undefined name 'tauxCsgCrdsTNS' - lib\models\urssaf_model.dart:356:28 - undefined_identifier
+  error - Undefined name 'tauxCfpArtisan' - lib\models\urssaf_model.dart:357:27 - undefined_identifier
+  error - Undefined name 'tauxCfpCommercant' - lib\models\urssaf_model.dart:358:30 - undefined_identifier
+  error - Undefined name 'tauxVieillesseSalT1' - lib\models\urssaf_model.dart:360:33 - undefined_identifier
+warning - Two keys in a map literal shouldn't be equal - lib\models\urssaf_model.dart:361:7 - equal_keys_in_map
+  error - Undefined name 'tauxVieillesseSalT1' - lib\models\urssaf_model.dart:361:33 - undefined_identifier
+  error - Undefined name 'tauxVieillesseSalT2' - lib\models\urssaf_model.dart:362:33 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompSalT1' - lib\models\urssaf_model.dart:363:36 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompSalT2' - lib\models\urssaf_model.dart:364:36 - undefined_identifier
+  error - Undefined name 'tauxAPECSal' - lib\models\urssaf_model.dart:365:24 - undefined_identifier
+  error - Undefined name 'tauxCSGDeductible' - lib\models\urssaf_model.dart:366:30 - undefined_identifier
+  error - Undefined name 'tauxCSGNonDeductible' - lib\models\urssaf_model.dart:367:34 - undefined_identifier
+  error - Undefined name 'tauxCRDS' - lib\models\urssaf_model.dart:368:20 - undefined_identifier
+  error - Undefined name 'tauxMaladiePatronal1' - lib\models\urssaf_model.dart:369:33 - undefined_identifier
+  error - Undefined name 'tauxMaladiePatronal2' - lib\models\urssaf_model.dart:370:33 - undefined_identifier
+  error - Undefined name 'tauxVieillessePatT1' - lib\models\urssaf_model.dart:371:33 - undefined_identifier
+  error - Undefined name 'tauxVieillessePatT2' - lib\models\urssaf_model.dart:372:33 - undefined_identifier
+  error - Undefined name 'tauxAllocFamPatronal1' - lib\models\urssaf_model.dart:373:35 - undefined_identifier
+  error - Undefined name 'tauxAllocFamPatronal2' - lib\models\urssaf_model.dart:374:35 - undefined_identifier
+  error - Undefined name 'tauxChomagePatronal' - lib\models\urssaf_model.dart:375:32 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompPatT1' - lib\models\urssaf_model.dart:376:36 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompPatT2' - lib\models\urssaf_model.dart:377:36 - undefined_identifier
+  error - Undefined name 'tauxAPECPat' - lib\models\urssaf_model.dart:378:24 - undefined_identifier
+  error - Undefined name 'tauxAccidentTravail' - lib\models\urssaf_model.dart:379:32 - undefined_identifier
+  error - Undefined name 'tauxReductionMax50' - lib\models\urssaf_model.dart:380:31 - undefined_identifier
+  error - Undefined name 'tauxReductionMax50Plus' - lib\models\urssaf_model.dart:381:35 - undefined_identifier
+  error - Undefined name 'tauxCsgDividendes' - lib\models\urssaf_model.dart:383:30 - undefined_identifier
+  error - Undefined name 'tauxPfuIr' - lib\models\urssaf_model.dart:384:22 - undefined_identifier
+  error - Undefined name 'tauxPfuTotal' - lib\models\urssaf_model.dart:385:25 - undefined_identifier
+  error - Undefined name 'tauxIsReduit' - lib\models\urssaf_model.dart:386:25 - undefined_identifier
+  error - Undefined name 'tauxIsNormal' - lib\models\urssaf_model.dart:387:25 - undefined_identifier
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:408:17 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:409:25 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:410:35 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:411:33 - invalid_reference_to_this
+  error - Undefined name 'tauxMicroVente' - lib\models\urssaf_model.dart:413:23 - undefined_identifier
+  error - Undefined name 'tauxMicroServiceBIC' - lib\models\urssaf_model.dart:414:28 - undefined_identifier
+  error - Undefined name 'tauxMicroServiceBNC' - lib\models\urssaf_model.dart:415:28 - undefined_identifier
+  error - Undefined name 'tauxMicroLiberalCIPAV' - lib\models\urssaf_model.dart:416:30 - undefined_identifier
+  error - Undefined name 'tauxMicroMeubles' - lib\models\urssaf_model.dart:417:25 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroVente' - lib\models\urssaf_model.dart:418:26 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroService' - lib\models\urssaf_model.dart:419:28 - undefined_identifier
+  error - Undefined name 'tauxCfpMicroLiberal' - lib\models\urssaf_model.dart:420:28 - undefined_identifier
+  error - Undefined name 'plafondCaMicroVente' - lib\models\urssaf_model.dart:421:28 - undefined_identifier
+  error - Undefined name 'plafondCaMicroService' - lib\models\urssaf_model.dart:422:30 - undefined_identifier
+  error - Undefined name 'seuilTvaMicroVente' - lib\models\urssaf_model.dart:423:27 - undefined_identifier
+  error - Undefined name 'seuilTvaMicroService' - lib\models\urssaf_model.dart:424:29 - undefined_identifier
+  error - Undefined name 'abattementTNS' - lib\models\urssaf_model.dart:425:22 - undefined_identifier
+  error - Undefined name 'abattementMinTNS' - lib\models\urssaf_model.dart:426:25 - undefined_identifier
+  error - Undefined name 'abattementMaxTNS' - lib\models\urssaf_model.dart:427:25 - undefined_identifier
+  error - Undefined name 'tauxMaladieTNSMin' - lib\models\urssaf_model.dart:428:26 - undefined_identifier
+  error - Undefined name 'tauxMaladieTNSMax' - lib\models\urssaf_model.dart:429:26 - undefined_identifier
+  error - Undefined name 'tauxIJTNS' - lib\models\urssaf_model.dart:430:18 - undefined_identifier
+  error - Undefined name 'tauxRetraiteBaseTNST1' - lib\models\urssaf_model.dart:431:30 - undefined_identifier
+  error - Undefined name 'tauxRetraiteBaseTNST2' - lib\models\urssaf_model.dart:432:30 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompTNST1' - lib\models\urssaf_model.dart:433:30 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompTNST2' - lib\models\urssaf_model.dart:434:30 - undefined_identifier
+  error - Undefined name 'tauxInvaliditeDecesTNS' - lib\models\urssaf_model.dart:435:31 - undefined_identifier
+  error - Undefined name 'tauxAllocFamTNSMin' - lib\models\urssaf_model.dart:436:27 - undefined_identifier
+  error - Undefined name 'tauxAllocFamTNSMax' - lib\models\urssaf_model.dart:437:27 - undefined_identifier
+  error - Undefined name 'tauxCsgCrdsTNS' - lib\models\urssaf_model.dart:438:23 - undefined_identifier
+  error - Undefined name 'tauxCfpArtisan' - lib\models\urssaf_model.dart:439:23 - undefined_identifier
+  error - Undefined name 'tauxCfpCommercant' - lib\models\urssaf_model.dart:440:26 - undefined_identifier
+  error - Undefined name 'tauxVieillesseSalT1' - lib\models\urssaf_model.dart:441:28 - undefined_identifier
+  error - Undefined name 'tauxVieillesseSalT2' - lib\models\urssaf_model.dart:442:28 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompSalT1' - lib\models\urssaf_model.dart:443:30 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompSalT2' - lib\models\urssaf_model.dart:444:30 - undefined_identifier
+  error - Undefined name 'tauxAPECSal' - lib\models\urssaf_model.dart:445:20 - undefined_identifier
+  error - Undefined name 'tauxCSGDeductible' - lib\models\urssaf_model.dart:446:26 - undefined_identifier
+  error - Undefined name 'tauxCSGNonDeductible' - lib\models\urssaf_model.dart:447:29 - undefined_identifier
+  error - Undefined name 'tauxCRDS' - lib\models\urssaf_model.dart:448:17 - undefined_identifier
+  error - Undefined name 'tauxMaladiePatronal1' - lib\models\urssaf_model.dart:449:29 - undefined_identifier
+  error - Undefined name 'tauxMaladiePatronal2' - lib\models\urssaf_model.dart:450:29 - undefined_identifier
+  error - Undefined name 'tauxVieillessePatT1' - lib\models\urssaf_model.dart:451:28 - undefined_identifier
+  error - Undefined name 'tauxVieillessePatT2' - lib\models\urssaf_model.dart:452:28 - undefined_identifier
+  error - Undefined name 'tauxAllocFamPatronal1' - lib\models\urssaf_model.dart:453:30 - undefined_identifier
+  error - Undefined name 'tauxAllocFamPatronal2' - lib\models\urssaf_model.dart:454:30 - undefined_identifier
+  error - Undefined name 'tauxChomagePatronal' - lib\models\urssaf_model.dart:455:28 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompPatT1' - lib\models\urssaf_model.dart:456:30 - undefined_identifier
+  error - Undefined name 'tauxRetraiteCompPatT2' - lib\models\urssaf_model.dart:457:30 - undefined_identifier
+  error - Undefined name 'tauxAPECPat' - lib\models\urssaf_model.dart:458:20 - undefined_identifier
+  error - Undefined name 'tauxAccidentTravail' - lib\models\urssaf_model.dart:459:28 - undefined_identifier
+  error - Undefined name 'tauxReductionMax50' - lib\models\urssaf_model.dart:460:27 - undefined_identifier
+  error - Undefined name 'tauxReductionMax50Plus' - lib\models\urssaf_model.dart:461:31 - undefined_identifier
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:463:47 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:464:31 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:465:37 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:466:37 - invalid_reference_to_this
+  error - Invalid reference to 'this' expression - lib\models\urssaf_model.dart:467:37 - invalid_reference_to_this
+  error - Expected a method, getter, setter or operator declaration - lib\models\urssaf_model.dart:470:1 - expected_executable
+  error - The method 'fromMap' isn't defined for the type 'UrssafConfig' - lib\repositories\dashboard_repository.dart:72:46 - undefined_method
+  error - The method 'fromMap' isn't defined for the type 'UrssafConfig' - lib\repositories\urssaf_repository.dart:26:29 - undefined_method
+  error - The method 'toMap' isn't defined for the type 'UrssafConfig' - lib\repositories\urssaf_repository.dart:40:27 - undefined_method
+  error - The method 'calculerCotisationsMicro' isn't defined for the type 'UrssafConfig' - lib\viewmodels\dashboard_viewmodel.dart:184:20 - undefined_method
+  error - The method 'caclulerVentilationMicro' isn't defined for the type 'UrssafConfig' - lib\viewmodels\dashboard_viewmodel.dart:187:39 - undefined_method
+  error - The method 'calculerCotisationsTNS' isn't defined for the type 'UrssafConfig' - lib\viewmodels\dashboard_viewmodel.dart:193:38 - undefined_method
+  error - The argument type 'Decimal' can't be assigned to the parameter type 'Rational'.  - lib\viewmodels\dashboard_viewmodel.dart:291:49 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\views\tableau_de_bord_view.dart:291:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\cotisation_detail_card.dart:38:40 - deprecated_member_use
+  error - The argument type 'Decimal' can't be assigned to the parameter type 'Rational'.  - lib\widgets\dashboard\cotisation_detail_card.dart:57:46 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\cotisation_detail_card.dart:70:36 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\widgets\dashboard\cotisation_detail_card.dart:121:18 - unnecessary_to_list_in_spreads
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\gradient_kpi_card.dart:33:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\gradient_kpi_card.dart:48:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\gradient_kpi_card.dart:64:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\gradient_kpi_card.dart:111:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\gradient_kpi_card.dart:112:44 - deprecated_member_use
+warning - The value of the local variable 'seuilTvaMax' isn't used - lib\widgets\dashboard\plafonds_card.dart:24:13 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\dashboard\plafonds_card.dart:130:64 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\widgets\dashboard\top_clients_card.dart:34:18 - unnecessary_to_list_in_spreads
+

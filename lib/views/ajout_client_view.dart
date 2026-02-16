@@ -125,7 +125,11 @@ class _AjoutClientViewState extends State<AjoutClientView> {
       }
 
       if (mounted && success) {
-        context.pop();
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/app/clients');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Client enregistré avec succès")));
       } else if (mounted) {

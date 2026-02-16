@@ -94,14 +94,24 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   @override
   void initState() {
     super.initState();
+    // Initialisation immédiate des contrôleurs
+    _numeroCtrl = TextEditingController();
+    _objetCtrl = TextEditingController();
+    _notesCtrl = TextEditingController();
+    _conditionsCtrl = TextEditingController();
+
     _tabController = TabController(length: 2, vsync: this);
 
-    // Clear previous PDF state
+    // Clear previous PDF state AND Force Initial Refresh
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DevisViewModel>(context, listen: false).clearPdfState();
-    });
+      if (!mounted) return;
+      final vm = Provider.of<DevisViewModel>(context, listen: false);
+      vm.clearPdfState();
 
-    _checkDraftAndInit();
+      vm.clearPdfState();
+
+      _checkDraftAndInit();
+    });
   }
 
   Future<void> _checkDraftAndInit() async {
@@ -155,6 +165,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Brouillon restauré automatiquement"),
             duration: Duration(seconds: 2)));
+
+        // Refresh PDF after restore
+        final vm = Provider.of<DevisViewModel>(context, listen: false);
+        final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+        vm.forceRefreshPdf(
+            _buildDevisFromState(), _selectedClient, entVM.profil,
+            isTvaApplicable: entVM.isTvaApplicable);
       } catch (e) {
         print("Erreur restauration draft: $e");
         _initData(); // Fallback
@@ -210,6 +227,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
           final client =
               clientVM.clients.firstWhere((c) => c.id == d!.clientId);
           setState(() => _selectedClient = client);
+
+          // Refresh PDF after client init
+          final vm = Provider.of<DevisViewModel>(context, listen: false);
+          final entVM =
+              Provider.of<EntrepriseViewModel>(context, listen: false);
+          vm.forceRefreshPdf(_buildDevisFromState(), client, entVM.profil,
+              isTvaApplicable: entVM.isTvaApplicable);
         } catch (_) {}
       });
     } else {
@@ -218,7 +242,19 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       _notesCtrl = TextEditingController();
       _conditionsCtrl = TextEditingController(text: "Paiement à réception");
       _statut = 'brouillon';
+
+      // Refresh PDF for New empty devis
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = Provider.of<DevisViewModel>(context, listen: false);
+        final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+        vm.forceRefreshPdf(
+            _buildDevisFromState(), _selectedClient, entVM.profil,
+            isTvaApplicable: entVM.isTvaApplicable);
+      });
     }
+
+    // Trigger setState to ensure UI updates if lines changed
+    if (mounted) setState(() {});
   }
 
   @override
@@ -511,6 +547,16 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
       onSave: _sauvegarder,
+      onBack: () async {
+        final vm = Provider.of<DevisViewModel>(context, listen: false);
+        await vm.clearLocalDraft(widget.id);
+        if (context.mounted) {
+          if (context.canPop())
+            context.pop();
+          else
+            context.go('/app/home');
+        }
+      },
       isSaving: _isLoading,
       draftData: draftData,
       draftType: 'devis',

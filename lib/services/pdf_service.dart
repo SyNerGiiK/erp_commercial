@@ -14,6 +14,24 @@ import '../models/paiement_model.dart';
 import '../models/enums/entreprise_enums.dart'; // IMPORT ADDED
 import '../utils/format_utils.dart';
 
+class PdfGenerationRequest {
+  final Map<String, dynamic>? document;
+  final String documentType; // 'devis' or 'facture'
+  final Map<String, dynamic>? client;
+  final Map<String, dynamic>? profil;
+  final String docTypeLabel;
+  final bool isTvaApplicable;
+
+  PdfGenerationRequest({
+    required this.document,
+    required this.documentType,
+    required this.client,
+    required this.profil,
+    required this.docTypeLabel,
+    required this.isTvaApplicable,
+  });
+}
+
 class PdfService {
   static const PdfColor _primaryColor = PdfColor.fromInt(0xFF1E5572);
   static const PdfColor _accentColor = PdfColor.fromInt(0xFF2A769E);
@@ -35,7 +53,8 @@ class PdfService {
   static Future<Uint8List?> _downloadImage(String? url) async {
     if (url == null || url.isEmpty) return null;
     try {
-      final response = await http.get(Uri.parse(url));
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         return response.bodyBytes;
       }
@@ -45,8 +64,53 @@ class PdfService {
     return null;
   }
 
+  // --- ISOLATE GENERATION ---
+  static Future<Uint8List> generatePdfIsolate(
+      PdfGenerationRequest request) async {
+    // Reconstruct objects from Maps
+    // Client
+    final client =
+        request.client != null ? Client.fromMap(request.client!) : null;
+
+    // Entreprise
+    final profil = request.profil != null
+        ? ProfilEntreprise.fromMap(request.profil!)
+        : null;
+
+    // Document (Devis or Facture)
+    dynamic document;
+    if (request.documentType == 'facture') {
+      document = Facture.fromMap(request.document!);
+    } else {
+      document = Devis.fromMap(request.document!);
+    }
+
+    return await generateDocument(document, client, profil,
+        docType: request.docTypeLabel,
+        isTvaApplicable: request.isTvaApplicable);
+  }
+
   // --- GÉNÉRATION DOCUMENTS (Devis, Facture, Avoir, Situation) ---
   static Future<Uint8List> generateDocument(
+      dynamic document, Client? client, ProfilEntreprise? entreprise,
+      {String docType = "DOCUMENT", bool isTvaApplicable = true}) async {
+    // ... (rest of method is same, but I need to replace the whole method if I change signature or content)
+    // Actually I can keep generateDocument as is, and add a new wrapper for Isolate.
+    // The Wrapper will parse Maps and call generateDocument.
+    // So I don't need to replace generateDocument logic, just add new methods.
+
+    // BUT replace_file_content is for replacing blocks.
+    // I will append the new classes/methods at the end of the file or beginning.
+    // I'll add them at the end of imports or before PdfService class?
+    // Or inside PdfService class as static.
+
+    // Let's add them at the top of PdfService class.
+    return _generateDocumentInternal(document, client, entreprise,
+        docType: docType, isTvaApplicable: isTvaApplicable);
+  }
+
+  // Wrapper/Alias to keep compatibility if needed, but I'll likely just move the logic.
+  static Future<Uint8List> _generateDocumentInternal(
       dynamic document, Client? client, ProfilEntreprise? entreprise,
       {String docType = "DOCUMENT", bool isTvaApplicable = true}) async {
     final theme = await _loadTheme();

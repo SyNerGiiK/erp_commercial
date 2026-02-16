@@ -112,17 +112,23 @@ class DevisViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Need to import PdfService. But we are in a ViewModel.
-      // Ideally Services are injected or static. PdfService is static.
-      // We need to import it at top of file.
-      // Assuming import is added.
-      // Using generic dynamic document is risky but requested.
-      // We cast inside generateDocument anyway.
+      // Create request object with Maps to be isolate-safe
+      final request = PdfGenerationRequest(
+        document: (document as Devis).toMap(),
+        documentType: 'devis',
+        client: client?.toMap(),
+        profil: profil?.toMap(),
+        docTypeLabel: "DEVIS",
+        isTvaApplicable: isTvaApplicable,
+      );
 
-      // We need to access PdfService. using fully qualified or import.
-      // Lets rely on 'import ../services/pdf_service.dart'; being added.
+      final result = await compute(PdfService.generatePdfIsolate, request);
+      _currentPdfData = result;
     } catch (e) {
-      developer.log("Error launching generation", error: e);
+      developer.log("Error generating PDF", error: e);
+    } finally {
+      _isGeneratingPdf = false;
+      notifyListeners();
     }
 
     // Defer actual call to separate method or closure to ensure imports?

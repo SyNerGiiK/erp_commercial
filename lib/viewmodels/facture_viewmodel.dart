@@ -99,11 +99,20 @@ class FactureViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await PdfService.generateDocument(document, client, profil,
-          docType: document is Facture
-              ? (document.type == 'avoir' ? 'AVOIR' : 'FACTURE')
-              : 'FACTURE',
-          isTvaApplicable: isTvaApplicable);
+      final docTypeLabel = (document is Facture && document.type == 'avoir')
+          ? 'AVOIR'
+          : 'FACTURE';
+
+      final request = PdfGenerationRequest(
+        document: (document as Facture).toMap(),
+        documentType: 'facture',
+        client: client?.toMap(),
+        profil: profil?.toMap(),
+        docTypeLabel: docTypeLabel,
+        isTvaApplicable: isTvaApplicable,
+      );
+
+      final result = await compute(PdfService.generatePdfIsolate, request);
       _currentPdfData = result;
     } catch (e) {
       developer.log("Error generating PDF", error: e);

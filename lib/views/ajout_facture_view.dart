@@ -85,12 +85,26 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
   @override
   void initState() {
     super.initState();
-    // Clear previous PDF state
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<FactureViewModel>(context, listen: false).clearPdfState();
-    });
+    // Initialisation immédiate des contrôleurs
+    _numeroCtrl = TextEditingController();
+    _objetCtrl = TextEditingController();
+    _notesCtrl = TextEditingController();
+    _conditionsCtrl = TextEditingController();
 
-    _checkDraftAndInit();
+    // Clear previous PDF state AND Force Initial Refresh
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final vm = Provider.of<FactureViewModel>(context, listen: false);
+      vm.clearPdfState();
+
+      // Force refresh (fixes blank preview at start)
+      final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+      final draftData = _buildFactureFromState();
+      vm.forceRefreshPdf(draftData, _selectedClient, entVM.profil,
+          isTvaApplicable: entVM.isTvaApplicable);
+
+      _checkDraftAndInit();
+    });
   }
 
   Future<void> _checkDraftAndInit() async {

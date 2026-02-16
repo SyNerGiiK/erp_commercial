@@ -272,6 +272,8 @@ class Devis {
       'signature_url': signatureUrl,
       'date_signature': dateSignature?.toIso8601String(),
       'tva_intra': tvaIntra,
+      'lignes_devis': lignes.map((e) => e.toMap()).toList(),
+      'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
     };
   }
 

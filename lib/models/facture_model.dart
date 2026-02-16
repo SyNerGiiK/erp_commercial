@@ -273,6 +273,9 @@ class Facture {
       'conditions_reglement': conditionsReglement,
       'notes_publiques': notesPubliques,
       'tva_intra': tvaIntra,
+      'lignes_factures': lignes.map((e) => e.toMap()).toList(),
+      'paiements': paiements.map((e) => e.toMap()).toList(),
+      'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
     };
   }
 

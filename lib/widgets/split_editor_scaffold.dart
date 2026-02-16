@@ -9,18 +9,18 @@ import '../viewmodels/editor_state_provider.dart';
 class SplitEditorScaffold extends StatefulWidget {
   final String title;
   final Widget editorForm;
-  // final Future<Uint8List> Function(PdfPageFormat) onGeneratePdf; // REMOVED
 
-  final Uint8List? pdfData; // NEW
-  final bool isPdfLoading; // NEW
-  final bool isRealTime; // NEW
-  final ValueChanged<bool>? onToggleRealTime; // NEW
-  final VoidCallback? onRefreshPdf; // NEW
+  final Uint8List? pdfData;
+  final bool isPdfLoading;
+  final bool isRealTime;
+  final ValueChanged<bool>? onToggleRealTime;
+  final VoidCallback? onRefreshPdf;
 
   final VoidCallback? onSave;
+  final VoidCallback? onBack; // NEW
   final bool isSaving;
-  final dynamic draftData; // Pour la minimisation
-  final String draftType; // 'devis' ou 'facture'
+  final dynamic draftData;
+  final String draftType;
   final String? draftId;
   final String? sourceDevisId;
 
@@ -28,10 +28,8 @@ class SplitEditorScaffold extends StatefulWidget {
     super.key,
     required this.title,
     required this.editorForm,
-    // required this.onGeneratePdf, // REMOVED
     required this.draftData,
     required this.draftType,
-    // NEW PARAMS
     this.pdfData,
     this.isPdfLoading = false,
     this.isRealTime = false,
@@ -40,6 +38,7 @@ class SplitEditorScaffold extends StatefulWidget {
     this.draftId,
     this.sourceDevisId,
     this.onSave,
+    this.onBack,
     this.isSaving = false,
   });
 
@@ -82,7 +81,9 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (context.canPop()) {
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else if (context.canPop()) {
               context.pop();
             } else {
               context.go('/app/home');
@@ -170,28 +171,46 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
         children: [
           // Le PdfPreview
           // On affiche le PDF data s'il existe
-          if (widget.pdfData != null)
+          // 1. Loading active (Spinner)
+          if (widget.isPdfLoading)
+            const Center(
+                child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Génération de l'aperçu...",
+                    style: TextStyle(color: Colors.grey)),
+              ],
+            ))
+          // 2. Data available (Preview)
+          else if (widget.pdfData != null)
             PdfPreview(
-              key: ValueKey(widget.pdfData.hashCode), // Refresh on data change
+              key: ValueKey(widget.pdfData.hashCode),
               build: (format) => Future.value(widget.pdfData!),
               useActions: false,
-              loadingWidget: const SizedBox(), // Managed by overlay
+              loadingWidget: const SizedBox(),
               initialPageFormat: PdfPageFormat.a4,
               canChangeOrientation: false,
               canChangePageFormat: false,
               canDebug: false,
               maxPageWidth: 700,
             )
+          // 3. Fallback (Empty state)
           else
-            // Squelette de chargement (Shimmer-like)
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(),
+                  const Icon(Icons.picture_as_pdf,
+                      size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
-                  Text("Chargement de l'aperçu...",
+                  Text("L'aperçu s'affichera ici",
                       style: TextStyle(color: Colors.grey[500])),
+                  TextButton.icon(
+                      onPressed: () {}, // No action generic here, handled by VM
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Actualiser"))
                 ],
               ),
             ),

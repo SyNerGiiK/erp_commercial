@@ -140,7 +140,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         _numeroCtrl.text = devis.numeroDevis;
         _objetCtrl.text = devis.objet;
         _notesCtrl.text = devis.notesPubliques ?? '';
-        _conditionsCtrl.text = devis.conditionsReglement ?? '';
+        _conditionsCtrl.text = devis.conditionsReglement;
         _dateEmission = devis.dateEmission;
         _dateValidite = devis.dateValidite;
         _statut = devis.statut;
@@ -149,10 +149,8 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         _lignes =
             devis.lignes.map((l) => LigneDevis.fromMap(l.toMap())).toList();
 
-        // Client (Complexe car on a que l'ID ou le snapshot)
-        // Idéalement on garde l'ID et on fetch, ou on utilise le snapshot client
-        // Pour MVP Auto-Save: on essaie de retrouver le client par ID si présent
-        if (devis.clientId != null) {
+        // Client
+        if (mounted) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
           try {
             _selectedClient =
@@ -173,7 +171,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
             _buildDevisFromState(), _selectedClient, entVM.profil,
             isTvaApplicable: entVM.isTvaApplicable);
       } catch (e) {
-        print("Erreur restauration draft: $e");
+        debugPrint("Erreur restauration draft: $e");
         _initData(); // Fallback
       }
     });
@@ -420,12 +418,16 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       // Clear Draft
       await vm.clearLocalDraft(widget.id);
 
-      context.go('/app/devis');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
+      if (mounted) {
+        context.go('/app/devis');
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+      }
     }
   }
 
@@ -551,10 +553,11 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         final vm = Provider.of<DevisViewModel>(context, listen: false);
         await vm.clearLocalDraft(widget.id);
         if (context.mounted) {
-          if (context.canPop())
+          if (context.canPop()) {
             context.pop();
-          else
+          } else {
             context.go('/app/home');
+          }
         }
       },
       isSaving: _isLoading,

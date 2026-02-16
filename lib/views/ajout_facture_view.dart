@@ -126,7 +126,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
         _numeroCtrl.text = facture.numeroFacture;
         _objetCtrl.text = facture.objet;
         _notesCtrl.text = facture.notesPubliques ?? '';
-        _conditionsCtrl.text = facture.conditionsReglement ?? '';
+        _conditionsCtrl.text = facture.conditionsReglement;
         _dateEmission = facture.dateEmission;
         _dateEcheance = facture.dateEcheance;
         _statut = facture.statut;

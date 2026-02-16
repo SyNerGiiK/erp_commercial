@@ -95,6 +95,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+
+    // Clear previous PDF state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DevisViewModel>(context, listen: false).clearPdfState();
+    });
+
     _initData();
   }
 
@@ -324,33 +331,6 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     }
   }
 
-  /// callback pour SplitEditorScaffold
-  Future<Uint8List> _generatePreviewPdf(PdfPageFormat format) async {
-    final entrepriseVM =
-        Provider.of<EntrepriseViewModel>(context, listen: false);
-    if (entrepriseVM.profil == null) {
-      await entrepriseVM.fetchProfil();
-    }
-    final isTvaApplicable = entrepriseVM.isTvaApplicable;
-
-    // On utilise un client temporaire si pas sélectionné pour éviter crash
-    final client = _selectedClient ??
-        Client(
-          nomComplet: "Client (En attente)",
-          adresse: "",
-          codePostal: "",
-          ville: "",
-          telephone: "",
-          email: "",
-          typeClient: "particulier",
-        );
-
-    final devis = _buildDevisFromState();
-
-    return await PdfService.generateDocument(devis, client, entrepriseVM.profil,
-        docType: "DEVIS", isTvaApplicable: isTvaApplicable);
-  }
-
   Future<void> _finaliser() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -436,7 +416,27 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   @override
   Widget build(BuildContext context) {
     // On construit les données pour le draft (Minimisation)
+    // On construit les données pour le draft (Minimisation)
     final draftData = _buildDevisFromState();
+
+    // TRIGGER AUTO-UPDATE (Debounced in VM)
+    // We call this on every build.
+    // If not RealTime, VM ignores it.
+    // If RealTime, VM debounces it.
+    // We need to pass current data.
+    final vm = Provider.of<DevisViewModel>(context);
+    // Don't call trigger if we are currently building FROM the VM notification (loop risk)?
+    // triggerPdfUpdate uses a Timer, so it doesn't trigger immediate notify.
+    // However, we should be careful.
+    // Let's use a postFrameCallback to avoid "setState during build" if logic changes?
+    // No, triggerPdfUpdate is safe.
+
+    // We need Profil and TVA info
+    final entVM = Provider.of<EntrepriseViewModel>(context,
+        listen: false); // Listen false to avoid extra rebuilds here
+
+    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+        isTvaApplicable: entVM.isTvaApplicable);
 
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
@@ -446,7 +446,30 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       draftType: 'devis',
       draftId: widget.id,
       // La fonction qui génère le PDF preview
-      onGeneratePdf: _generatePreviewPdf,
+      // onGeneratePdf: _generatePreviewPdf, // REMOVED
+
+      // NEW BINDING
+      pdfData: vm.currentPdfData,
+      isPdfLoading: vm.isGeneratingPdf,
+      isRealTime: vm.isRealTimePreviewEnabled,
+      onToggleRealTime: (val) {
+        vm.toggleRealTimePreview(val);
+        // If enabling, trigger update immediately
+        if (val) {
+          vm.triggerPdfUpdate(draftData, _selectedClient,
+              Provider.of<EntrepriseViewModel>(context, listen: false).profil,
+              isTvaApplicable:
+                  Provider.of<EntrepriseViewModel>(context, listen: false)
+                      .isTvaApplicable);
+        }
+      },
+      onRefreshPdf: () {
+        vm.forceRefreshPdf(draftData, _selectedClient,
+            Provider.of<EntrepriseViewModel>(context, listen: false).profil,
+            isTvaApplicable:
+                Provider.of<EntrepriseViewModel>(context, listen: false)
+                    .isTvaApplicable);
+      },
 
       // FORMULAIRE (Partie Gauche)
       editorForm: Column(

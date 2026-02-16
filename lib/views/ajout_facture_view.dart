@@ -83,6 +83,10 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
   @override
   void initState() {
     super.initState();
+    // Clear previous PDF state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<FactureViewModel>(context, listen: false).clearPdfState();
+    });
     _initData();
   }
 
@@ -376,31 +380,6 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     }
   }
 
-  // Preview PDF (Callback)
-  Future<Uint8List> _generatePreviewPdf(PdfPageFormat format) async {
-    final entrepriseVM =
-        Provider.of<EntrepriseViewModel>(context, listen: false);
-    if (entrepriseVM.profil == null) {
-      await entrepriseVM.fetchProfil();
-    }
-
-    final client = _selectedClient ??
-        Client(
-          nomComplet: "Client (En attente)",
-          adresse: "",
-          codePostal: "",
-          ville: "",
-          telephone: "",
-          email: "",
-          typeClient: "particulier",
-        );
-
-    final facture = _buildFactureFromState();
-    return await PdfService.generateDocument(
-        facture, client, entrepriseVM.profil,
-        docType: "FACTURE", isTvaApplicable: entrepriseVM.isTvaApplicable);
-  }
-
   Future<void> _signerClient() async {
     if (widget.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -487,6 +466,13 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
     final isTvaApplicable =
         Provider.of<EntrepriseViewModel>(context).isTvaApplicable;
 
+    // TRIGGER AUTO-UPDATE
+    final vm = Provider.of<FactureViewModel>(context);
+    final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+
+    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+        isTvaApplicable: isTvaApplicable);
+
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouvelle Facture" : "Modifier Facture",
       draftData: draftData,
@@ -496,7 +482,25 @@ class _AjoutFactureViewState extends State<AjoutFactureView> {
       sourceDevisId: widget.sourceDevisId,
       onSave: _sauvegarder,
       isSaving: _isLoading,
-      onGeneratePdf: _generatePreviewPdf,
+
+      // NEW BINDING
+      pdfData: vm.currentPdfData,
+      isPdfLoading: vm.isGeneratingPdf,
+      isRealTime: vm.isRealTimePreviewEnabled,
+      onToggleRealTime: (val) {
+        vm.toggleRealTimePreview(val);
+        if (val) {
+          vm.triggerPdfUpdate(draftData, _selectedClient,
+              Provider.of<EntrepriseViewModel>(context, listen: false).profil,
+              isTvaApplicable: isTvaApplicable);
+        }
+      },
+      onRefreshPdf: () {
+        vm.forceRefreshPdf(draftData, _selectedClient,
+            Provider.of<EntrepriseViewModel>(context, listen: false).profil,
+            isTvaApplicable: isTvaApplicable);
+      },
+      // onGeneratePdf: _generatePreviewPdf, // REMOVED
       editorForm: Form(
         key: _formKey,
         child: SingleChildScrollView(

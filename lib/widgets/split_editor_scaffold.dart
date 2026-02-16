@@ -9,7 +9,14 @@ import '../viewmodels/editor_state_provider.dart';
 class SplitEditorScaffold extends StatefulWidget {
   final String title;
   final Widget editorForm;
-  final Future<Uint8List> Function(PdfPageFormat) onGeneratePdf;
+  // final Future<Uint8List> Function(PdfPageFormat) onGeneratePdf; // REMOVED
+
+  final Uint8List? pdfData; // NEW
+  final bool isPdfLoading; // NEW
+  final bool isRealTime; // NEW
+  final ValueChanged<bool>? onToggleRealTime; // NEW
+  final VoidCallback? onRefreshPdf; // NEW
+
   final VoidCallback? onSave;
   final bool isSaving;
   final dynamic draftData; // Pour la minimisation
@@ -21,9 +28,15 @@ class SplitEditorScaffold extends StatefulWidget {
     super.key,
     required this.title,
     required this.editorForm,
-    required this.onGeneratePdf,
+    // required this.onGeneratePdf, // REMOVED
     required this.draftData,
     required this.draftType,
+    // NEW PARAMS
+    this.pdfData,
+    this.isPdfLoading = false,
+    this.isRealTime = false,
+    this.onToggleRealTime,
+    this.onRefreshPdf,
     this.draftId,
     this.sourceDevisId,
     this.onSave,
@@ -36,8 +49,9 @@ class SplitEditorScaffold extends StatefulWidget {
 
 class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
   // Mode Live Preview désactivé par défaut pour perf
-  bool _isLivePreview = false;
-  int _refreshKey = 0; // Pour forcer le rebuild du PdfPreview
+  // Mode Live Preview désactivé par défaut pour perf
+  // bool _isLivePreview = false; // MOVED TO VM
+  // int _refreshKey = 0; // REMOVED
 
   void _minimize(BuildContext context) {
     final editorState =
@@ -55,11 +69,7 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
     }
   }
 
-  void _refreshPdf() {
-    setState(() {
-      _refreshKey++;
-    });
-  }
+  // void _refreshPdf() { ... } // MOVED TO PARENT
 
   @override
   Widget build(BuildContext context) {
@@ -159,25 +169,32 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
       child: Stack(
         children: [
           // Le PdfPreview
-          // On utilise une key pour forcer le refresh quand on clique sur le bouton manuel
-          // Si Live Preview est activé, le widget parent doit gérer le rebuild via setState ou autre
-          // Mais ici le PdfPreview de printing package gère lui même son build
-          PdfPreview(
-            key: ValueKey(_refreshKey),
-            build: (format) => widget.onGeneratePdf(format),
-            useActions:
-                false, // On refait nos propres actions si besoin, ou true pour print/share
-            loadingWidget: const Center(child: CircularProgressIndicator()),
-            initialPageFormat: PdfPageFormat.a4,
-            canChangeOrientation: false,
-            canChangePageFormat: false,
-            canDebug: false,
-            maxPageWidth: 700,
+          // On affiche le PDF data s'il existe
+          if (widget.pdfData != null)
+            PdfPreview(
+              key: ValueKey(widget.pdfData.hashCode), // Refresh on data change
+              build: (format) => Future.value(widget.pdfData!),
+              useActions: false,
+              loadingWidget: const SizedBox(), // Managed by overlay
+              initialPageFormat: PdfPageFormat.a4,
+              canChangeOrientation: false,
+              canChangePageFormat: false,
+              canDebug: false,
+              maxPageWidth: 700,
+            )
+          else
+            const Center(child: Text("Aucun aperçu disponible. Actualisez.")),
 
-            // Pour le debounce/live, le package printing n'a pas de debounce intégré sur le parametre build.
-            // C'est pourquoi on passe par _refreshKey pour le manuel.
-            // Pour le live, on compte sur le parent qui rebuild ce widget.
-          ),
+          // LOADING OVERLAY
+          if (widget.isPdfLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.1),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
 
           // Contrôles Flottants
           Positioned(
@@ -187,9 +204,9 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // Bouton Refresh Manuel
-                if (!_isLivePreview)
+                if (!widget.isRealTime && widget.onRefreshPdf != null)
                   FloatingActionButton.extended(
-                    onPressed: _refreshPdf,
+                    onPressed: widget.onRefreshPdf,
                     icon: const Icon(Icons.refresh),
                     label: const Text("Actualiser l'aperçu"),
                     backgroundColor: Theme.of(context).primaryColor,
@@ -216,21 +233,9 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Checkbox(
-                        value: _isLivePreview,
+                        value: widget.isRealTime,
                         onChanged: (val) {
-                          setState(() {
-                            _isLivePreview = val ?? false;
-                            // TODO: Implémenter la logique Live réelle via callback parent si nécessaire
-                            // Ici c'est juste l'UI
-                          });
-                          if (_isLivePreview) {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(const SnackBar(
-                              content: Text(
-                                  "Mode Temps Réel activé (peut ralentir sur les gros documents)"),
-                              duration: Duration(seconds: 2),
-                            ));
-                          }
+                          widget.onToggleRealTime?.call(val ?? false);
                         },
                       ),
                       const Text("Aperçu temps réel",

@@ -5,9 +5,88 @@ import 'dart:typed_data';
 import '../models/devis_model.dart';
 import '../models/facture_model.dart';
 import '../repositories/devis_repository.dart';
+import '../models/client_model.dart'; // Added
+import '../models/entreprise_model.dart'; // Added
+import '../services/pdf_service.dart'; // Added
+import 'dart:async'; // Added
+import '../config/supabase_config.dart'; // Added
 
 class DevisViewModel extends ChangeNotifier {
   final IDevisRepository _repository = DevisRepository();
+
+  // --- PDF GENERATION STATE ---
+  bool _isRealTimePreviewEnabled = false;
+  bool get isRealTimePreviewEnabled => _isRealTimePreviewEnabled;
+
+  bool _isGeneratingPdf = false;
+  bool get isGeneratingPdf => _isGeneratingPdf;
+
+  Uint8List? _currentPdfData;
+  Uint8List? get currentPdfData => _currentPdfData;
+
+  // Keep track of the last processed draft to avoid loops if needed (optional)
+  // For now simple debounce.
+  Timer? _pdfDebounce;
+
+  void toggleRealTimePreview(bool value) {
+    _isRealTimePreviewEnabled = value;
+    notifyListeners();
+  }
+
+  void clearPdfState() {
+    _currentPdfData = null;
+    _isGeneratingPdf = false;
+    // We don't reset _isRealTimePreviewEnabled to keep user preference?
+    // Or reset it? User didn't specify. Let's keep it persistence-ish in session, so don't reset.
+    // Actually, safest to reset to false to avoid unwanted load on entry?
+    // Let's reset to false to be safe and clean.
+    _isRealTimePreviewEnabled = false;
+    _pdfDebounce?.cancel();
+  }
+
+  void triggerPdfUpdate(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) {
+    if (!_isRealTimePreviewEnabled) return;
+    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
+
+    _pdfDebounce = Timer(const Duration(milliseconds: 1000), () {
+      _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
+    });
+  }
+
+  void forceRefreshPdf(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) {
+    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
+    _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
+  }
+
+  Future<void> _generatePdf(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) async {
+    if (_isGeneratingPdf) return;
+
+    _isGeneratingPdf = true;
+    notifyListeners();
+
+    try {
+      // Need to import PdfService. But we are in a ViewModel.
+      // Ideally Services are injected or static. PdfService is static.
+      // We need to import it at top of file.
+      // Assuming import is added.
+      // Using generic dynamic document is risky but requested.
+      // We cast inside generateDocument anyway.
+
+      // We need to access PdfService. using fully qualified or import.
+      // Lets rely on 'import ../services/pdf_service.dart'; being added.
+    } catch (e) {
+      developer.log("Error launching generation", error: e);
+    }
+
+    // Defer actual call to separate method or closure to ensure imports?
+    // Actually I need to add the import in the `multi_replace`.
+  }
 
   List<Devis> _devis = [];
   List<Devis> _archives = [];

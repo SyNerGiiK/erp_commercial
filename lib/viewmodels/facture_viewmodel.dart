@@ -4,14 +4,87 @@ import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
+import '../models/client_model.dart'; // Added
+import '../models/entreprise_model.dart'; // Added
+import '../services/pdf_service.dart'; // Added
+import 'dart:async'; // Added
 import '../repositories/facture_repository.dart';
 import '../config/supabase_config.dart';
 
 class FactureViewModel extends ChangeNotifier {
   final IFactureRepository _repository = FactureRepository();
-  // Accès client uniquement pour des analytics très spécifiques si nécessaire,
-  // sinon passer par le repo.
   final _client = SupabaseConfig.client;
+
+  // --- PDF GENERATION STATE ---
+  bool _isRealTimePreviewEnabled = false;
+  bool get isRealTimePreviewEnabled => _isRealTimePreviewEnabled;
+
+  bool _isGeneratingPdf = false;
+  bool get isGeneratingPdf => _isGeneratingPdf;
+
+  Uint8List? _currentPdfData;
+  Uint8List? get currentPdfData => _currentPdfData;
+
+  Timer? _pdfDebounce;
+
+  void toggleRealTimePreview(bool value) {
+    _isRealTimePreviewEnabled = value;
+    notifyListeners();
+  }
+
+  void clearPdfState() {
+    _currentPdfData = null;
+    _isGeneratingPdf = false;
+    _isRealTimePreviewEnabled = false;
+    _pdfDebounce?.cancel();
+  }
+
+  void triggerPdfUpdate(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) {
+    if (!_isRealTimePreviewEnabled) return;
+    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
+
+    _pdfDebounce = Timer(const Duration(milliseconds: 1000), () {
+      _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
+    });
+  }
+
+  void forceRefreshPdf(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) {
+    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
+    _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
+  }
+
+  Future<void> _generatePdf(
+      dynamic document, Client? client, ProfilEntreprise? profil,
+      {required bool isTvaApplicable}) async {
+    if (_isGeneratingPdf) return;
+
+    _isGeneratingPdf = true;
+    notifyListeners();
+
+    try {
+      final result = await PdfService.generateDocument(document, client, profil,
+          docType: document is Facture
+              ? (document.type == 'avoir' ? 'AVOIR' : 'FACTURE')
+              : 'FACTURE',
+          isTvaApplicable: isTvaApplicable);
+      _currentPdfData = result;
+    } catch (e) {
+      developer.log("Error generating PDF", error: e);
+    } finally {
+      _isGeneratingPdf = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pdfDebounce?.cancel();
+    super.dispose();
+  }
 
   List<Facture> _factures = [];
   List<Facture> _archives = [];

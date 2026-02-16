@@ -18,8 +18,13 @@ class CalculationsUtils {
   }
 
   /// Calcule un total de ligne
-  /// Formule : Quantité * Prix Unitaire
-  static Decimal calculateTotalLigne(Decimal qte, Decimal pu) {
+  /// Formule : Quantité * Prix Unitaire * (Avancement / 100 si situation)
+  static Decimal calculateTotalLigne(Decimal qte, Decimal pu,
+      {bool isSituation = false, Decimal? avancement}) {
+    if (isSituation) {
+      final av = avancement ?? Decimal.fromInt(100);
+      return ((qte * pu * av) / Decimal.fromInt(100)).toDecimal();
+    }
     return qte * pu;
   }
 

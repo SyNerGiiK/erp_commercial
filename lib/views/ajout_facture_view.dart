@@ -138,7 +138,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
             facture.lignes.map((l) => LigneFacture.fromMap(l.toMap())).toList();
 
         // Client
-        if (facture.clientId != null) {
+        if (mounted) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
           try {
             _selectedClient =
@@ -437,12 +437,16 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
 
     if (success) {
       await vm.clearLocalDraft(widget.id);
-      context.go('/app/factures');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Facture enregistrée !")));
+      if (mounted) {
+        context.go('/app/factures');
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Facture enregistrée !")));
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+      }
     }
   }
 
@@ -709,14 +713,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
                         onChanged: (desc, qte, pu, unite, type, gras, ital,
                             soul, av, tva) {
                           setState(() {
-                            Decimal total;
-                            if (isSituation) {
-                              total = ((qte * pu * av) / Decimal.fromInt(100))
-                                  .toDecimal();
-                            } else {
-                              total = CalculationsUtils.calculateTotalLigne(
-                                  qte, pu);
-                            }
+                            final total = CalculationsUtils.calculateTotalLigne(
+                                qte, pu,
+                                isSituation: isSituation, avancement: av);
 
                             _lignes[index] = ligne.copyWith(
                               description: desc,

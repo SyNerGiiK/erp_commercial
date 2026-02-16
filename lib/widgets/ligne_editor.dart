@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import '../config/theme.dart';
+import '../utils/calculations_utils.dart';
 
 class LigneEditor extends StatefulWidget {
   final String description;
@@ -181,12 +182,8 @@ class _LigneEditorState extends State<LigneEditor> {
 
     // Si situation : Total = Qte * PU * (Av / 100)
     // Sinon : Total = Qte * PU
-    Decimal total;
-    if (widget.isSituation) {
-      total = ((q * pu * av) / Decimal.fromInt(100)).toDecimal();
-    } else {
-      total = q * pu;
-    }
+    final total = CalculationsUtils.calculateTotalLigne(q, pu,
+        isSituation: widget.isSituation, avancement: av);
 
     // Astuce pour affichage : toDouble()
     final localTotalStr = total.toDouble().toStringAsFixed(2);
@@ -450,16 +447,9 @@ class _LigneEditorState extends State<LigneEditor> {
   }
 
   Widget _buildReadOnly() {
-    Decimal total;
-    if (widget.isSituation) {
-      total = ((widget.quantite *
-                  widget.prixUnitaire *
-                  (widget.avancement ?? Decimal.fromInt(100))) /
-              Decimal.fromInt(100))
-          .toDecimal();
-    } else {
-      total = widget.quantite * widget.prixUnitaire;
-    }
+    final total = CalculationsUtils.calculateTotalLigne(
+        widget.quantite, widget.prixUnitaire,
+        isSituation: widget.isSituation, avancement: widget.avancement);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),

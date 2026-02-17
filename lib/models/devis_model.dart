@@ -25,7 +25,7 @@ class LigneDevis {
   final String uiKey;
 
   Decimal get montantTva =>
-      (totalLigne * tauxTva / Decimal.fromInt(100)).toDecimal();
+      CalculationsUtils.calculateCharges(totalLigne, tauxTva);
 
   LigneDevis({
     this.id,

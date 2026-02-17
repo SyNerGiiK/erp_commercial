@@ -1,5 +1,4 @@
 ﻿import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'package:decimal/decimal.dart';
 
 import '../repositories/dashboard_repository.dart';
@@ -9,19 +8,15 @@ import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
+import '../core/base_viewmodel.dart';
 
 enum DashboardPeriod { mois, trimestre, annee }
 
-class DashboardViewModel extends ChangeNotifier {
+class DashboardViewModel extends BaseViewModel {
   final IDashboardRepository _repository;
 
   DashboardViewModel({IDashboardRepository? repository})
       : _repository = repository ?? DashboardRepository();
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   DashboardPeriod _selectedPeriod = DashboardPeriod.mois;
   DashboardPeriod get selectedPeriod => _selectedPeriod;
@@ -102,14 +97,7 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshData() async {
-    _loadingDepth++;
-
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      Future.microtask(() => notifyListeners());
-    }
-
-    try {
+    await execute(() async {
       final now = DateTime.now();
       final dates = _getDatesForPeriod(_selectedPeriod, now);
       final datesPrev =
@@ -144,19 +132,10 @@ class DashboardViewModel extends ChangeNotifier {
       _calculateKPI(factures, depenses, dates, isCurrent: true);
       _calculateKPI(facturesPrev, depensesPrev, datesPrev, isCurrent: false);
 
-      _generateGraphData(allFacturesYear); // Sur l'année entière
+      _generateGraphData(allFacturesYear);
       _generateTopClients(factures);
       _generateExpenseBreakdown(depenses);
-    } catch (e, s) {
-      developer.log("🔴 Erreur Dashboard VM", error: e, stackTrace: s);
-    } finally {
-      _loadingDepth--;
-
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
+    });
   }
 
   void _calculateKPI(List<Facture> factures, List<Depense> depenses,

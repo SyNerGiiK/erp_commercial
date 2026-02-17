@@ -101,7 +101,7 @@ void main() {
       verify(() => mockRepository.getConfig()).called(1); // Reload après save
     });
 
-    test('devrait relancer l\'exception en cas d\'erreur de sauvegarde',
+    test('devrait gérer l\'erreur sans crash en cas d\'échec de sauvegarde',
         () async {
       // ARRANGE
       final newConfig = UrssafConfig(
@@ -113,11 +113,14 @@ void main() {
       when(() => mockRepository.saveConfig(any()))
           .thenThrow(Exception('Save failed'));
 
-      // ACT & ASSERT
-      expect(
-        () => viewModel.saveConfig(newConfig),
-        throwsException,
-      );
+      // ACT
+      await viewModel.saveConfig(newConfig);
+
+      // ASSERT - L'erreur est gérée silencieusement par BaseViewModel
+      expect(viewModel.isLoading, false);
+      verify(() => mockRepository.saveConfig(newConfig)).called(1);
+      verifyNever(
+          () => mockRepository.getConfig()); // Ne recharge pas en cas d'erreur
     });
   });
 

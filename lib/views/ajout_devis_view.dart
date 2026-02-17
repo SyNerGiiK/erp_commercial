@@ -118,7 +118,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     final vm = Provider.of<DevisViewModel>(context, listen: false);
 
     // 1. Vérif Draft Local
-    final drafts = await vm.checkLocalDraft(widget.id);
+    final drafts = await vm.checkDevisDraft(widget.id);
 
     if (drafts != null && mounted) {
       // SI DRAFT EXISTE : On l'utilise
@@ -167,7 +167,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         // Refresh PDF after restore
         final vm = Provider.of<DevisViewModel>(context, listen: false);
         final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-        vm.forceRefreshPdf(
+        vm.forceRefreshDevisPdf(
             _buildDevisFromState(), _selectedClient, entVM.profil,
             isTvaApplicable: entVM.isTvaApplicable);
       } catch (e) {
@@ -230,7 +230,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
           final vm = Provider.of<DevisViewModel>(context, listen: false);
           final entVM =
               Provider.of<EntrepriseViewModel>(context, listen: false);
-          vm.forceRefreshPdf(_buildDevisFromState(), client, entVM.profil,
+          vm.forceRefreshDevisPdf(_buildDevisFromState(), client, entVM.profil,
               isTvaApplicable: entVM.isTvaApplicable);
         } catch (_) {}
       });
@@ -245,7 +245,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final vm = Provider.of<DevisViewModel>(context, listen: false);
         final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-        vm.forceRefreshPdf(
+        vm.forceRefreshDevisPdf(
             _buildDevisFromState(), _selectedClient, entVM.profil,
             isTvaApplicable: entVM.isTvaApplicable);
       });
@@ -416,7 +416,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
     if (success) {
       // Clear Draft
-      await vm.clearLocalDraft(widget.id);
+      await vm.clearDevisDraft(widget.id);
 
       if (mounted) {
         context.go('/app/devis');
@@ -535,7 +535,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     final entVM = Provider.of<EntrepriseViewModel>(context,
         listen: false); // Listen false to avoid extra rebuilds here
 
-    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+    vm.triggerDevisPdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: entVM.isTvaApplicable);
 
     // AUTO-SAVE TRIGGER
@@ -544,14 +544,14 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
 
     // On envoie au VM
     final devisVM = Provider.of<DevisViewModel>(context, listen: false);
-    devisVM.autoSaveDraft(widget.id, json);
+    devisVM.saveDevisDraft(widget.id, json);
 
     return SplitEditorScaffold(
       title: widget.id == null ? "Nouveau Devis" : "Modifier Devis",
       onSave: _sauvegarder,
       onBack: () async {
         final vm = Provider.of<DevisViewModel>(context, listen: false);
-        await vm.clearLocalDraft(widget.id);
+        await vm.clearDevisDraft(widget.id);
         if (context.mounted) {
           if (context.canPop()) {
             context.pop();
@@ -575,7 +575,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         vm.toggleRealTimePreview(val);
         // If enabling, trigger update immediately
         if (val) {
-          vm.triggerPdfUpdate(draftData, _selectedClient,
+          vm.triggerDevisPdfUpdate(draftData, _selectedClient,
               Provider.of<EntrepriseViewModel>(context, listen: false).profil,
               isTvaApplicable:
                   Provider.of<EntrepriseViewModel>(context, listen: false)
@@ -583,7 +583,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         }
       },
       onRefreshPdf: () {
-        vm.forceRefreshPdf(draftData, _selectedClient,
+        vm.forceRefreshDevisPdf(draftData, _selectedClient,
             Provider.of<EntrepriseViewModel>(context, listen: false).profil,
             isTvaApplicable:
                 Provider.of<EntrepriseViewModel>(context, listen: false)

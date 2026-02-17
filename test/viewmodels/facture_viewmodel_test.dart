@@ -231,7 +231,21 @@ void main() {
     test('devrait supprimer une facture et rafraîchir', () async {
       // ARRANGE
       const factureIdToDelete = 'facture-1';
-      final remainingFactures = <Facture>[
+      final initialFactures = <Facture>[
+        Facture(
+          id: 'facture-1',
+          userId: 'user-1',
+          numeroFacture: 'FAC-2024-001',
+          objet: 'To Delete',
+          clientId: 'client-1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('1000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+          statutJuridique: 'brouillon', // MUST be brouillon to delete
+        ),
         Facture(
           id: 'facture-2',
           userId: 'user-1',
@@ -244,9 +258,18 @@ void main() {
           remiseTaux: Decimal.zero,
           acompteDejaRegle: Decimal.zero,
           statut: 'validee',
+          statutJuridique: 'brouillon',
         ),
       ];
 
+      final remainingFactures = <Facture>[initialFactures[1]];
+
+      // First fetch to populate viewModel
+      when(() => mockRepository.getFactures(archives: false))
+          .thenAnswer((_) async => initialFactures);
+      await viewModel.fetchFactures();
+
+      // Then setup delete
       when(() => mockRepository.deleteFacture(factureIdToDelete))
           .thenAnswer((_) async {});
       when(() => mockRepository.getFactures(archives: false))
@@ -258,6 +281,8 @@ void main() {
       // ASSERT
       expect(viewModel.factures.length, 1);
       verify(() => mockRepository.deleteFacture(factureIdToDelete)).called(1);
+      verify(() => mockRepository.getFactures(archives: false))
+          .called(2); // 1 fetch + 1 after delete
     });
   });
 

@@ -1,145 +1,60 @@
 ﻿import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
-import '../models/client_model.dart'; // Added
-import '../models/entreprise_model.dart'; // Added
-import '../services/pdf_service.dart'; // Added
-import 'dart:async'; // Added
+import '../models/client_model.dart';
+import '../models/entreprise_model.dart';
 import '../repositories/facture_repository.dart';
 import '../config/supabase_config.dart';
-import '../services/local_storage_service.dart';
+import '../core/base_viewmodel.dart';
+import '../core/pdf_generation_mixin.dart';
+import '../core/autosave_mixin.dart';
 
-class FactureViewModel extends ChangeNotifier {
+class FactureViewModel extends BaseViewModel
+    with PdfGenerationMixin, AutoSaveMixin {
   final IFactureRepository _repository;
   SupabaseClient get _client => SupabaseConfig.client;
 
   FactureViewModel({IFactureRepository? repository})
       : _repository = repository ?? FactureRepository();
 
-  // --- PDF GENERATION STATE ---
-  bool _isRealTimePreviewEnabled = false;
-  bool get isRealTimePreviewEnabled => _isRealTimePreviewEnabled;
+  // --- WRAPPERS POUR MIXINS ---
+  Future<Map<String, dynamic>?> checkFactureDraft(String? id) =>
+      checkLocalDraft('facture', id);
 
-  bool _isGeneratingPdf = false;
-  bool get isGeneratingPdf => _isGeneratingPdf;
+  void saveFactureDraft(String? id, Map<String, dynamic> data) =>
+      autoSaveDraft('facture', id, data);
 
-  Uint8List? _currentPdfData;
-  Uint8List? get currentPdfData => _currentPdfData;
+  Future<void> clearFactureDraft(String? id) => clearLocalDraft('facture', id);
 
-  Timer? _pdfDebounce;
-
-  // Cache for fonts to avoid reloading them on every keystroke
-  Map<String, Uint8List>? _cachedFonts;
-
-  // --- AUTO-SAVE STATE ---
-  Timer? _saveDebounce;
-  bool _isRestoringDraft = false;
-  bool get isRestoringDraft => _isRestoringDraft;
-
-  void toggleRealTimePreview(bool value) {
-    _isRealTimePreviewEnabled = value;
-    notifyListeners();
-  }
-
-  void clearPdfState() {
-    _currentPdfData = null;
-    _isGeneratingPdf = false;
-    _isRealTimePreviewEnabled = false;
-    _isRealTimePreviewEnabled = false;
-    _pdfDebounce?.cancel();
-    _saveDebounce?.cancel();
-  }
-
-  // --- AUTO-SAVE LOGIC ---
-  Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
-    _isRestoringDraft = true;
-    Future.microtask(() => notifyListeners());
-    final key = LocalStorageService.generateKey('facture', id);
-    final data = await LocalStorageService.getDraft(key);
-    _isRestoringDraft = false;
-    notifyListeners();
-    return data;
-  }
-
-  void autoSaveDraft(String? id, Map<String, dynamic> data) {
-    if (_saveDebounce?.isActive ?? false) _saveDebounce!.cancel();
-    _saveDebounce = Timer(const Duration(seconds: 2), () async {
-      final key = LocalStorageService.generateKey('facture', id);
-      await LocalStorageService.saveDraft(key, data);
-    });
-  }
-
-  Future<void> clearLocalDraft(String? id) async {
-    _saveDebounce?.cancel();
-    final key = LocalStorageService.generateKey('facture', id);
-    await LocalStorageService.clearDraft(key);
-  }
-
-  void triggerPdfUpdate(
-      dynamic document, Client? client, ProfilEntreprise? profil,
+  void triggerFacturePdfUpdate(
+      Facture facture, Client? client, ProfilEntreprise? profil,
       {required bool isTvaApplicable}) {
-    if (!_isRealTimePreviewEnabled) return;
-    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
-
-    _pdfDebounce = Timer(const Duration(milliseconds: 1000), () {
-      _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
-    });
+    final docTypeLabel = (facture.type == 'avoir') ? 'AVOIR' : 'FACTURE';
+    triggerPdfUpdate(
+      facture,
+      client,
+      profil,
+      documentType: 'facture',
+      docTypeLabel: docTypeLabel,
+      isTvaApplicable: isTvaApplicable,
+    );
   }
 
-  void forceRefreshPdf(
-      dynamic document, Client? client, ProfilEntreprise? profil,
+  void forceRefreshFacturePdf(
+      Facture facture, Client? client, ProfilEntreprise? profil,
       {required bool isTvaApplicable}) {
-    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
-    _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
-  }
-
-  Future<void> _generatePdf(
-      dynamic document, Client? client, ProfilEntreprise? profil,
-      {required bool isTvaApplicable}) async {
-    if (_isGeneratingPdf) return;
-
-    _isGeneratingPdf = true;
-    notifyListeners();
-
-    try {
-      // Ensure fonts are loaded in Main Isolate
-      _cachedFonts ??= await PdfService.prepareFonts();
-
-      final docTypeLabel = (document is Facture && document.type == 'avoir')
-          ? 'AVOIR'
-          : 'FACTURE';
-
-      final request = PdfGenerationRequest(
-        document: (document as Facture).toMap(),
-        documentType: 'facture',
-        client: client?.toMap(),
-        profil: profil?.toMap(),
-        docTypeLabel: docTypeLabel,
-        isTvaApplicable: isTvaApplicable,
-        // Pass PRELOADED fonts
-        fontRegular: _cachedFonts?['regular'],
-        fontBold: _cachedFonts?['bold'],
-        fontItalic: _cachedFonts?['italic'],
-      );
-
-      final result = await compute(PdfService.generatePdfIsolate, request);
-      _currentPdfData = result;
-    } catch (e) {
-      developer.log("Error generating PDF", error: e);
-    } finally {
-      _isGeneratingPdf = false;
-      notifyListeners();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pdfDebounce?.cancel();
-    super.dispose();
+    final docTypeLabel = (facture.type == 'avoir') ? 'AVOIR' : 'FACTURE';
+    forceRefreshPdf(
+      facture,
+      client,
+      profil,
+      documentType: 'facture',
+      docTypeLabel: docTypeLabel,
+      isTvaApplicable: isTvaApplicable,
+    );
   }
 
   List<Facture> _factures = [];
@@ -148,22 +63,14 @@ class FactureViewModel extends ChangeNotifier {
   List<Facture> get factures => _factures;
   List<Facture> get archives => _archives;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
-
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
-
   Future<void> fetchFactures() async {
-    await _executeOperation(() async {
+    await execute(() async {
       _factures = await _repository.getFactures(archives: false);
     });
   }
 
   Future<void> fetchArchives() async {
-    await _executeOperation(() async {
+    await execute(() async {
       _archives = await _repository.getFactures(archives: true);
     });
   }
@@ -171,21 +78,36 @@ class FactureViewModel extends ChangeNotifier {
   // --- CRUD BASE ---
 
   Future<bool> addFacture(Facture facture) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.createFacture(facture);
       await fetchFactures();
     });
   }
 
   Future<bool> updateFacture(Facture facture) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.updateFacture(facture);
       await fetchFactures();
     });
   }
 
   Future<void> deleteFacture(String id) async {
-    await _executeOperation(() async {
+    await executeOperation(() async {
+      // 🛡️ PROTECTION : Vérifier que c'est un brouillon avant suppression
+      final facture = _factures.firstWhere(
+        (f) => f.id == id,
+        orElse: () => throw Exception("Facture introuvable"),
+      );
+
+      if (facture.statutJuridique != 'brouillon') {
+        throw Exception(
+            "Impossible de supprimer une facture validée (statut: ${facture.statutJuridique}). "
+            "Seules les factures brouillon peuvent être supprimées.");
+      }
+
+      developer
+          .log("🗑️ Suppression facture brouillon: ${facture.numeroFacture}");
+
       await _repository.deleteFacture(id);
       await fetchFactures();
     });
@@ -193,7 +115,7 @@ class FactureViewModel extends ChangeNotifier {
 
   Future<void> toggleArchive(Facture facture, bool archiver) async {
     if (facture.id == null) return;
-    await _executeOperation(() async {
+    await executeOperation(() async {
       await _repository.updateArchiveStatus(facture.id!, archiver);
       await fetchFactures();
       await fetchArchives();
@@ -202,7 +124,7 @@ class FactureViewModel extends ChangeNotifier {
 
   Future<bool> finaliserFacture(Facture facture) async {
     if (facture.id == null) return false;
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       // 1. Génération du numéro définitif via RPC (comme Devis)
       String numeroDefinitif = facture.numeroFacture;
       if (numeroDefinitif.isEmpty ||
@@ -274,7 +196,37 @@ class FactureViewModel extends ChangeNotifier {
   // --- PAIEMENTS ---
 
   Future<bool> addPaiement(Paiement paiement) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
+      // 🛡️ PROTECTION : Vérifier que le paiement ne dépasse pas le reste à payer
+      await fetchFactures();
+      final facture = _factures.firstWhere(
+        (f) => f.id == paiement.factureId,
+        orElse: () => throw Exception("Facture introuvable"),
+      );
+
+      // Calcul du total déjà réglé
+      final totalRegle =
+          facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+
+      // Calcul du net commercial (HT - Remise)
+      final remiseAmount =
+          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100))
+              .toDecimal();
+      final netCommercial = facture.totalHt - remiseAmount;
+
+      // Reste à payer = Net - Acompte déjà réglé - Total des paiements
+      final resteAPayer = netCommercial - facture.acompteDejaRegle - totalRegle;
+
+      // Tolérance d'1 centime pour arrondi
+      if (paiement.montant > resteAPayer + Decimal.parse('0.01')) {
+        throw Exception(
+            "Le paiement (${paiement.montant.toDouble().toStringAsFixed(2)}€) "
+            "dépasse le reste à payer (${resteAPayer.toDouble().toStringAsFixed(2)}€)");
+      }
+
+      developer.log(
+          "🟢 Ajout paiement: ${paiement.montant}€ sur facture ${facture.numeroFacture}");
+
       await _repository.addPaiement(paiement);
       await fetchFactures();
 
@@ -284,7 +236,7 @@ class FactureViewModel extends ChangeNotifier {
   }
 
   Future<bool> deletePaiement(String paiementId, String? factureId) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.deletePaiement(paiementId);
       await fetchFactures();
 
@@ -308,7 +260,8 @@ class FactureViewModel extends ChangeNotifier {
           facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
       final remiseAmount =
-          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100)).toDecimal();
+          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100))
+              .toDecimal();
       final netCommercial = facture.totalHt - remiseAmount;
 
       final reste = netCommercial - facture.acompteDejaRegle - totalRegle;
@@ -333,7 +286,7 @@ class FactureViewModel extends ChangeNotifier {
   // --- SIGNATURE ---
 
   Future<bool> uploadSignature(String factureId, Uint8List bytes) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       final url = await _repository.uploadSignature(factureId, bytes);
 
       // On met à jour la facture locale et distante
@@ -362,49 +315,12 @@ class FactureViewModel extends ChangeNotifier {
   }
 
   Future<bool> markAsSent(String id) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       final f = _factures.firstWhere((element) => element.id == id);
       final updated = f.copyWith(statut: 'envoye');
       await _repository.updateFacture(updated);
       await fetchFactures();
     });
-  }
-
-  // --- HELPERS ---
-
-  Future<bool> _executeOperation(Future<void> Function() operation) async {
-    _loadingDepth++;
-
-    if (_loadingDepth == 1) {
-      _setLoading(true);
-      _clearError();
-    }
-
-    try {
-      await operation();
-      return true;
-    } catch (e) {
-      _setError(e);
-      return false;
-    } finally {
-      _loadingDepth--;
-
-      if (_loadingDepth == 0) {
-        _setLoading(false);
-      }
-    }
-  }
-
-  void _setLoading(bool value) {
-    if (_isLoading == value) return;
-    _isLoading = value;
-    Future.microtask(() => notifyListeners());
-  }
-
-  void _setError(dynamic error) {
-    _errorMessage = error.toString();
-    developer.log("FactureViewModel Error", error: error);
-    Future.microtask(() => notifyListeners());
   }
 
   // --- DASHBOARD & KPI ---
@@ -450,7 +366,8 @@ class FactureViewModel extends ChangeNotifier {
         // Attention: Dans Facture, totalHt est le total des lignes.
         // Remise est déduite du HT.
         // Net Commercial = HT - Remise.
-        final remiseAmount = ((f.totalHt * f.remiseTaux) / Decimal.fromInt(100)).toDecimal();
+        final remiseAmount =
+            ((f.totalHt * f.remiseTaux) / Decimal.fromInt(100)).toDecimal();
         final netCommercial = f.totalHt - remiseAmount;
 
         // Reste = Net - AcompteInitial - TotalReglé
@@ -469,15 +386,8 @@ class FactureViewModel extends ChangeNotifier {
 
   /// Retourne les dernières factures modifiées/créées
   List<Facture> getRecentActivity(int limit) {
-    // Tri par date d'émission (ou création si on avait le champ created_at dispo en local)
-    // On utilise dateEmission pour l'instant
     final sorted = List<Facture>.from(_factures);
     sorted.sort((a, b) => b.dateEmission.compareTo(a.dateEmission));
     return sorted.take(limit).toList();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
   }
 }

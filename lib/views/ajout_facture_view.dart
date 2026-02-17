@@ -100,7 +100,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
       // Force refresh (fixes blank preview at start)
       final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
       final draftData = _buildFactureFromState();
-      vm.forceRefreshPdf(draftData, _selectedClient, entVM.profil,
+      vm.forceRefreshFacturePdf(draftData, _selectedClient, entVM.profil,
           isTvaApplicable: entVM.isTvaApplicable);
 
       _checkDraftAndInit();
@@ -109,7 +109,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
 
   Future<void> _checkDraftAndInit() async {
     final vm = Provider.of<FactureViewModel>(context, listen: false);
-    final drafts = await vm.checkLocalDraft(widget.id);
+    final drafts = await vm.checkFactureDraft(widget.id);
 
     if (drafts != null && mounted) {
       _restoreDraft(drafts);
@@ -512,7 +512,7 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
     setState(() => _isLoading = false);
 
     if (success) {
-      await vm.clearLocalDraft(widget.id);
+      await vm.clearFactureDraft(widget.id);
       if (mounted) {
         context.go('/app/factures');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -617,9 +617,9 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
 
     // AUTO-SAVE
-    vm.autoSaveDraft(widget.id, draftData.toMap());
+    vm.saveFactureDraft(widget.id, draftData.toMap());
 
-    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+    vm.triggerFacturePdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: isTvaApplicable);
 
     return SplitEditorScaffold(
@@ -639,13 +639,13 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
       onToggleRealTime: (val) {
         vm.toggleRealTimePreview(val);
         if (val) {
-          vm.triggerPdfUpdate(draftData, _selectedClient,
+          vm.triggerFacturePdfUpdate(draftData, _selectedClient,
               Provider.of<EntrepriseViewModel>(context, listen: false).profil,
               isTvaApplicable: isTvaApplicable);
         }
       },
       onRefreshPdf: () {
-        vm.forceRefreshPdf(draftData, _selectedClient,
+        vm.forceRefreshFacturePdf(draftData, _selectedClient,
             Provider.of<EntrepriseViewModel>(context, listen: false).profil,
             isTvaApplicable: isTvaApplicable);
       },

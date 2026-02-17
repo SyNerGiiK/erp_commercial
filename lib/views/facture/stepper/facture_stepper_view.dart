@@ -211,7 +211,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       if (!mounted) return;
       final vm = Provider.of<FactureViewModel>(context, listen: false);
       final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-      vm.forceRefreshPdf(
+      vm.forceRefreshFacturePdf(
           _buildFactureFromState(), _selectedClient, entVM.profil,
           isTvaApplicable: entVM.isTvaApplicable);
     });
@@ -308,7 +308,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     setState(() => _isLoading = false);
 
     if (success) {
-      await vm.clearLocalDraft(widget.id);
+      await vm.clearFactureDraft(widget.id);
       if (mounted) {
         context.go('/app/factures');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -328,7 +328,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     final vm = Provider.of<FactureViewModel>(context);
     final entVM = Provider.of<EntrepriseViewModel>(context);
     // Auto Update PDF
-    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+    vm.triggerFacturePdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: entVM.isTvaApplicable);
 
     return SplitEditorScaffold(
@@ -342,12 +342,12 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       onToggleRealTime: (val) {
         vm.toggleRealTimePreview(val);
         if (val) {
-          vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+          vm.triggerFacturePdfUpdate(draftData, _selectedClient, entVM.profil,
               isTvaApplicable: entVM.isTvaApplicable);
         }
       },
       onRefreshPdf: () {
-        vm.forceRefreshPdf(draftData, _selectedClient, entVM.profil,
+        vm.forceRefreshFacturePdf(draftData, _selectedClient, entVM.profil,
             isTvaApplicable: entVM.isTvaApplicable);
       },
       onSave: _sauvegarder,

@@ -1,10 +1,8 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:developer' as developer;
 import 'dart:typed_data';
 
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
-import '../config/supabase_config.dart';
+import '../core/document_repository.dart';
 
 abstract class IFactureRepository {
   Future<List<Facture>> getFactures({bool archives = false});
@@ -23,15 +21,21 @@ abstract class IFactureRepository {
   Future<String> uploadSignature(String factureId, Uint8List bytes);
 }
 
-class FactureRepository implements IFactureRepository {
-  final SupabaseClient _client = SupabaseConfig.client;
+class FactureRepository extends DocumentRepository
+    implements IFactureRepository {
+  @override
+  String get tableName => 'factures';
+
+  @override
+  String get numeroPrefix => 'FAC';
+
+  @override
+  String get documentType => 'facture';
 
   @override
   Future<List<Facture>> getFactures({bool archives = false}) async {
     try {
-      final userId = SupabaseConfig.userId;
-
-      final response = await _client
+      final response = await client
           .from('factures')
           .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
@@ -41,39 +45,28 @@ class FactureRepository implements IFactureRepository {
 
       return (response as List).map((e) => Facture.fromMap(e)).toList();
     } catch (e) {
-      throw _handleError(e, 'getFactures');
+      throw handleError(e, 'getFactures');
     }
   }
 
   @override
   Future<Facture> createFacture(Facture facture) async {
     try {
-      final userId = SupabaseConfig.userId;
-      final data = facture.toMap();
-      data['user_id'] = userId;
-      data.remove('id'); // L'ID est généré par Supabase
-      // Remove nested lists to avoid SQL errors
+      final data = prepareForInsert(facture.toMap());
       data.remove('lignes_factures');
       data.remove('lignes_chiffrages');
       data.remove('paiements');
 
-      // 🔍 DEBUG: Log des données envoyées
-      // print('🟦 DEBUG createFacture - Données envoyées:');
-      // print(data);
-
-      // 1. Insertion Facture
       final response =
-          await _client.from('factures').insert(data).select().single();
+          await client.from('factures').insert(data).select().single();
 
       final newFactureId = response['id'];
 
-      // 2. Insertion Lignes & Chiffrage & Paiements
-      await _saveChildren(newFactureId, facture, userId, savePaiements: true);
+      await _saveChildren(newFactureId, facture, savePaiements: true);
 
       return Facture.fromMap(response);
     } catch (e) {
-      // print('🔴 DEBUG createFacture - Erreur complète: $e');
-      throw _handleError(e, 'createFacture');
+      throw handleError(e, 'createFacture');
     }
   }
 
@@ -81,159 +74,99 @@ class FactureRepository implements IFactureRepository {
   Future<void> updateFacture(Facture facture) async {
     if (facture.id == null) return;
     try {
-      final data = facture.toMap();
-      data.remove('user_id'); // RLS : On ne touche jamais au user_id
-      data.remove(
-          'numero_facture'); // Sécurité : On ne modifie pas le numéro d'une facture existante
-      // Remove nested lists to avoid SQL errors
+      final data = prepareForUpdate(facture.toMap());
+      data.remove('numero_facture');
       data.remove('lignes_factures');
       data.remove('lignes_chiffrages');
       data.remove('paiements');
 
-      // 1. Update Facture
-      await _client.from('factures').update(data).eq('id', facture.id!);
+      await client.from('factures').update(data).eq('id', facture.id!);
 
-      // 2. Full Replace des lignes (Suppression puis Réinsertion)
-      // Note: On ne supprime PAS les paiements ici pour ne pas perdre l'historique
-      await _client
-          .from('lignes_factures')
-          .delete()
-          .eq('facture_id', facture.id!);
-      await _client
-          .from('lignes_chiffrages')
-          .delete()
-          .eq('facture_id', facture.id!);
+      // Full Replace (ne pas supprimer les paiements pour garder l'historique)
+      await deleteChildLines(
+        facture.id!,
+        ['lignes_factures', 'lignes_chiffrages'],
+        'facture_id',
+      );
 
-      await _saveChildren(facture.id!, facture, SupabaseConfig.userId,
-          savePaiements: false);
+      await _saveChildren(facture.id!, facture, savePaiements: false);
     } catch (e) {
-      throw _handleError(e, 'updateFacture');
+      throw handleError(e, 'updateFacture');
     }
   }
 
   @override
   Future<void> deleteFacture(String id) async {
     try {
-      // 1. Detach Avoirs (Self-referencing FK)
-      // Si cette facture a généré des avoirs, on doit couper le lien avant suppression
-      await _client
+      // Detach Avoirs (Self-referencing FK)
+      await client
           .from('factures')
           .update({'facture_source_id': null}).eq('facture_source_id', id);
 
-      // 2. FORCE MANUAL CASCADE
-      await _client.from('lignes_factures').delete().eq('facture_id', id);
-      await _client.from('lignes_chiffrages').delete().eq('facture_id', id);
-      await _client.from('paiements').delete().eq('facture_id', id);
+      // FORCE MANUAL CASCADE
+      await client.from('lignes_factures').delete().eq('facture_id', id);
+      await client.from('lignes_chiffrages').delete().eq('facture_id', id);
+      await client.from('paiements').delete().eq('facture_id', id);
 
-      // 3. Delete Facture
-      await _client.from('factures').delete().eq('id', id);
+      await client.from('factures').delete().eq('id', id);
     } catch (e) {
-      throw _handleError(e, 'deleteFacture');
+      throw handleError(e, 'deleteFacture');
     }
   }
 
   @override
   Future<void> updateStatus(String id, String status) async {
     try {
-      await _client.from('factures').update({'statut': status}).eq('id', id);
+      await client.from('factures').update({'statut': status}).eq('id', id);
     } catch (e) {
-      throw _handleError(e, 'updateStatus');
+      throw handleError(e, 'updateStatus');
     }
   }
 
   @override
   Future<void> updateArchiveStatus(String id, bool isArchived) async {
     try {
-      await _client
+      await client
           .from('factures')
           .update({'est_archive': isArchived}).eq('id', id);
     } catch (e) {
-      throw _handleError(e, 'updateArchiveStatus');
+      throw handleError(e, 'updateArchiveStatus');
     }
   }
-
-  /// Appelle la fonction stockée PostgreSQL pour garantir l'unicité et la séquence
-  @override
-  Future<String> generateNextNumero(int annee) async {
-    try {
-      final userId = SupabaseConfig.userId;
-      final params = {
-        'p_type_doc': 'facture',
-        'p_user_id': userId,
-        'p_annee': annee
-      };
-      // C'EST ICI QUE SUPABASE TRAVAILLE :
-      return await _client.rpc('get_next_document_number', params: params);
-    } catch (e) {
-      throw _handleError(e, 'generateNextNumero');
-    }
-  }
-
-  // --- PAIEMENTS ---
 
   @override
   Future<void> addPaiement(Paiement paiement) async {
     try {
-      // Pas de RLS "user_id" direct sur la table paiement selon schéma standard,
-      // mais on vérifie l'accès via la facture parente si nécessaire.
-      // Ici on suppose que la table paiements est liée.
       final data = paiement.toMap();
       data.remove('id');
-      await _client.from('paiements').insert(data);
-
-      // Optionnel : Mettre à jour le statut de la facture si tout est payé
-      // (Logique souvent gérée par le ViewModel ou un Trigger DB)
+      await client.from('paiements').insert(data);
     } catch (e) {
-      throw _handleError(e, 'addPaiement');
+      throw handleError(e, 'addPaiement');
     }
   }
 
   @override
   Future<void> deletePaiement(String id) async {
     try {
-      await _client.from('paiements').delete().eq('id', id);
+      await client.from('paiements').delete().eq('id', id);
     } catch (e) {
-      throw _handleError(e, 'deletePaiement');
+      throw handleError(e, 'deletePaiement');
     }
   }
 
-  @override
-  Future<String> uploadSignature(String factureId, Uint8List bytes) async {
-    try {
-      final userId = SupabaseConfig.userId;
-      final path = '$userId/factures/$factureId/signature.png';
-
-      await _client.storage.from('documents').uploadBinary(
-            path,
-            bytes,
-            fileOptions:
-                const FileOptions(upsert: true, contentType: 'image/png'),
-          );
-
-      final url = _client.storage.from('documents').getPublicUrl(path);
-      return "$url?t=${DateTime.now().millisecondsSinceEpoch}";
-    } catch (e) {
-      throw _handleError(e, 'uploadSignature');
-    }
-  }
-
-  // --- PRIVATE HELPERS ---
-
-  Future<void> _saveChildren(String factureId, Facture facture, String userId,
+  Future<void> _saveChildren(String factureId, Facture facture,
       {bool savePaiements = true}) async {
-    // Lignes Facture
     if (facture.lignes.isNotEmpty) {
       final lignesData = facture.lignes.asMap().entries.map((entry) {
         final map = entry.value.toMap();
         map['facture_id'] = factureId;
-        map['ordre'] = entry.key; // Préservation de l'ordre
+        map['ordre'] = entry.key;
         map.remove('id');
         return map;
       }).toList();
-      await _client.from('lignes_factures').insert(lignesData);
+      await client.from('lignes_factures').insert(lignesData);
     }
 
-    // Lignes Chiffrage (Rentabilité)
     if (facture.chiffrage.isNotEmpty) {
       final chiffrageData = facture.chiffrage.map((c) {
         final map = c.toMap();
@@ -242,10 +175,9 @@ class FactureRepository implements IFactureRepository {
         map.remove('id');
         return map;
       }).toList();
-      await _client.from('lignes_chiffrages').insert(chiffrageData);
+      await client.from('lignes_chiffrages').insert(chiffrageData);
     }
 
-    // Paiements (Seulement à la création pour les acomptes initiaux)
     if (savePaiements && facture.paiements.isNotEmpty) {
       final paiementsData = facture.paiements.map((p) {
         final map = p.toMap();
@@ -253,12 +185,7 @@ class FactureRepository implements IFactureRepository {
         map.remove('id');
         return map;
       }).toList();
-      await _client.from('paiements').insert(paiementsData);
+      await client.from('paiements').insert(paiementsData);
     }
-  }
-
-  Exception _handleError(dynamic error, String context) {
-    developer.log("🔴 Erreur Repo Facture ($context)", error: error);
-    return Exception("Erreur ($context): $error");
   }
 }

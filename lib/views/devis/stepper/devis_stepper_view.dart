@@ -200,7 +200,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
     setState(() => _isLoading = false);
 
     if (success) {
-      await vm.clearLocalDraft(widget.id);
+      await vm.clearDevisDraft(widget.id);
       if (mounted) {
         context.go('/app/devis');
         ScaffoldMessenger.of(context)
@@ -220,7 +220,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
     final vm = Provider.of<DevisViewModel>(context);
     final entVM = Provider.of<EntrepriseViewModel>(context);
 
-    vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+    vm.triggerDevisPdfUpdate(draftData, _selectedClient, entVM.profil,
         isTvaApplicable: entVM.isTvaApplicable);
 
     return SplitEditorScaffold(
@@ -233,12 +233,12 @@ class _DevisStepperViewState extends State<DevisStepperView> {
       onToggleRealTime: (val) {
         vm.toggleRealTimePreview(val);
         if (val) {
-          vm.triggerPdfUpdate(draftData, _selectedClient, entVM.profil,
+          vm.triggerDevisPdfUpdate(draftData, _selectedClient, entVM.profil,
               isTvaApplicable: entVM.isTvaApplicable);
         }
       },
       onRefreshPdf: () {
-        vm.forceRefreshPdf(draftData, _selectedClient, entVM.profil,
+        vm.forceRefreshDevisPdf(draftData, _selectedClient, entVM.profil,
             isTvaApplicable: entVM.isTvaApplicable);
       },
       onSave: _sauvegarder,

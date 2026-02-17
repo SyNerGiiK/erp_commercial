@@ -1,12 +1,10 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
-
-import '../config/supabase_config.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
+import '../core/base_repository.dart';
 
 abstract class IDashboardRepository {
   Future<List<Facture>> getFacturesPeriod(DateTime start, DateTime end);
@@ -17,15 +15,12 @@ abstract class IDashboardRepository {
   Future<List<dynamic>> getRecentActivity();
 }
 
-class DashboardRepository implements IDashboardRepository {
-  final SupabaseClient _client = SupabaseConfig.client;
-
+class DashboardRepository extends BaseRepository
+    implements IDashboardRepository {
   @override
   Future<List<Facture>> getFacturesPeriod(DateTime start, DateTime end) async {
     try {
-      final userId = SupabaseConfig.userId;
-      // On prend tout sauf brouillons pour les stats
-      final response = await _client
+      final response = await client
           .from('factures')
           .select('*, paiements(*)')
           .eq('user_id', userId)
@@ -33,7 +28,7 @@ class DashboardRepository implements IDashboardRepository {
 
       return (response as List).map((e) => Facture.fromMap(e)).toList();
     } catch (e) {
-      throw _handleError(e, 'getFacturesPeriod');
+      throw handleError(e, 'getFacturesPeriod');
     }
   }
 
@@ -45,8 +40,7 @@ class DashboardRepository implements IDashboardRepository {
   @override
   Future<List<Depense>> getDepensesPeriod(DateTime start, DateTime end) async {
     try {
-      final userId = SupabaseConfig.userId;
-      final response = await _client
+      final response = await client
           .from('depenses')
           .select()
           .eq('user_id', userId)
@@ -55,15 +49,14 @@ class DashboardRepository implements IDashboardRepository {
 
       return (response as List).map((e) => Depense.fromMap(e)).toList();
     } catch (e) {
-      throw _handleError(e, 'getDepensesPeriod');
+      throw handleError(e, 'getDepensesPeriod');
     }
   }
 
   @override
   Future<UrssafConfig> getUrssafConfig() async {
     try {
-      final userId = SupabaseConfig.userId;
-      final response = await _client
+      final response = await client
           .from('urssaf_configs')
           .select()
           .eq('user_id', userId)
@@ -71,7 +64,7 @@ class DashboardRepository implements IDashboardRepository {
 
       return response != null
           ? UrssafConfig.fromMap(response)
-          : UrssafConfig(userId: 'dashboard_mock'); // Fallback si pas de config
+          : UrssafConfig(userId: 'dashboard_mock');
     } catch (e) {
       developer.log("⚠️ DashboardRepo: Pas de config Urssaf", error: e);
       return UrssafConfig(userId: 'dashboard_mock');
@@ -81,8 +74,7 @@ class DashboardRepository implements IDashboardRepository {
   @override
   Future<ProfilEntreprise?> getProfilEntreprise() async {
     try {
-      final userId = SupabaseConfig.userId;
-      final response = await _client
+      final response = await client
           .from('entreprises')
           .select()
           .eq('user_id', userId)
@@ -98,18 +90,14 @@ class DashboardRepository implements IDashboardRepository {
   @override
   Future<List<dynamic>> getRecentActivity() async {
     try {
-      final userId = SupabaseConfig.userId;
-
-      // Fetch last 5 factures
-      var facturesData = await _client
+      var facturesData = await client
           .from('factures')
           .select('*, paiements(*)')
           .eq('user_id', userId)
           .order('date_emission', ascending: false)
           .limit(5);
 
-      // Fetch last 5 devis
-      var devisData = await _client
+      var devisData = await client
           .from('devis')
           .select()
           .eq('user_id', userId)
@@ -120,14 +108,13 @@ class DashboardRepository implements IDashboardRepository {
           (facturesData as List).map((e) => Facture.fromMap(e)).toList();
       final devis = (devisData as List).map((e) => Devis.fromMap(e)).toList();
 
-      // Merge and sort
       final all = <dynamic>[...factures, ...devis];
       all.sort((a, b) {
         DateTime dateA =
             a is Facture ? a.dateEmission : (a as Devis).dateEmission;
         DateTime dateB =
             b is Facture ? b.dateEmission : (b as Devis).dateEmission;
-        return dateB.compareTo(dateA); // Descending
+        return dateB.compareTo(dateA);
       });
 
       return all.take(5).toList();
@@ -135,10 +122,5 @@ class DashboardRepository implements IDashboardRepository {
       developer.log("⚠️ Erreur Recent Activity", error: e);
       return [];
     }
-  }
-
-  Exception _handleError(Object error, String method) {
-    developer.log("🔴 DashboardRepo Error ($method)", error: error);
-    return Exception("Erreur ($method): $error");
   }
 }

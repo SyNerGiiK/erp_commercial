@@ -1,153 +1,27 @@
 ﻿import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'package:decimal/decimal.dart';
 import 'dart:typed_data';
 import '../models/devis_model.dart';
 import '../models/facture_model.dart';
 import '../repositories/devis_repository.dart';
-import '../models/client_model.dart'; // Added
-import '../models/entreprise_model.dart'; // Added
-import '../services/pdf_service.dart'; // Added
-import 'dart:async'; // Added
-import '../config/supabase_config.dart'; // Added
-import '../services/local_storage_service.dart'; // Auto-Save
+import '../models/client_model.dart';
+import '../models/entreprise_model.dart';
+import '../core/base_viewmodel.dart';
+import '../core/pdf_generation_mixin.dart';
+import '../core/autosave_mixin.dart';
 
-class DevisViewModel extends ChangeNotifier {
+class DevisViewModel extends BaseViewModel
+    with PdfGenerationMixin, AutoSaveMixin {
   final IDevisRepository _repository;
 
   DevisViewModel({IDevisRepository? repository})
       : _repository = repository ?? DevisRepository();
-
-  // --- PDF GENERATION STATE ---
-  bool _isRealTimePreviewEnabled = false;
-  bool get isRealTimePreviewEnabled => _isRealTimePreviewEnabled;
-
-  bool _isGeneratingPdf = false;
-  bool get isGeneratingPdf => _isGeneratingPdf;
-
-  Uint8List? _currentPdfData;
-  Uint8List? get currentPdfData => _currentPdfData;
-
-  // Keep track of the last processed draft to avoid loops if needed (optional)
-  // For now simple debounce.
-  Timer? _pdfDebounce;
-
-  // --- AUTO-SAVE STATE ---
-  Timer? _saveDebounce;
-  bool _isRestoringDraft = false;
-  bool get isRestoringDraft => _isRestoringDraft;
-
-  void toggleRealTimePreview(bool value) {
-    _isRealTimePreviewEnabled = value;
-    notifyListeners();
-  }
-
-  void clearPdfState() {
-    _currentPdfData = null;
-    _isGeneratingPdf = false;
-    // We don't reset _isRealTimePreviewEnabled to keep user preference?
-    // Or reset it? User didn't specify. Let's keep it persistence-ish in session, so don't reset.
-    // Actually, safest to reset to false to avoid unwanted load on entry?
-    // Let's reset to false to be safe and clean.
-    _isRealTimePreviewEnabled = false;
-    _isRealTimePreviewEnabled = false;
-    _pdfDebounce?.cancel();
-    _saveDebounce?.cancel();
-  }
-
-  // --- AUTO-SAVE LOGIC ---
-
-  /// Tente de charger un brouillon local
-  Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
-    _isRestoringDraft = true;
-    Future.microtask(() => notifyListeners());
-
-    final key = LocalStorageService.generateKey('devis', id);
-    final data = await LocalStorageService.getDraft(key);
-
-    _isRestoringDraft = false;
-    notifyListeners();
-    return data;
-  }
-
-  /// Sauvegarde locale déclenchée par l'UI (Debounce 2s)
-  void autoSaveDraft(String? id, Map<String, dynamic> data) {
-    if (_saveDebounce?.isActive ?? false) _saveDebounce!.cancel();
-
-    _saveDebounce = Timer(const Duration(seconds: 2), () async {
-      final key = LocalStorageService.generateKey('devis', id);
-      await LocalStorageService.saveDraft(key, data);
-      developer.log("Auto-saved draft: $key");
-    });
-  }
-
-  /// Nettoyage explicite (après validation)
-  Future<void> clearLocalDraft(String? id) async {
-    _saveDebounce?.cancel();
-    final key = LocalStorageService.generateKey('devis', id);
-    await LocalStorageService.clearDraft(key);
-  }
-
-  void triggerPdfUpdate(
-      dynamic document, Client? client, ProfilEntreprise? profil,
-      {required bool isTvaApplicable}) {
-    if (!_isRealTimePreviewEnabled) return;
-    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
-
-    _pdfDebounce = Timer(const Duration(milliseconds: 1000), () {
-      _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
-    });
-  }
-
-  void forceRefreshPdf(
-      dynamic document, Client? client, ProfilEntreprise? profil,
-      {required bool isTvaApplicable}) {
-    if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
-    _generatePdf(document, client, profil, isTvaApplicable: isTvaApplicable);
-  }
-
-  Future<void> _generatePdf(
-      dynamic document, Client? client, ProfilEntreprise? profil,
-      {required bool isTvaApplicable}) async {
-    if (_isGeneratingPdf) return;
-
-    _isGeneratingPdf = true;
-    notifyListeners();
-
-    try {
-      // Create request object with Maps to be isolate-safe
-      final request = PdfGenerationRequest(
-        document: (document as Devis).toMap(),
-        documentType: 'devis',
-        client: client?.toMap(),
-        profil: profil?.toMap(),
-        docTypeLabel: "DEVIS",
-        isTvaApplicable: isTvaApplicable,
-      );
-
-      final result = await compute(PdfService.generatePdfIsolate, request);
-      _currentPdfData = result;
-    } catch (e) {
-      developer.log("Error generating PDF", error: e);
-    } finally {
-      _isGeneratingPdf = false;
-      notifyListeners();
-    }
-
-    // Defer actual call to separate method or closure to ensure imports?
-    // Actually I need to add the import in the `multi_replace`.
-  }
 
   List<Devis> _devis = [];
   List<Devis> _archives = [];
 
   List<Devis> get devis => _devis;
   List<Devis> get archives => _archives;
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   // Stockage temporaire du draft facture pour la transformation
   Facture? _pendingDraftFacture;
@@ -163,27 +37,80 @@ class DevisViewModel extends ChangeNotifier {
     _pendingDraftFacture = null;
   }
 
+  // --- AUTO-SAVE & PDF WRAPPERS ---
+
+  /// Wrapper pour check local draft avec le bon type
+  Future<Map<String, dynamic>?> checkDevisDraft(String? id) async {
+    return await checkLocalDraft('devis', id);
+  }
+
+  /// Wrapper pour auto-save avec le bon type
+  void saveDevisDraft(String? id, Map<String, dynamic> data) {
+    autoSaveDraft('devis', id, data);
+  }
+
+  /// Wrapper pour clear draft avec le bon type
+  Future<void> clearDevisDraft(String? id) async {
+    await clearLocalDraft('devis', id);
+  }
+
+  /// Wrapper pour trigger PDF avec le bon type
+  void triggerDevisPdfUpdate(
+    Devis devis,
+    Client? client,
+    ProfilEntreprise? profil, {
+    required bool isTvaApplicable,
+  }) {
+    triggerPdfUpdate(
+      devis,
+      client,
+      profil,
+      isTvaApplicable: isTvaApplicable,
+      documentType: 'devis',
+      docTypeLabel: 'DEVIS',
+    );
+  }
+
+  /// Wrapper pour force refresh PDF avec le bon type
+  void forceRefreshDevisPdf(
+    Devis devis,
+    Client? client,
+    ProfilEntreprise? profil, {
+    required bool isTvaApplicable,
+  }) {
+    forceRefreshPdf(
+      devis,
+      client,
+      profil,
+      isTvaApplicable: isTvaApplicable,
+      documentType: 'devis',
+      docTypeLabel: 'DEVIS',
+    );
+  }
+
+  // --- CRUD OPERATIONS ---
+
   Future<void> fetchDevis() async {
-    await _executeOperation(() async {
+    await execute(() async {
       _devis = await _repository.getDevis(archives: false);
     });
   }
 
   Future<void> fetchArchives() async {
-    await _executeOperation(() async {
+    await execute(() async {
       _archives = await _repository.getDevis(archives: true);
     });
   }
 
   Future<bool> addDevis(Devis devis) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.createDevis(devis);
       await fetchDevis();
     });
   }
 
   Future<bool> updateDevis(Devis devis) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.updateDevis(devis);
       await fetchDevis();
     });
@@ -191,14 +118,27 @@ class DevisViewModel extends ChangeNotifier {
 
   Future<bool> finaliserDevis(Devis devis) async {
     if (devis.id == null) return false;
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.finalizeDevis(devis.id!);
       await fetchDevis();
     });
   }
 
   Future<void> deleteDevis(String id) async {
-    await _executeOperation(() async {
+    await executeOperation(() async {
+      // 🛡️ PROTECTION : Vérifier que c'est un brouillon avant suppression
+      final devis = _devis.firstWhere(
+        (d) => d.id == id,
+        orElse: () => throw Exception("Devis introuvable"),
+      );
+
+      if (devis.statut != 'brouillon') {
+        throw Exception("Impossible de supprimer un devis ${devis.statut}. "
+            "Seuls les devis brouillon peuvent être supprimés.");
+      }
+
+      developer.log("🗑️ Suppression devis brouillon: ${devis.numeroDevis}");
+
       await _repository.deleteDevis(id);
       await fetchDevis();
     });
@@ -206,7 +146,7 @@ class DevisViewModel extends ChangeNotifier {
 
   Future<void> toggleArchive(Devis devis, bool archiver) async {
     if (devis.id == null) return;
-    await _executeOperation(() async {
+    await executeOperation(() async {
       await _repository.toggleArchive(devis.id!, archiver);
       await fetchDevis();
       await fetchArchives();
@@ -214,7 +154,7 @@ class DevisViewModel extends ChangeNotifier {
   }
 
   Future<bool> markAsSent(String id) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       final d = _devis.firstWhere((element) => element.id == id);
       final updated = d.copyWith(statut: 'envoye');
       await _repository.updateDevis(updated);
@@ -224,7 +164,7 @@ class DevisViewModel extends ChangeNotifier {
 
   Future<bool> uploadSignature(String devisId, Uint8List bytes) async {
     if (devisId.isEmpty) return false;
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       final url = await _repository.uploadSignature(devisId, bytes);
 
       final devis = _devis.firstWhere((d) => d.id == devisId);
@@ -422,7 +362,8 @@ class DevisViewModel extends ChangeNotifier {
     if (total == 0) return Decimal.zero;
 
     // Fix: Convertir immédiatement les divisions en Decimal
-    final ratio = (Decimal.fromInt(signed) / Decimal.fromInt(total)).toDecimal();
+    final ratio =
+        (Decimal.fromInt(signed) / Decimal.fromInt(total)).toDecimal();
     final percentage = ratio * Decimal.fromInt(100);
     return percentage;
   }
@@ -436,29 +377,10 @@ class DevisViewModel extends ChangeNotifier {
     return sorted.take(limit).toList();
   }
 
-  Future<bool> _executeOperation(Future<void> Function() operation) async {
-    _loadingDepth++;
-
-    // Ne marquer comme loading que pour le premier appel (niveau 0 → 1)
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      Future.microtask(() => notifyListeners());
-    }
-
-    try {
-      await operation();
-      return true;
-    } catch (e) {
-      developer.log("🔴 DevisVM Error", error: e);
-      return false;
-    } finally {
-      _loadingDepth--;
-
-      // Ne retirer le loading que quand tous les appels sont terminés
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
+  @override
+  void dispose() {
+    disposePdf();
+    disposeAutoSave();
+    super.dispose();
   }
 }

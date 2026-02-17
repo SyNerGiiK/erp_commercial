@@ -218,11 +218,7 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                     if (val == 'delete') {
                       await vm.deleteFacture(f.id!);
                       if (!mounted) return;
-                      if (vm.errorMessage != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content:
-                                Text("Erreur deletion: ${vm.errorMessage}")));
-                      }
+                      // errorMessage removed from FactureViewModel
                       return;
                     }
                     if (val == 'avoir') {

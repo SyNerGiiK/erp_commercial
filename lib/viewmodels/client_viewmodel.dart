@@ -1,52 +1,48 @@
 import 'dart:developer' as developer;
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:decimal/decimal.dart';
 
 import '../models/client_model.dart';
 import '../models/photo_model.dart';
 import '../repositories/client_repository.dart';
+import '../core/base_viewmodel.dart';
 
-class ClientViewModel extends ChangeNotifier {
+class ClientViewModel extends BaseViewModel {
   final IClientRepository _repository;
 
   List<Client> _clients = [];
-  bool _isLoading = false;
-
-  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   ClientViewModel({IClientRepository? repository})
       : _repository = repository ?? ClientRepository();
 
   List<Client> get clients => _clients;
-  bool get isLoading => _isLoading;
 
   // --- PHOTOS ---
   List<PhotoChantier> _photos = [];
   List<PhotoChantier> get photos => _photos;
 
   Future<void> fetchClients() async {
-    await _executeOperation(() async {
+    await execute(() async {
       _clients = await _repository.getClients();
     });
   }
 
   Future<bool> addClient(Client client) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.createClient(client);
       await fetchClients();
     });
   }
 
   Future<bool> updateClient(Client client) async {
-    return await _executeOperation(() async {
+    return await executeOperation(() async {
       await _repository.updateClient(client);
       await fetchClients();
     });
   }
 
   Future<void> deleteClient(String id) async {
-    await _executeOperation(() async {
+    await executeOperation(() async {
       await _repository.deleteClient(id);
       await fetchClients();
     });
@@ -110,33 +106,5 @@ class ClientViewModel extends ChangeNotifier {
     ranked.sort((a, b) => (b['ca'] as Decimal).compareTo(a['ca'] as Decimal));
 
     return ranked.take(limit).toList();
-  }
-
-  // --- HELPERS ---
-
-  Future<bool> _executeOperation(Future<void> Function() operation) async {
-    _loadingDepth++;
-
-    // Ne marquer comme loading que pour le premier appel (niveau 0 → 1)
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      notifyListeners();
-    }
-
-    try {
-      await operation();
-      return true;
-    } catch (e) {
-      developer.log("🔴 ClientVM Error", error: e);
-      return false;
-    } finally {
-      _loadingDepth--;
-
-      // Ne retirer le loading que quand tous les appels sont terminés
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
   }
 }

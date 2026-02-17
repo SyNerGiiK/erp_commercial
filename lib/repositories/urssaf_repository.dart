@@ -1,26 +1,17 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
-
 import '../models/urssaf_model.dart';
-import '../config/supabase_config.dart';
+import '../core/base_repository.dart';
 
 abstract class IUrssafRepository {
   Future<UrssafConfig> getConfig();
   Future<void> saveConfig(UrssafConfig config);
 }
 
-class UrssafRepository implements IUrssafRepository {
-  // Instance singleton pour éviter les soucis de scope
-  SupabaseClient get _client => Supabase.instance.client;
-
+class UrssafRepository extends BaseRepository implements IUrssafRepository {
   @override
   Future<UrssafConfig> getConfig() async {
     try {
-      final session = _client.auth.currentSession;
-      if (session == null) return UrssafConfig(userId: '');
-
-      final userId = session.user.id;
-      final response = await _client
+      final response = await client
           .from('urssaf_configs')
           .select()
           .eq('user_id', userId)
@@ -29,51 +20,38 @@ class UrssafRepository implements IUrssafRepository {
       if (response != null) {
         return UrssafConfig.fromMap(response);
       }
-      // Retourne config par défaut avec l'ID user actuel
       return UrssafConfig(userId: userId);
     } catch (e, s) {
       developer.log("⚠️ UrssafRepo: Pas de config chargée",
           error: e, stackTrace: s);
-      // Fallback safe
-      return UrssafConfig(userId: _client.auth.currentUser?.id ?? '', id: '');
+      return UrssafConfig(userId: userId, id: '');
     }
   }
 
   @override
   Future<void> saveConfig(UrssafConfig config) async {
     try {
-      final session = _client.auth.currentSession;
-      if (session == null) throw Exception("Utilisateur non connecté");
+      final data = prepareForUpdate(config.toMap());
 
-      final userId = session.user.id;
-      final data = config.toMap();
-
-      // Nettoyage sécurité
-      data.remove('id');
-      data.remove('user_id'); // On ne peut pas update le user_id
-
-      // Check existence
-      final existing = await _client
+      final existing = await client
           .from('urssaf_configs')
           .select('id')
           .eq('user_id', userId)
           .maybeSingle();
 
       if (existing != null) {
-        // UPDATE
-        await _client
+        await client
             .from('urssaf_configs')
             .update(data)
             .eq('id', existing['id']);
       } else {
-        // INSERT
-        data['user_id'] = userId; // Nécessaire pour l'insert
-        await _client.from('urssaf_configs').insert(data);
+        final insertData = prepareForInsert(config.toMap());
+        await client.from('urssaf_configs').insert(insertData);
       }
     } catch (e, s) {
       developer.log("🔴 UrssafRepo Error (saveConfig)",
           error: e, stackTrace: s);
-      throw Exception("Erreur sauvegarde Urssaf: $e");
+      throw handleError(e, 'saveConfig');
     }
   }
 }

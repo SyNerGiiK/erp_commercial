@@ -232,7 +232,20 @@ void main() {
       test('devrait supprimer un devis et rafraîchir', () async {
         // ARRANGE
         const devisIdToDelete = 'devis-1';
-        final remainingDevis = <Devis>[
+        final initialDevis = <Devis>[
+          Devis(
+            id: 'devis-1',
+            userId: 'user-1',
+            numeroDevis: 'DEV-2024-001',
+            objet: 'To Delete',
+            clientId: 'client-1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('1000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'brouillon', // MUST be brouillon to delete
+          ),
           Devis(
             id: 'devis-2',
             userId: 'user-1',
@@ -244,10 +257,18 @@ void main() {
             totalHt: Decimal.parse('2000'),
             remiseTaux: Decimal.zero,
             acompteMontant: Decimal.zero,
-            statut: 'envoye',
+            statut: 'brouillon',
           ),
         ];
 
+        final remainingDevis = <Devis>[initialDevis[1]];
+
+        // First fetch to populate viewModel
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => initialDevis);
+        await viewModel.fetchDevis();
+
+        // Then setup delete
         when(() => mockRepository.deleteDevis(devisIdToDelete))
             .thenAnswer((_) async {});
         when(() => mockRepository.getDevis(archives: false))
@@ -260,7 +281,8 @@ void main() {
         expect(viewModel.devis.length, 1);
         expect(viewModel.devis.first.id, 'devis-2');
         verify(() => mockRepository.deleteDevis(devisIdToDelete)).called(1);
-        verify(() => mockRepository.getDevis(archives: false)).called(1);
+        verify(() => mockRepository.getDevis(archives: false))
+            .called(2); // 1 fetch + 1 after delete
       });
     });
 

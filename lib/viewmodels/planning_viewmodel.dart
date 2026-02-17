@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import '../repositories/planning_repository.dart';
 import '../models/planning_model.dart';
+import '../core/base_viewmodel.dart';
 
-class PlanningViewModel extends ChangeNotifier {
+class PlanningViewModel extends BaseViewModel {
   final IPlanningRepository _repository;
 
   PlanningViewModel({IPlanningRepository? repository})
@@ -12,11 +13,6 @@ class PlanningViewModel extends ChangeNotifier {
   List<PlanningEvent> _filteredEvents = [];
 
   List<PlanningEvent> get events => _filteredEvents;
-
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   // Filtres
   bool _showChantiers = true;
@@ -50,14 +46,7 @@ class PlanningViewModel extends ChangeNotifier {
   }
 
   Future<void> fetchEvents(dynamic factures, dynamic devis) async {
-    _loadingDepth++;
-
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      notifyListeners();
-    }
-
-    try {
+    await executeOperation(() async {
       _allEvents.clear();
 
       // 1. Manuels (DB)
@@ -102,16 +91,7 @@ class PlanningViewModel extends ChangeNotifier {
       }
 
       _applyFilters();
-    } catch (e) {
-      debugPrint("Erreur PlanningVM fetchEvents: $e");
-    } finally {
-      _loadingDepth--;
-
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
+    });
   }
 
   void _applyFilters() {
@@ -136,7 +116,7 @@ class PlanningViewModel extends ChangeNotifier {
       // On ne refetch pas tout, on demande à la vue de rafraîchir
       return true;
     } catch (e) {
-      debugPrint("Erreur addEvent: $e");
+      developer.log("Erreur addEvent: $e");
       return false;
     }
   }
@@ -147,7 +127,7 @@ class PlanningViewModel extends ChangeNotifier {
       await _repository.updateEvent(event);
       return true;
     } catch (e) {
-      debugPrint("Erreur updateEvent: $e");
+      developer.log("Erreur updateEvent: $e");
       return false;
     }
   }
@@ -156,7 +136,7 @@ class PlanningViewModel extends ChangeNotifier {
     try {
       await _repository.deleteEvent(id);
     } catch (e) {
-      debugPrint("Erreur deleteEvent: $e");
+      developer.log("Erreur deleteEvent: $e");
     }
   }
 }

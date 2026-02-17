@@ -1,56 +1,41 @@
-import 'package:flutter/foundation.dart';
 import 'package:decimal/decimal.dart';
 import '../models/shopping_model.dart';
 import '../repositories/shopping_repository.dart';
+import '../core/base_viewmodel.dart';
 
-class ShoppingViewModel extends ChangeNotifier {
+class ShoppingViewModel extends BaseViewModel {
   final IShoppingRepository _repository;
 
   ShoppingViewModel({IShoppingRepository? repository})
       : _repository = repository ?? ShoppingRepository();
 
   List<ShoppingItem> _items = [];
-  bool _isLoading = false;
-
-  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   List<ShoppingItem> get items => _items;
-  bool get isLoading => _isLoading;
 
   Decimal get totalPanier =>
       _items.fold(Decimal.zero, (sum, item) => sum + item.totalLigne);
 
   Future<void> fetchItems() async {
-    _loadingDepth++;
-
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      notifyListeners();
-    }
-
-    try {
-      _items = await _repository.getItems();
-    } catch (e) {
-      _items = [];
-    } finally {
-      _loadingDepth--;
-
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
+    await executeOperation(
+      () async {
+        _items = await _repository.getItems();
+      },
+      onError: () {
+        _items = [];
+      },
+    );
   }
 
   Future<void> addItem(ShoppingItem item) async {
-    await _executeOperation(() async {
+    await executeOperation(() async {
       await _repository.addItem(item);
       await fetchItems();
     });
   }
 
   Future<void> deleteItem(String id) async {
-    await _executeOperation(() async {
+    await executeOperation(() async {
       await _repository.deleteItem(id);
       await fetchItems();
     });
@@ -71,28 +56,6 @@ class ShoppingViewModel extends ChangeNotifier {
     } catch (e) {
       // Rollback si erreur (rechargement depuis serveur)
       await fetchItems();
-    }
-  }
-
-  Future<void> _executeOperation(Future<void> Function() operation) async {
-    _loadingDepth++;
-
-    if (_loadingDepth == 1) {
-      _isLoading = true;
-      notifyListeners();
-    }
-
-    try {
-      await operation();
-    } catch (e) {
-      debugPrint("ShoppingViewModel Error: $e");
-    } finally {
-      _loadingDepth--;
-
-      if (_loadingDepth == 0) {
-        _isLoading = false;
-        notifyListeners();
-      }
     }
   }
 }

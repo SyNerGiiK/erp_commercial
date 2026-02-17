@@ -19,6 +19,13 @@ abstract class IFactureRepository {
 
   // SIGNATURE
   Future<String> uploadSignature(String factureId, Uint8List bytes);
+
+  // FACTURES LIÉES (pour historique règlements devis)
+  Future<List<Facture>> getLinkedFactures(String devisSourceId,
+      {String? excludeFactureId});
+
+  // FACTURES EN RETARD
+  Future<List<Facture>> getFacturesEnRetard();
 }
 
 class FactureRepository extends DocumentRepository
@@ -151,6 +158,45 @@ class FactureRepository extends DocumentRepository
       await client.from('paiements').delete().eq('id', id);
     } catch (e) {
       throw handleError(e, 'deletePaiement');
+    }
+  }
+
+  @override
+  Future<List<Facture>> getLinkedFactures(String devisSourceId,
+      {String? excludeFactureId}) async {
+    try {
+      var query = client
+          .from('factures')
+          .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
+          .eq('user_id', userId)
+          .eq('devis_source_id', devisSourceId);
+
+      if (excludeFactureId != null && excludeFactureId.isNotEmpty) {
+        query = query.neq('id', excludeFactureId);
+      }
+
+      final response = await query;
+      return (response as List).map((e) => Facture.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getLinkedFactures');
+    }
+  }
+
+  @override
+  Future<List<Facture>> getFacturesEnRetard() async {
+    try {
+      final response = await client
+          .from('factures')
+          .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
+          .eq('user_id', userId)
+          .eq('est_archive', false)
+          .inFilter('statut', ['validee', 'envoye'])
+          .lt('date_echeance', DateTime.now().toIso8601String())
+          .order('date_echeance', ascending: true);
+
+      return (response as List).map((e) => Facture.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getFacturesEnRetard');
     }
   }
 

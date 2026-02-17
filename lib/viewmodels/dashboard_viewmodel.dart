@@ -231,8 +231,32 @@ class DashboardViewModel extends BaseViewModel {
   }
 
   void _generateTopClients(List<Facture> factures) {
-    // MVP: On laisse vide pour l'instant
-    _topClients = [];
+    final Map<String, Decimal> clientCA = {};
+    final Map<String, String> clientNames = {};
+
+    for (var f in factures) {
+      final cid = f.clientId;
+      if (cid.isNotEmpty) {
+        final totalRegle =
+            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+        clientCA[cid] = (clientCA[cid] ?? Decimal.zero) + totalRegle;
+        if (!clientNames.containsKey(cid)) {
+          clientNames[cid] =
+              f.objet; // Fallback, sera enrichi par le nom client
+        }
+      }
+    }
+
+    final ranked = clientCA.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    _topClients = ranked.take(5).map((entry) {
+      return {
+        'clientId': entry.key,
+        'ca': entry.value,
+        'label': clientNames[entry.key] ?? entry.key,
+      };
+    }).toList();
   }
 
   void _generateExpenseBreakdown(List<Depense> depenses) {

@@ -361,7 +361,6 @@ class DevisViewModel extends BaseViewModel
 
     if (total == 0) return Decimal.zero;
 
-    // Fix: Convertir immédiatement les divisions en Decimal
     final ratio =
         (Decimal.fromInt(signed) / Decimal.fromInt(total)).toDecimal();
     final percentage = ratio * Decimal.fromInt(100);
@@ -370,11 +369,61 @@ class DevisViewModel extends BaseViewModel
 
   /// Retourne les derniers devis modifiés/créés
   List<Devis> getRecentActivity(int limit) {
-    // Tri par date d'émission (ou création si on avait le champ created_at dispo en local)
-    // On utilise numeroDevis pour l'instant (plus récent = plus grand) ou dateEmission
     final sorted = List<Devis>.from(_devis);
     sorted.sort((a, b) => b.dateEmission.compareTo(a.dateEmission));
     return sorted.take(limit).toList();
+  }
+
+  /// Duplique un devis existant en brouillon
+  Devis duplicateDevis(Devis source) {
+    // Construction directe pour garantir id = null (copyWith ne peut pas nullifier)
+    return Devis(
+      // id omis = null
+      userId: source.userId,
+      numeroDevis: '',
+      objet: source.objet,
+      clientId: source.clientId,
+      dateEmission: DateTime.now(),
+      dateValidite: DateTime.now().add(const Duration(days: 30)),
+      statut: 'brouillon',
+      estTransforme: false,
+      estArchive: false,
+      totalHt: source.totalHt,
+      totalTva: source.totalTva,
+      totalTtc: source.totalTtc,
+      remiseTaux: source.remiseTaux,
+      acompteMontant: source.acompteMontant,
+      conditionsReglement: source.conditionsReglement,
+      notesPubliques: source.notesPubliques,
+      tvaIntra: source.tvaIntra,
+      lignes: source.lignes
+          .map((l) => LigneDevis(
+                description: l.description,
+                quantite: l.quantite,
+                prixUnitaire: l.prixUnitaire,
+                totalLigne: l.totalLigne,
+                typeActivite: l.typeActivite,
+                unite: l.unite,
+                type: l.type,
+                ordre: l.ordre,
+                tauxTva: l.tauxTva,
+              ))
+          .toList(),
+      chiffrage: source.chiffrage.map((c) => c.copyWith()).toList(),
+    );
+  }
+
+  /// Annule un devis (statut → annulé)
+  Future<bool> annulerDevis(String id) async {
+    return await executeOperation(() async {
+      final d = _devis.firstWhere((element) => element.id == id);
+      if (d.statut == 'signe') {
+        throw Exception("Impossible d'annuler un devis déjà signé");
+      }
+      final updated = d.copyWith(statut: 'annule');
+      await _repository.updateDevis(updated);
+      await fetchDevis();
+    });
   }
 
   @override

@@ -1,13 +1,11 @@
 ﻿import 'dart:developer' as developer;
 import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
 import '../models/client_model.dart';
 import '../models/entreprise_model.dart';
 import '../repositories/facture_repository.dart';
-import '../config/supabase_config.dart';
 import '../core/base_viewmodel.dart';
 import '../core/pdf_generation_mixin.dart';
 import '../core/autosave_mixin.dart';
@@ -15,7 +13,6 @@ import '../core/autosave_mixin.dart';
 class FactureViewModel extends BaseViewModel
     with PdfGenerationMixin, AutoSaveMixin {
   final IFactureRepository _repository;
-  SupabaseClient get _client => SupabaseConfig.client;
 
   FactureViewModel({IFactureRepository? repository})
       : _repository = repository ?? FactureRepository();
@@ -152,45 +149,129 @@ class FactureViewModel extends BaseViewModel
   Future<Decimal> calculateHistoriqueReglements(
       String devisSourceId, String excludeFactureId) async {
     try {
-      final userId = SupabaseConfig.userId;
-
-      var query = _client
-          .from('factures')
-          .select('*, paiements(*)')
-          .eq('user_id', userId)
-          .eq('devis_source_id', devisSourceId);
-
-      if (excludeFactureId.isNotEmpty) {
-        query = query.neq('id', excludeFactureId);
-      }
-
-      final response = await query;
-
-      final linkedFactures =
-          (response as List).map((e) => Facture.fromMap(e)).toList();
-
-      developer.log(
-          "CALCUL HISTORIQUE: DevisID=$devisSourceId, ExcludeID=$excludeFactureId");
-      developer.log(
-          "CALCUL HISTORIQUE: ${linkedFactures.length} factures liées trouvées");
+      final linkedFactures = await _repository.getLinkedFactures(
+        devisSourceId,
+        excludeFactureId: excludeFactureId.isNotEmpty ? excludeFactureId : null,
+      );
 
       Decimal total = Decimal.zero;
       for (var f in linkedFactures) {
-        developer.log(
-            "  - Facture ${f.numeroFacture} (ID: ${f.id}, Type: ${f.type})");
-        // On additionne les paiements reçus sur ces factures
         for (var p in f.paiements) {
-          developer.log(
-              "    -> Paiement: ${p.montant} (Date: ${p.datePaiement}, isAcompte: ${p.isAcompte})");
           total += p.montant;
         }
       }
-      developer.log("CALCUL HISTORIQUE: TOTAL = $total");
       return total;
     } catch (e) {
       developer.log("Erreur calcul historique règlements", error: e);
       return Decimal.zero;
     }
+  }
+
+  /// Retourne les factures en retard de paiement
+  List<Facture> get facturesEnRetard {
+    final now = DateTime.now();
+    return _factures.where((f) {
+      if (f.statut == 'brouillon' ||
+          f.statut == 'payee' ||
+          f.statut == 'annulee') {
+        return false;
+      }
+      return f.dateEcheance.isBefore(now);
+    }).toList();
+  }
+
+  /// Retourne le nombre de jours de retard moyen
+  double get retardMoyen {
+    final retards = facturesEnRetard;
+    if (retards.isEmpty) return 0;
+    final now = DateTime.now();
+    final totalJours = retards.fold<int>(
+      0,
+      (sum, f) => sum + now.difference(f.dateEcheance).inDays,
+    );
+    return totalJours / retards.length;
+  }
+
+  /// Duplique une facture existante en brouillon
+  Facture duplicateFacture(Facture source) {
+    // Construction directe pour garantir id = null (copyWith ne peut pas nullifier)
+    return Facture(
+      // id omis = null
+      userId: source.userId,
+      numeroFacture: '',
+      objet: source.objet,
+      clientId: source.clientId,
+      devisSourceId: source.devisSourceId,
+      dateEmission: DateTime.now(),
+      dateEcheance: DateTime.now().add(const Duration(days: 30)),
+      statut: 'brouillon',
+      statutJuridique: 'brouillon',
+      estArchive: false,
+      type: source.type,
+      totalHt: source.totalHt,
+      totalTva: source.totalTva,
+      totalTtc: source.totalTtc,
+      remiseTaux: source.remiseTaux,
+      acompteDejaRegle: Decimal.zero,
+      conditionsReglement: source.conditionsReglement,
+      notesPubliques: source.notesPubliques,
+      tvaIntra: source.tvaIntra,
+      lignes: source.lignes
+          .map((l) => LigneFacture(
+                description: l.description,
+                quantite: l.quantite,
+                prixUnitaire: l.prixUnitaire,
+                totalLigne: l.totalLigne,
+                typeActivite: l.typeActivite,
+                unite: l.unite,
+                type: l.type,
+                ordre: l.ordre,
+                tauxTva: l.tauxTva,
+              ))
+          .toList(),
+      chiffrage: source.chiffrage.map((c) => c.copyWith()).toList(),
+    );
+  }
+
+  /// Crée un avoir (credit note) à partir d'une facture validée
+  Facture createAvoir(Facture source) {
+    if (source.id == null) throw Exception("La facture source n'a pas d'ID");
+    if (source.statutJuridique == 'brouillon') {
+      throw Exception("Impossible de créer un avoir sur une facture brouillon");
+    }
+
+    // Inverser les montants des lignes
+    final lignesAvoir = source.lignes.map((l) {
+      final montantInverse = Decimal.zero - l.totalLigne;
+      final puInverse = Decimal.zero - l.prixUnitaire;
+      return l.copyWith(
+        id: null,
+        prixUnitaire: puInverse,
+        totalLigne: montantInverse,
+      );
+    }).toList();
+
+    return Facture(
+      userId: source.userId,
+      numeroFacture: '',
+      objet: "Avoir sur ${source.numeroFacture} - ${source.objet}",
+      clientId: source.clientId,
+      factureSourceId: source.id,
+      dateEmission: DateTime.now(),
+      dateEcheance: DateTime.now().add(const Duration(days: 30)),
+      statut: 'brouillon',
+      statutJuridique: 'brouillon',
+      type: 'avoir',
+      totalHt: Decimal.zero - source.totalHt,
+      totalTva: Decimal.zero - source.totalTva,
+      totalTtc: Decimal.zero - source.totalTtc,
+      remiseTaux: source.remiseTaux,
+      acompteDejaRegle: Decimal.zero,
+      conditionsReglement: source.conditionsReglement,
+      notesPubliques: "Avoir sur facture ${source.numeroFacture}",
+      tvaIntra: source.tvaIntra,
+      lignes: lignesAvoir,
+    );
   }
 
   // --- PAIEMENTS ---

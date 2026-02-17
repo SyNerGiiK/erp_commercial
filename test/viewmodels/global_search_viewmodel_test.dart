@@ -6,6 +6,8 @@ import 'package:erp_commercial/models/client_model.dart';
 import 'package:erp_commercial/models/facture_model.dart';
 import 'package:erp_commercial/models/devis_model.dart';
 import 'package:erp_commercial/repositories/global_search_repository.dart';
+import 'package:erp_commercial/models/depense_model.dart';
+import 'package:erp_commercial/models/article_model.dart';
 import '../mocks/repository_mocks.dart';
 
 void main() {
@@ -189,6 +191,145 @@ void main() {
       expect(viewModel.isLoading, false);
       await viewModel.search('test');
       expect(viewModel.isLoading, false);
+    });
+  });
+
+  group('recherche étendue (dépenses & articles)', () {
+    test('devrait retourner des résultats dépenses et articles', () async {
+      // ARRANGE
+      final testDepenses = <Depense>[
+        Depense(
+          id: 'dep-1',
+          userId: 'user-1',
+          titre: 'Fournitures bureau',
+          montant: Decimal.parse('150'),
+          date: DateTime.now(),
+          categorie: 'fournitures',
+        ),
+      ];
+
+      final testArticles = <Article>[
+        Article(
+          id: 'art-1',
+          userId: 'user-1',
+          designation: 'Peinture façade',
+          prixUnitaire: Decimal.parse('45'),
+          prixAchat: Decimal.parse('30'),
+          tauxTva: Decimal.parse('20'),
+        ),
+      ];
+
+      when(() => mockRepository.searchAll(any())).thenAnswer(
+        (_) async => GlobalSearchResults(
+          depenses: testDepenses,
+          articles: testArticles,
+        ),
+      );
+
+      // ACT
+      await viewModel.search('fournitures');
+
+      // ASSERT
+      expect(viewModel.depensesResults.length, 1);
+      expect(viewModel.depensesResults[0].titre, 'Fournitures bureau');
+      expect(viewModel.articlesResults.length, 1);
+      expect(viewModel.articlesResults[0].designation, 'Peinture façade');
+    });
+
+    test('devrait calculer le totalResults correctement', () async {
+      // ARRANGE
+      when(() => mockRepository.searchAll(any())).thenAnswer(
+        (_) async => GlobalSearchResults(
+          clients: [
+            Client(
+              userId: 'u1',
+              nomComplet: 'Test',
+              adresse: '',
+              codePostal: '',
+              ville: '',
+              telephone: '',
+              email: '',
+            ),
+          ],
+          factures: [
+            Facture(
+              id: 'f1',
+              userId: 'u1',
+              numeroFacture: 'FAC-001',
+              objet: 'Test',
+              clientId: 'c1',
+              dateEmission: DateTime.now(),
+              dateEcheance: DateTime.now(),
+              totalHt: Decimal.parse('1000'),
+              remiseTaux: Decimal.zero,
+              acompteDejaRegle: Decimal.zero,
+            ),
+          ],
+          depenses: [
+            Depense(
+              id: 'dep-1',
+              userId: 'u1',
+              titre: 'Test',
+              montant: Decimal.parse('50'),
+              date: DateTime.now(),
+            ),
+          ],
+          articles: [
+            Article(
+              id: 'art-1',
+              userId: 'u1',
+              designation: 'Test',
+              prixUnitaire: Decimal.parse('10'),
+              prixAchat: Decimal.parse('5'),
+              tauxTva: Decimal.parse('20'),
+            ),
+          ],
+        ),
+      );
+
+      // ACT
+      await viewModel.search('test');
+
+      // ASSERT
+      expect(viewModel.totalResults, 4); // 1+1+0+1+1
+    });
+
+    test('devrait vider dépenses et articles en cas d\'erreur', () async {
+      // ARRANGE - Prepopulate
+      when(() => mockRepository.searchAll(any())).thenAnswer(
+        (_) async => GlobalSearchResults(
+          depenses: [
+            Depense(
+              userId: 'u1',
+              titre: 'Test',
+              montant: Decimal.parse('50'),
+              date: DateTime.now(),
+            ),
+          ],
+          articles: [
+            Article(
+              userId: 'u1',
+              designation: 'Test',
+              prixUnitaire: Decimal.parse('10'),
+              prixAchat: Decimal.parse('5'),
+              tauxTva: Decimal.parse('20'),
+            ),
+          ],
+        ),
+      );
+      await viewModel.search('test');
+
+      // Setup error
+      when(() => mockRepository.searchAll(any()))
+          .thenThrow(Exception('Network error'));
+
+      // ACT
+      await viewModel.search('error');
+
+      // ASSERT
+      expect(viewModel.depensesResults, isEmpty);
+      expect(viewModel.articlesResults, isEmpty);
+      expect(viewModel.totalResults, 0);
     });
   });
 }

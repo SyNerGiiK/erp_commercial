@@ -34,7 +34,7 @@ void main() {
     test('devrait retourner le message d\'erreur AuthException', () async {
       // ARRANGE
       when(() => mockRepository.signIn(any(), any())).thenThrow(
-        AuthException('Invalid credentials'),
+        const AuthException('Invalid credentials'),
       );
 
       // ACT
@@ -78,7 +78,7 @@ void main() {
     test('devrait retourner le message d\'erreur en cas d\'échec', () async {
       // ARRANGE
       when(() => mockRepository.signUp(any(), any())).thenThrow(
-        AuthException('Email already registered'),
+        const AuthException('Email already registered'),
       );
 
       // ACT

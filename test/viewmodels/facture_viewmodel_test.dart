@@ -739,6 +739,360 @@ void main() {
     });
   });
 
+  group('duplicateFacture', () {
+    test('devrait créer une copie brouillon de la facture source', () {
+      // ARRANGE
+      final source = Facture(
+        id: 'facture-original',
+        userId: 'user-1',
+        numeroFacture: 'FAC-2024-010',
+        objet: 'Prestation originale',
+        clientId: 'client-1',
+        dateEmission: DateTime(2024, 1, 15),
+        dateEcheance: DateTime(2024, 2, 15),
+        totalHt: Decimal.parse('5000'),
+        remiseTaux: Decimal.parse('10'),
+        acompteDejaRegle: Decimal.parse('1000'),
+        statut: 'payee',
+        statutJuridique: 'validee',
+        type: 'standard',
+        lignes: [
+          LigneFacture(
+            id: 'ligne-1',
+            description: 'Ligne test',
+            quantite: Decimal.fromInt(2),
+            prixUnitaire: Decimal.parse('2500'),
+            totalLigne: Decimal.parse('5000'),
+            type: 'article',
+          ),
+        ],
+        paiements: [
+          Paiement(
+            id: 'p1',
+            factureId: 'facture-original',
+            montant: Decimal.parse('4000'),
+            datePaiement: DateTime(2024, 2, 10),
+            typePaiement: 'virement',
+          ),
+        ],
+      );
+
+      // ACT
+      final duplicate = viewModel.duplicateFacture(source);
+
+      // ASSERT
+      expect(duplicate.id, isNull);
+      expect(duplicate.numeroFacture, '');
+      expect(duplicate.statut, 'brouillon');
+      expect(duplicate.statutJuridique, 'brouillon');
+      expect(duplicate.objet, 'Prestation originale');
+      expect(duplicate.clientId, 'client-1');
+      expect(duplicate.totalHt, Decimal.parse('5000'));
+      expect(duplicate.remiseTaux, Decimal.parse('10'));
+      expect(duplicate.paiements, isEmpty);
+      expect(duplicate.lignes.length, 1);
+      expect(duplicate.lignes[0].id, isNull);
+      expect(duplicate.lignes[0].description, 'Ligne test');
+    });
+  });
+
+  group('createAvoir', () {
+    test('devrait créer un avoir avec montants inversés', () {
+      // ARRANGE
+      final source = Facture(
+        id: 'facture-source',
+        userId: 'user-1',
+        numeroFacture: 'FAC-2024-020',
+        objet: 'Prestation avoir test',
+        clientId: 'client-1',
+        dateEmission: DateTime(2024, 1, 15),
+        dateEcheance: DateTime(2024, 2, 15),
+        totalHt: Decimal.parse('3000'),
+        totalTva: Decimal.parse('600'),
+        totalTtc: Decimal.parse('3600'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+        statut: 'validee',
+        statutJuridique: 'validee',
+        lignes: [
+          LigneFacture(
+            id: 'l1',
+            description: 'Service A',
+            quantite: Decimal.one,
+            prixUnitaire: Decimal.parse('3000'),
+            totalLigne: Decimal.parse('3000'),
+            type: 'article',
+          ),
+        ],
+      );
+
+      // ACT
+      final avoir = viewModel.createAvoir(source);
+
+      // ASSERT
+      expect(avoir.type, 'avoir');
+      expect(avoir.factureSourceId, 'facture-source');
+      expect(avoir.totalHt, Decimal.parse('-3000'));
+      expect(avoir.totalTva, Decimal.parse('-600'));
+      expect(avoir.totalTtc, Decimal.parse('-3600'));
+      expect(avoir.statut, 'brouillon');
+      expect(avoir.objet, contains('Avoir sur FAC-2024-020'));
+      expect(avoir.lignes.length, 1);
+      expect(avoir.lignes[0].prixUnitaire, Decimal.parse('-3000'));
+      expect(avoir.lignes[0].totalLigne, Decimal.parse('-3000'));
+    });
+
+    test('devrait lancer une exception si facture sans ID', () {
+      final factureSansId = Facture(
+        userId: 'user-1',
+        objet: 'Sans ID',
+        clientId: 'client-1',
+        dateEmission: DateTime.now(),
+        dateEcheance: DateTime.now(),
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+      );
+
+      expect(
+        () => viewModel.createAvoir(factureSansId),
+        throwsException,
+      );
+    });
+
+    test('devrait lancer une exception si facture brouillon', () {
+      final factureBrouillon = Facture(
+        id: 'f1',
+        userId: 'user-1',
+        objet: 'Brouillon',
+        clientId: 'client-1',
+        dateEmission: DateTime.now(),
+        dateEcheance: DateTime.now(),
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+        statutJuridique: 'brouillon',
+      );
+
+      expect(
+        () => viewModel.createAvoir(factureBrouillon),
+        throwsException,
+      );
+    });
+  });
+
+  group('facturesEnRetard', () {
+    test('devrait retourner uniquement les factures en retard', () async {
+      // ARRANGE
+      final now = DateTime.now();
+      final factures = <Facture>[
+        // En retard - validée avec échéance passée
+        Facture(
+          id: 'f1',
+          userId: 'user-1',
+          numeroFacture: 'FAC-001',
+          objet: 'En retard',
+          clientId: 'c1',
+          dateEmission: now.subtract(const Duration(days: 60)),
+          dateEcheance: now.subtract(const Duration(days: 30)),
+          totalHt: Decimal.parse('1000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+        ),
+        // Pas en retard - payée
+        Facture(
+          id: 'f2',
+          userId: 'user-1',
+          numeroFacture: 'FAC-002',
+          objet: 'Payée',
+          clientId: 'c2',
+          dateEmission: now.subtract(const Duration(days: 60)),
+          dateEcheance: now.subtract(const Duration(days: 30)),
+          totalHt: Decimal.parse('500'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'payee',
+        ),
+        // Pas en retard - échéance future
+        Facture(
+          id: 'f3',
+          userId: 'user-1',
+          numeroFacture: 'FAC-003',
+          objet: 'Future',
+          clientId: 'c3',
+          dateEmission: now,
+          dateEcheance: now.add(const Duration(days: 30)),
+          totalHt: Decimal.parse('2000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+        ),
+        // En retard - envoyée avec échéance passée
+        Facture(
+          id: 'f4',
+          userId: 'user-1',
+          numeroFacture: 'FAC-004',
+          objet: 'Envoyée retard',
+          clientId: 'c4',
+          dateEmission: now.subtract(const Duration(days: 45)),
+          dateEcheance: now.subtract(const Duration(days: 15)),
+          totalHt: Decimal.parse('750'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'envoye',
+        ),
+      ];
+
+      when(() => mockRepository.getFactures(archives: false))
+          .thenAnswer((_) async => factures);
+      await viewModel.fetchFactures();
+
+      // ACT
+      final retard = viewModel.facturesEnRetard;
+
+      // ASSERT
+      expect(retard.length, 2);
+      expect(retard.any((f) => f.id == 'f1'), true);
+      expect(retard.any((f) => f.id == 'f4'), true);
+    });
+
+    test('devrait retourner une liste vide si aucune facture en retard',
+        () async {
+      when(() => mockRepository.getFactures(archives: false))
+          .thenAnswer((_) async => <Facture>[]);
+      await viewModel.fetchFactures();
+
+      expect(viewModel.facturesEnRetard, isEmpty);
+    });
+  });
+
+  group('retardMoyen', () {
+    test('devrait calculer le retard moyen en jours', () async {
+      final now = DateTime.now();
+      final factures = <Facture>[
+        Facture(
+          id: 'f1',
+          userId: 'user-1',
+          numeroFacture: 'FAC-001',
+          objet: 'Retard 10j',
+          clientId: 'c1',
+          dateEmission: now.subtract(const Duration(days: 40)),
+          dateEcheance: now.subtract(const Duration(days: 10)),
+          totalHt: Decimal.parse('1000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+        ),
+        Facture(
+          id: 'f2',
+          userId: 'user-1',
+          numeroFacture: 'FAC-002',
+          objet: 'Retard 20j',
+          clientId: 'c2',
+          dateEmission: now.subtract(const Duration(days: 50)),
+          dateEcheance: now.subtract(const Duration(days: 20)),
+          totalHt: Decimal.parse('500'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+        ),
+      ];
+
+      when(() => mockRepository.getFactures(archives: false))
+          .thenAnswer((_) async => factures);
+      await viewModel.fetchFactures();
+
+      // ACT
+      final retard = viewModel.retardMoyen;
+
+      // ASSERT - (10 + 20) / 2 = 15
+      expect(retard, closeTo(15.0, 1.0));
+    });
+
+    test('devrait retourner 0 si aucune facture en retard', () async {
+      when(() => mockRepository.getFactures(archives: false))
+          .thenAnswer((_) async => <Facture>[]);
+      await viewModel.fetchFactures();
+
+      expect(viewModel.retardMoyen, 0.0);
+    });
+  });
+
+  group('calculateHistoriqueReglements', () {
+    test('devrait calculer le total des paiements des factures liées',
+        () async {
+      // ARRANGE
+      final linkedFactures = <Facture>[
+        Facture(
+          id: 'f-linked-1',
+          userId: 'user-1',
+          numeroFacture: 'FAC-ACOMPTE',
+          objet: 'Acompte',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('3000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'payee',
+          paiements: [
+            Paiement(
+              factureId: 'f-linked-1',
+              montant: Decimal.parse('3000'),
+              datePaiement: DateTime.now(),
+              typePaiement: 'virement',
+            ),
+          ],
+        ),
+        Facture(
+          id: 'f-linked-2',
+          userId: 'user-1',
+          numeroFacture: 'FAC-SITUATION',
+          objet: 'Situation',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('2000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'payee',
+          paiements: [
+            Paiement(
+              factureId: 'f-linked-2',
+              montant: Decimal.parse('2000'),
+              datePaiement: DateTime.now(),
+              typePaiement: 'cheque',
+            ),
+          ],
+        ),
+      ];
+
+      when(() => mockRepository.getLinkedFactures(
+            'devis-1',
+            excludeFactureId: 'facture-current',
+          )).thenAnswer((_) async => linkedFactures);
+
+      // ACT
+      final total = await viewModel.calculateHistoriqueReglements(
+          'devis-1', 'facture-current');
+
+      // ASSERT
+      expect(total, Decimal.parse('5000'));
+    });
+
+    test('devrait retourner zéro en cas d\'erreur', () async {
+      when(() => mockRepository.getLinkedFactures(any(),
+              excludeFactureId: any(named: 'excludeFactureId')))
+          .thenThrow(Exception('Erreur DB'));
+
+      final total =
+          await viewModel.calculateHistoriqueReglements('devis-1', 'f1');
+
+      expect(total, Decimal.zero);
+    });
+  });
+
   group('isLoading state', () {
     test('devrait être false initialement et après un fetch réussi', () async {
       // ARRANGE

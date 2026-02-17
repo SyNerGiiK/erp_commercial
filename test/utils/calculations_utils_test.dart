@@ -262,4 +262,128 @@ void main() {
       expect(margeNette, Decimal.parse('180'));
     });
   });
+
+  group('CalculationsUtils - calculateNetCommercial', () {
+    test('calcule le net commercial avec remise', () {
+      final result = CalculationsUtils.calculateNetCommercial(
+        Decimal.parse('1000'),
+        Decimal.parse('10'),
+      );
+      expect(result, Decimal.parse('900'));
+    });
+
+    test('retourne le HT si remise est zéro', () {
+      final result = CalculationsUtils.calculateNetCommercial(
+        Decimal.parse('1000'),
+        Decimal.zero,
+      );
+      expect(result, Decimal.parse('1000'));
+    });
+
+    test('calcule avec remise décimale', () {
+      final result = CalculationsUtils.calculateNetCommercial(
+        Decimal.parse('5000'),
+        Decimal.parse('7.5'),
+      );
+      // 5000 - (5000 * 7.5 / 100) = 5000 - 375 = 4625
+      expect(result, Decimal.parse('4625'));
+    });
+  });
+
+  group('CalculationsUtils - calculateResteAPayer', () {
+    test('calcule le reste à payer complet', () {
+      final result = CalculationsUtils.calculateResteAPayer(
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.parse('10'),
+        acompteDejaRegle: Decimal.parse('200'),
+        totalPaiements: Decimal.parse('300'),
+        totalTva: Decimal.parse('180'),
+      );
+      // Net = 1000 - 100 = 900
+      // TTC = 900 + 180 = 1080
+      // Reste = 1080 - 200 - 300 = 580
+      expect(result, Decimal.parse('580'));
+    });
+
+    test('calcule le reste sans TVA', () {
+      final result = CalculationsUtils.calculateResteAPayer(
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+        totalPaiements: Decimal.parse('500'),
+      );
+      expect(result, Decimal.parse('500'));
+    });
+  });
+
+  group('CalculationsUtils - calculateTauxMarge', () {
+    test('calcule le taux de marge', () {
+      final result = CalculationsUtils.calculateTauxMarge(
+        Decimal.parse('1000'),
+        Decimal.parse('600'),
+      );
+      // (1000 - 600) * 100 / 1000 = 40
+      expect(result, Decimal.parse('40'));
+    });
+
+    test('retourne zéro si vente est zéro', () {
+      final result = CalculationsUtils.calculateTauxMarge(
+        Decimal.zero,
+        Decimal.parse('100'),
+      );
+      expect(result, Decimal.zero);
+    });
+
+    test('gère une marge négative', () {
+      final result = CalculationsUtils.calculateTauxMarge(
+        Decimal.parse('500'),
+        Decimal.parse('700'),
+      );
+      // (500 - 700) * 100 / 500 = -40
+      expect(result, Decimal.parse('-40'));
+    });
+  });
+
+  group('CalculationsUtils - calculateTotalTva', () {
+    test('calcule la TVA totale pour plusieurs lignes', () {
+      final lignes = [
+        {'montant': Decimal.parse('1000'), 'taux': Decimal.parse('20')},
+        {'montant': Decimal.parse('500'), 'taux': Decimal.parse('10')},
+      ];
+      final result = CalculationsUtils.calculateTotalTva(lignes);
+      // 1000 * 20 / 100 + 500 * 10 / 100 = 200 + 50 = 250
+      expect(result, Decimal.parse('250'));
+    });
+
+    test('retourne zéro pour liste vide', () {
+      final result = CalculationsUtils.calculateTotalTva([]);
+      expect(result, Decimal.zero);
+    });
+  });
+
+  group('CalculationsUtils - roundDecimal', () {
+    test('arrondi à 2 décimales', () {
+      final result = CalculationsUtils.roundDecimal(
+        Decimal.parse('123.456'),
+        2,
+      );
+      expect(result, Decimal.parse('123.46'));
+    });
+
+    test('arrondi à 0 décimale', () {
+      final result = CalculationsUtils.roundDecimal(
+        Decimal.parse('99.5'),
+        0,
+      );
+      expect(result, Decimal.parse('100'));
+    });
+
+    test('arrondi négatif', () {
+      final result = CalculationsUtils.roundDecimal(
+        Decimal.parse('-10.555'),
+        2,
+      );
+      expect(result, Decimal.parse('-10.56'));
+    });
+  });
 }

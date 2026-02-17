@@ -390,7 +390,7 @@ void main() {
   });
 
   group('addEvent', () {
-    test('devrait ajouter un événement et retourner true', () async {
+    test('devrait ajouter un événement et rafraîchir la liste', () async {
       // ARRANGE
       final newEvent = PlanningEvent(
         titre: 'Nouveau RDV',
@@ -399,7 +399,20 @@ void main() {
         type: 'rdv',
       );
 
+      final updatedEvents = <PlanningEvent>[
+        PlanningEvent(
+          id: 'event-new',
+          titre: 'Nouveau RDV',
+          dateDebut: DateTime(2024, 3, 10),
+          dateFin: DateTime(2024, 3, 10),
+          type: 'rdv',
+          isManual: true,
+        ),
+      ];
+
       when(() => mockRepository.addEvent(any())).thenAnswer((_) async {});
+      when(() => mockRepository.getManualEvents())
+          .thenAnswer((_) async => updatedEvents);
 
       // ACT
       final result = await viewModel.addEvent(newEvent);
@@ -407,6 +420,9 @@ void main() {
       // ASSERT
       expect(result, true);
       verify(() => mockRepository.addEvent(any())).called(1);
+      verify(() => mockRepository.getManualEvents()).called(1);
+      expect(viewModel.events.length, 1);
+      expect(viewModel.events[0].titre, 'Nouveau RDV');
     });
 
     test('devrait retourner false en cas d\'erreur', () async {
@@ -429,8 +445,7 @@ void main() {
   });
 
   group('updateEvent', () {
-    test('devrait mettre à jour un événement existant et retourner true',
-        () async {
+    test('devrait mettre à jour un événement existant et rafraîchir', () async {
       // ARRANGE
       final existingEvent = PlanningEvent(
         id: 'event-1',
@@ -440,7 +455,20 @@ void main() {
         type: 'rdv',
       );
 
+      final updatedEvents = <PlanningEvent>[
+        PlanningEvent(
+          id: 'event-1',
+          titre: 'RDV modifié',
+          dateDebut: DateTime(2024, 3, 15),
+          dateFin: DateTime(2024, 3, 15),
+          type: 'rdv',
+          isManual: true,
+        ),
+      ];
+
       when(() => mockRepository.updateEvent(any())).thenAnswer((_) async {});
+      when(() => mockRepository.getManualEvents())
+          .thenAnswer((_) async => updatedEvents);
 
       // ACT
       final result = await viewModel.updateEvent(existingEvent);
@@ -448,6 +476,7 @@ void main() {
       // ASSERT
       expect(result, true);
       verify(() => mockRepository.updateEvent(existingEvent)).called(1);
+      verify(() => mockRepository.getManualEvents()).called(1);
     });
 
     test('devrait retourner false si l\'event n\'a pas d\'id', () async {
@@ -487,16 +516,45 @@ void main() {
   });
 
   group('deleteEvent', () {
-    test('devrait supprimer un événement', () async {
-      // ARRANGE
-      const eventId = 'event-1';
-      when(() => mockRepository.deleteEvent(eventId)).thenAnswer((_) async {});
+    test('devrait supprimer un événement et mettre à jour la liste', () async {
+      // ARRANGE - First setup events
+      final initialEvents = <PlanningEvent>[
+        PlanningEvent(
+          id: 'event-1',
+          titre: 'A supprimer',
+          dateDebut: DateTime(2024, 3, 10),
+          dateFin: DateTime(2024, 3, 10),
+          type: 'rdv',
+          isManual: true,
+        ),
+        PlanningEvent(
+          id: 'event-2',
+          titre: 'A garder',
+          dateDebut: DateTime(2024, 3, 12),
+          dateFin: DateTime(2024, 3, 12),
+          type: 'rdv',
+          isManual: true,
+        ),
+      ];
+
+      when(() => mockRepository.getManualEvents())
+          .thenAnswer((_) async => initialEvents);
+      await viewModel.fetchEvents([], []);
+      expect(viewModel.events.length, 2);
+
+      // Setup delete
+      when(() => mockRepository.deleteEvent('event-1'))
+          .thenAnswer((_) async {});
 
       // ACT
-      await viewModel.deleteEvent(eventId);
+      final result = await viewModel.deleteEvent('event-1');
 
       // ASSERT
-      verify(() => mockRepository.deleteEvent(eventId)).called(1);
+      expect(result, true);
+      verify(() => mockRepository.deleteEvent('event-1')).called(1);
+      // After delete, event-1 should be removed from _allEvents
+      expect(viewModel.events.length, 1);
+      expect(viewModel.events[0].titre, 'A garder');
     });
 
     test('devrait gérer les erreurs sans crash', () async {
@@ -506,7 +564,8 @@ void main() {
           .thenThrow(Exception('Delete failed'));
 
       // ACT & ASSERT - Should not throw
-      await viewModel.deleteEvent(eventId);
+      final result = await viewModel.deleteEvent(eventId);
+      expect(result, false);
       verify(() => mockRepository.deleteEvent(eventId)).called(1);
     });
   });

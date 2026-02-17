@@ -165,7 +165,7 @@ void main() {
     test('devrait rollback en cas d\'erreur (refresh depuis serveur)',
         () async {
       // ARRANGE
-      final createInitialItems = () => <ShoppingItem>[
+      List<ShoppingItem> createInitialItems() => <ShoppingItem>[
             ShoppingItem(
               id: 'item-1',
               userId: 'user-1',

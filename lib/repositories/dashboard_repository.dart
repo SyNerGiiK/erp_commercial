@@ -22,9 +22,11 @@ class DashboardRepository extends BaseRepository
     try {
       final response = await client
           .from('factures')
-          .select('*, paiements(*)')
+          .select('*, paiements(*), lignes_factures(*)')
           .eq('user_id', userId)
-          .neq('statut', 'brouillon');
+          .neq('statut', 'brouillon')
+          .gte('date_emission', start.toIso8601String())
+          .lte('date_emission', end.toIso8601String());
 
       return (response as List).map((e) => Facture.fromMap(e)).toList();
     } catch (e) {
@@ -34,7 +36,10 @@ class DashboardRepository extends BaseRepository
 
   @override
   Future<List<Facture>> getAllFacturesYear(int year) async {
-    return getFacturesPeriod(DateTime(year, 1, 1), DateTime(year, 12, 31));
+    return getFacturesPeriod(
+      DateTime(year, 1, 1),
+      DateTime(year, 12, 31, 23, 59, 59),
+    );
   }
 
   @override

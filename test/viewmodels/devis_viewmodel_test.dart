@@ -453,6 +453,119 @@ void main() {
       });
     });
 
+    group('duplicateDevis', () {
+      test('devrait créer une copie brouillon du devis source', () {
+        // ARRANGE
+        final source = Devis(
+          id: 'devis-original',
+          userId: 'user-1',
+          numeroDevis: 'DEV-2024-010',
+          objet: 'Projet Original',
+          clientId: 'client-1',
+          dateEmission: DateTime(2024, 1, 15),
+          dateValidite: DateTime(2024, 2, 15),
+          totalHt: Decimal.parse('8000'),
+          remiseTaux: Decimal.parse('5'),
+          acompteMontant: Decimal.parse('2000'),
+          statut: 'signe',
+          estTransforme: true,
+          lignes: [
+            LigneDevis(
+              id: 'ligne-d1',
+              description: 'Démo ligne',
+              quantite: Decimal.fromInt(4),
+              prixUnitaire: Decimal.parse('2000'),
+              totalLigne: Decimal.parse('8000'),
+              type: 'article',
+            ),
+          ],
+        );
+
+        // ACT
+        final duplicate = viewModel.duplicateDevis(source);
+
+        // ASSERT
+        expect(duplicate.id, isNull);
+        expect(duplicate.numeroDevis, '');
+        expect(duplicate.statut, 'brouillon');
+        expect(duplicate.estTransforme, false);
+        expect(duplicate.objet, 'Projet Original');
+        expect(duplicate.clientId, 'client-1');
+        expect(duplicate.totalHt, Decimal.parse('8000'));
+        expect(duplicate.lignes.length, 1);
+        expect(duplicate.lignes[0].id, isNull);
+        expect(duplicate.lignes[0].description, 'Démo ligne');
+      });
+    });
+
+    group('annulerDevis', () {
+      test('devrait annuler un devis non signé', () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'devis-to-cancel',
+            userId: 'user-1',
+            numeroDevis: 'DEV-2024-020',
+            objet: 'A annuler',
+            clientId: 'client-1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('5000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'envoye',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        when(() => mockRepository.updateDevis(any())).thenAnswer((_) async {});
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => [
+                  testDevis[0].copyWith(statut: 'annule'),
+                ]);
+
+        // ACT
+        final result = await viewModel.annulerDevis('devis-to-cancel');
+
+        // ASSERT
+        expect(result, true);
+        verify(() => mockRepository.updateDevis(any())).called(1);
+      });
+
+      test('devrait retourner false si devis signé', () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'devis-signe',
+            userId: 'user-1',
+            numeroDevis: 'DEV-2024-030',
+            objet: 'Déjà signé',
+            clientId: 'client-1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('5000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'signe',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        // ACT
+        final result = await viewModel.annulerDevis('devis-signe');
+
+        // ASSERT
+        expect(result, false);
+        verifyNever(() => mockRepository.updateDevis(any()));
+      });
+    });
+
     group('isLoading state', () {
       test('devrait être false initialement et après un fetch réussi',
           () async {

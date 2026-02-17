@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 import '../repositories/planning_repository.dart';
 import '../models/planning_model.dart';
 import '../core/base_viewmodel.dart';
@@ -110,33 +109,31 @@ class PlanningViewModel extends BaseViewModel {
   // --- CRUD (Manuels uniquement) ---
 
   Future<bool> addEvent(PlanningEvent event) async {
-    try {
-      // Pour un ajout, on s'assure que l'ID est null (géré par Supabase)
+    return await executeOperation(() async {
       await _repository.addEvent(event.copyWith(id: null));
-      // On ne refetch pas tout, on demande à la vue de rafraîchir
-      return true;
-    } catch (e) {
-      developer.log("Erreur addEvent: $e");
-      return false;
-    }
+      final manualEvents = await _repository.getManualEvents();
+      _allEvents.removeWhere((e) => e.isManual);
+      _allEvents.addAll(manualEvents);
+      _applyFilters();
+    });
   }
 
   Future<bool> updateEvent(PlanningEvent event) async {
-    if (event.id == null) return false; // ID requis pour update
-    try {
+    if (event.id == null) return false;
+    return await executeOperation(() async {
       await _repository.updateEvent(event);
-      return true;
-    } catch (e) {
-      developer.log("Erreur updateEvent: $e");
-      return false;
-    }
+      final manualEvents = await _repository.getManualEvents();
+      _allEvents.removeWhere((e) => e.isManual);
+      _allEvents.addAll(manualEvents);
+      _applyFilters();
+    });
   }
 
-  Future<void> deleteEvent(String id) async {
-    try {
+  Future<bool> deleteEvent(String id) async {
+    return await executeOperation(() async {
       await _repository.deleteEvent(id);
-    } catch (e) {
-      developer.log("Erreur deleteEvent: $e");
-    }
+      _allEvents.removeWhere((e) => e.id == id);
+      _applyFilters();
+    });
   }
 }

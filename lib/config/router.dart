@@ -21,8 +21,9 @@ import '../views/settings_root_view.dart';
 import '../views/parametres_view.dart';
 import '../views/bibliotheque_prix_view.dart';
 import '../views/profil_entreprise_view.dart';
-import '../views/ajout_devis_view.dart';
+import '../views/devis/stepper/devis_stepper_view.dart'; // ADDED
 import '../views/ajout_facture_view.dart';
+import '../views/facture/stepper/facture_stepper_view.dart'; // ADDED
 import '../views/ajout_client_view.dart';
 import '../views/ajout_depense_view.dart';
 import '../views/global_search_view.dart';
@@ -131,9 +132,9 @@ class AppRouter {
           path: '/app/ajout_devis',
           builder: (context, state) {
             if (state.extra is Devis) {
-              return AjoutDevisView(devisAModifier: state.extra as Devis);
+              return DevisStepperView(devisAModifier: state.extra as Devis);
             }
-            return const AjoutDevisView();
+            return const DevisStepperView();
           },
         ),
         GoRoute(
@@ -141,7 +142,7 @@ class AppRouter {
           builder: (context, state) {
             final id = state.pathParameters['id'];
             final devis = state.extra as Devis?;
-            return AjoutDevisView(id: id, devisAModifier: devis);
+            return DevisStepperView(id: id, devisAModifier: devis);
           },
         ),
 
@@ -151,7 +152,8 @@ class AppRouter {
           builder: (context, state) {
             // Check extra for restored draft
             if (state.extra is Facture) {
-              return AjoutFactureView(factureAModifier: state.extra as Facture);
+              return FactureStepperView(
+                  factureAModifier: state.extra as Facture);
             }
 
             final sourceDevisId = state.uri.queryParameters['source_devis'];
@@ -166,10 +168,10 @@ class AppRouter {
               devisVM.clearPendingDraftFacture();
 
               if (draftFacture != null) {
-                return AjoutFactureView(factureAModifier: draftFacture);
+                return FactureStepperView(factureAModifier: draftFacture);
               }
             }
-            return AjoutFactureView(
+            return FactureStepperView(
                 sourceDevisId: sourceDevisId, sourceFactureId: sourceFactureId);
           },
         ),
@@ -178,7 +180,7 @@ class AppRouter {
           builder: (context, state) {
             final id = state.pathParameters['id'];
             final facture = state.extra as Facture?;
-            return AjoutFactureView(id: id, factureAModifier: facture);
+            return FactureStepperView(id: id, factureAModifier: facture);
           },
         ),
 

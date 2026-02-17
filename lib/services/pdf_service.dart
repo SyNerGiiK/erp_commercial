@@ -21,6 +21,10 @@ class PdfGenerationRequest {
   final Map<String, dynamic>? profil;
   final String docTypeLabel;
   final bool isTvaApplicable;
+  // Font bytes passed from main isolate
+  final Uint8List? fontRegular;
+  final Uint8List? fontBold;
+  final Uint8List? fontItalic;
 
   PdfGenerationRequest({
     required this.document,
@@ -29,6 +33,9 @@ class PdfGenerationRequest {
     required this.profil,
     required this.docTypeLabel,
     required this.isTvaApplicable,
+    this.fontRegular,
+    this.fontBold,
+    this.fontItalic,
   });
 }
 
@@ -38,10 +45,39 @@ class PdfService {
   static const PdfColor _lightGrey = PdfColor.fromInt(0xFFF8F8F8);
   static const PdfColor _darkGrey = PdfColor.fromInt(0xFF333333);
 
-  static Future<pw.ThemeData> _loadTheme() async {
-    final fontRegular = await PdfGoogleFonts.openSansRegular();
-    final fontBold = await PdfGoogleFonts.openSansBold();
-    final fontItalic = await PdfGoogleFonts.openSansItalic();
+  // Preload fonts in main isolate
+  static Future<Map<String, Uint8List>> prepareFonts() async {
+    // PdfGoogleFonts returns Future<Font>, but implementation is TtfFont
+    // We cast to dynamic to access .data safely without importing explicit TtfFont if obscured
+    final regular = await PdfGoogleFonts.openSansRegular();
+    final bold = await PdfGoogleFonts.openSansBold();
+    final italic = await PdfGoogleFonts.openSansItalic();
+
+    return {
+      'regular': (regular as dynamic).data.buffer.asUint8List(),
+      'bold': (bold as dynamic).data.buffer.asUint8List(),
+      'italic': (italic as dynamic).data.buffer.asUint8List(),
+    };
+  }
+
+  static Future<pw.ThemeData> _loadTheme(
+      {Uint8List? regularBytes,
+      Uint8List? boldBytes,
+      Uint8List? italicBytes}) async {
+    final pw.Font fontRegular = regularBytes != null
+        ? pw.Font.ttf(regularBytes.buffer
+            .asByteData(regularBytes.offsetInBytes, regularBytes.lengthInBytes))
+        : await PdfGoogleFonts.openSansRegular();
+
+    final pw.Font fontBold = boldBytes != null
+        ? pw.Font.ttf(boldBytes.buffer
+            .asByteData(boldBytes.offsetInBytes, boldBytes.lengthInBytes))
+        : await PdfGoogleFonts.openSansBold();
+
+    final pw.Font fontItalic = italicBytes != null
+        ? pw.Font.ttf(italicBytes.buffer
+            .asByteData(italicBytes.offsetInBytes, italicBytes.lengthInBytes))
+        : await PdfGoogleFonts.openSansItalic();
 
     return pw.ThemeData.withFont(
       base: fontRegular,
@@ -87,33 +123,42 @@ class PdfService {
 
     return await generateDocument(document, client, profil,
         docType: request.docTypeLabel,
-        isTvaApplicable: request.isTvaApplicable);
+        isTvaApplicable: request.isTvaApplicable,
+        // Pass fonts
+        fontRegular: request.fontRegular,
+        fontBold: request.fontBold,
+        fontItalic: request.fontItalic);
   }
 
   // --- GÉNÉRATION DOCUMENTS (Devis, Facture, Avoir, Situation) ---
   static Future<Uint8List> generateDocument(
       dynamic document, Client? client, ProfilEntreprise? entreprise,
-      {String docType = "DOCUMENT", bool isTvaApplicable = true}) async {
-    // ... (rest of method is same, but I need to replace the whole method if I change signature or content)
-    // Actually I can keep generateDocument as is, and add a new wrapper for Isolate.
-    // The Wrapper will parse Maps and call generateDocument.
-    // So I don't need to replace generateDocument logic, just add new methods.
-
-    // BUT replace_file_content is for replacing blocks.
-    // I will append the new classes/methods at the end of the file or beginning.
-    // I'll add them at the end of imports or before PdfService class?
-    // Or inside PdfService class as static.
-
+      {String docType = "DOCUMENT",
+      bool isTvaApplicable = true,
+      Uint8List? fontRegular,
+      Uint8List? fontBold,
+      Uint8List? fontItalic}) async {
     // Let's add them at the top of PdfService class.
     return _generateDocumentInternal(document, client, entreprise,
-        docType: docType, isTvaApplicable: isTvaApplicable);
+        docType: docType,
+        isTvaApplicable: isTvaApplicable,
+        fontRegular: fontRegular,
+        fontBold: fontBold,
+        fontItalic: fontItalic);
   }
 
   // Wrapper/Alias to keep compatibility if needed, but I'll likely just move the logic.
   static Future<Uint8List> _generateDocumentInternal(
       dynamic document, Client? client, ProfilEntreprise? entreprise,
-      {String docType = "DOCUMENT", bool isTvaApplicable = true}) async {
-    final theme = await _loadTheme();
+      {String docType = "DOCUMENT",
+      bool isTvaApplicable = true,
+      Uint8List? fontRegular,
+      Uint8List? fontBold,
+      Uint8List? fontItalic}) async {
+    final theme = await _loadTheme(
+        regularBytes: fontRegular,
+        boldBytes: fontBold,
+        italicBytes: fontItalic);
 
     final logoBytes = await _downloadImage(entreprise?.logoUrl);
     final signatureEntBytes = await _downloadImage(entreprise?.signatureUrl);
@@ -300,14 +345,19 @@ class PdfService {
     var currentChunk = <dynamic>[];
 
     for (var l in lignes) {
+      // BREAK on 'saut_page' OR 'titre' (starting a new section)
       if (l.type == 'saut_page') {
-        chunks.add(currentChunk);
+        if (currentChunk.isNotEmpty) chunks.add(currentChunk);
+        chunks.add([l]); // Keep saut_page as a chunk marker
         currentChunk = [];
+      } else if (l.type == 'titre') {
+        if (currentChunk.isNotEmpty) chunks.add(currentChunk);
+        currentChunk = [l]; // Start new chunk WITH title
       } else {
         currentChunk.add(l);
       }
     }
-    chunks.add(currentChunk);
+    if (currentChunk.isNotEmpty) chunks.add(currentChunk);
 
     if (chunks.isEmpty) return pw.Container();
 
@@ -316,14 +366,56 @@ class PdfService {
       final chunk = chunks[index];
       if (chunk.isEmpty) return pw.Container();
 
-      final table = _buildChunkTable(chunk,
+      // Handle Saut de Page chunk
+      if (chunk.first.type == 'saut_page') {
+        if (index < chunks.length - 1) return pw.NewPage();
+        return pw.Container();
+      }
+
+      // Handle Title chunk
+      pw.Widget? headerWidget;
+      List<dynamic> tableRows = chunk;
+
+      if (chunk.first.type == 'titre') {
+        headerWidget = _buildSectionTitle(chunk.first.description);
+        if (chunk.length > 1) {
+          tableRows = chunk.sublist(1);
+        } else {
+          // Only a title, no table
+          return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 10),
+              child: headerWidget);
+        }
+      }
+
+      final table = _buildChunkTable(tableRows,
           isSituation: isSituation, isBL: isBL, showTva: showTva);
 
-      if (index < chunks.length - 1) {
-        return pw.Column(children: [table, pw.NewPage()]);
-      }
-      return table;
+      return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 10),
+          child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                if (headerWidget != null) ...[
+                  headerWidget,
+                  pw.SizedBox(height: 5)
+                ],
+                table
+              ]));
     }));
+  }
+
+  static pw.Widget _buildSectionTitle(String title) {
+    return pw.Container(
+        width: double.infinity,
+        color: _lightGrey,
+        padding: const pw.EdgeInsets.all(5),
+        margin: const pw.EdgeInsets.only(top: 10),
+        child: pw.Text(title.toUpperCase(),
+            style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: _primaryColor,
+                fontSize: 10)));
   }
 
   static pw.Widget _buildChunkTable(List<dynamic> chunk,

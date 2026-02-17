@@ -28,6 +28,9 @@ class FactureViewModel extends ChangeNotifier {
 
   Timer? _pdfDebounce;
 
+  // Cache for fonts to avoid reloading them on every keystroke
+  Map<String, Uint8List>? _cachedFonts;
+
   // --- AUTO-SAVE STATE ---
   Timer? _saveDebounce;
   bool _isRestoringDraft = false;
@@ -99,6 +102,9 @@ class FactureViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Ensure fonts are loaded in Main Isolate
+      _cachedFonts ??= await PdfService.prepareFonts();
+
       final docTypeLabel = (document is Facture && document.type == 'avoir')
           ? 'AVOIR'
           : 'FACTURE';
@@ -110,6 +116,10 @@ class FactureViewModel extends ChangeNotifier {
         profil: profil?.toMap(),
         docTypeLabel: docTypeLabel,
         isTvaApplicable: isTvaApplicable,
+        // Pass PRELOADED fonts
+        fontRegular: _cachedFonts?['regular'],
+        fontBold: _cachedFonts?['bold'],
+        fontItalic: _cachedFonts?['italic'],
       );
 
       final result = await compute(PdfService.generatePdfIsolate, request);
@@ -187,9 +197,17 @@ class FactureViewModel extends ChangeNotifier {
   Future<bool> finaliserFacture(Facture facture) async {
     if (facture.id == null) return false;
     return await _executeOperation(() async {
+      // 1. Génération du numéro définitif via RPC (comme Devis)
+      String numeroDefinitif = facture.numeroFacture;
+      if (numeroDefinitif.isEmpty ||
+          numeroDefinitif.trim().toLowerCase() == 'brouillon') {
+        final annee = DateTime.now().year;
+        numeroDefinitif = await _repository.generateNextNumero(annee);
+      }
+
       // Update local temporaire pour éviter re-fetch immédiat (Optimistic)
       final updated = facture.copyWith(
-        // numeroFacture: Laisse vide, sera généré par le Trigger
+        numeroFacture: numeroDefinitif,
         statut: 'validee',
         statutJuridique: 'validee',
         dateValidation: DateTime.now(),
@@ -334,6 +352,15 @@ class FactureViewModel extends ChangeNotifier {
         await _repository.updateFacture(updated);
         await fetchFactures();
       }
+    });
+  }
+
+  Future<bool> markAsSent(String id) async {
+    return await _executeOperation(() async {
+      final f = _factures.firstWhere((element) => element.id == id);
+      final updated = f.copyWith(statut: 'envoye');
+      await _repository.updateFacture(updated);
+      await fetchFactures();
     });
   }
 

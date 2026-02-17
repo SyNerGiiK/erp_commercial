@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:decimal/decimal.dart';
 
+import '../widgets/base_screen.dart';
 import '../widgets/custom_drawer.dart';
 
 import '../viewmodels/dashboard_viewmodel.dart';
@@ -34,32 +35,31 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Fond clair premium
-      appBar: AppBar(
-        title: const Text("Tableau de Bord",
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.grey[50],
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      drawer: const CustomDrawer(selectedIndex: 0),
-      body: Consumer<DashboardViewModel>(
-        builder: (context, vm, child) {
-          if (vm.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return Consumer<DashboardViewModel>(
+      builder: (context, vm, child) {
+        if (vm.isLoading) {
+          return const BaseScreen(
+            title: "Tableau de Bord",
+            menuIndex: 0,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-          final ca = vm.caEncaissePeriode;
-          final benef = vm.beneficeNetPeriode;
-          final cotis = vm.totalCotisations;
-          final dep = vm.depensesPeriode;
+        final ca = vm.caEncaissePeriode;
+        final benef = vm.beneficeNetPeriode;
+        final cotis = vm.totalCotisations;
+        final dep = vm.depensesPeriode;
 
-          return RefreshIndicator(
+        return BaseScreen(
+          title: "Tableau de Bord",
+          menuIndex: 0,
+          child: RefreshIndicator(
             onRefresh: vm.refreshData,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(24.0),
+              // Padding géré par BaseScreen (16.0), on ajoute juste un peu si besoin ou on laisse.
+              // BaseScreen met 16.0. L'ancien code avait 24.0. On peut laisser tel quel ou ajuster.
+              // Le contenu est dans un ConstrainedBox(maxWidth: 1200) fourni par BaseScreen.
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -244,21 +244,20 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                     onTap: (item) {
                       if (item is Facture) {
                         // Adaptez la route selon votre config GoRouter
-                        // context.push('/factures/detail/${item.id}');
-                        // Pour l'instant on ne fait rien ou un log car je ne connais pas vos routes exactes
-                        debugPrint("Tap Facture ${item.id}");
+                        context.push('/app/ajout_facture/${item.id}',
+                            extra: item);
                       } else if (item is Devis) {
-                        // context.push('/devis/detail/${item.id}');
-                        debugPrint("Tap Devis ${item.id}");
+                        context.push('/app/ajout_devis/${item.id}',
+                            extra: item);
                       }
                     },
                   ),
                 ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

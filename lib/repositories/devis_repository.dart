@@ -45,6 +45,8 @@ class DevisRepository implements IDevisRepository {
       final data = devis.toMap();
       data['user_id'] = userId;
       data.remove('id');
+      data.remove('lignes_devis');
+      data.remove('lignes_chiffrages');
 
       final response =
           await _client.from('devis').insert(data).select().single();
@@ -66,6 +68,8 @@ class DevisRepository implements IDevisRepository {
       final data = devis.toMap();
       data.remove('user_id');
       data.remove('id');
+      data.remove('lignes_devis');
+      data.remove('lignes_chiffrages');
 
       await _client.from('devis').update(data).eq('id', devis.id!);
 
@@ -98,7 +102,33 @@ class DevisRepository implements IDevisRepository {
 
   @override
   Future<void> finalizeDevis(String id) async {
-    await _client.from('devis').update({'statut': 'envoye'}).eq('id', id);
+    try {
+      // 1. Récupérer l'état actuel pour vérifier si un numéro existe déjà
+      final current = await _client
+          .from('devis')
+          .select('numero_devis')
+          .eq('id', id)
+          .single();
+      final currentNum = current['numero_devis'] as String?;
+
+      final updates = <String, dynamic>{
+        'statut': 'en_attente', // "En attente" de signature client
+      };
+
+      // 2. Générer un numéro définitif si c'est un brouillon
+      if (currentNum == null ||
+          currentNum.trim().toLowerCase() == 'brouillon' ||
+          currentNum.isEmpty) {
+        final newNum = await generateNextNumero(DateTime.now().year);
+        updates['numero_devis'] = newNum;
+        // La date d'émission devient la date de validation officielle
+        updates['date_emission'] = DateTime.now().toIso8601String();
+      }
+
+      await _client.from('devis').update(updates).eq('id', id);
+    } catch (e) {
+      throw _handleError(e, 'finalizeDevis');
+    }
   }
 
   @override

@@ -208,6 +208,15 @@ class DevisViewModel extends ChangeNotifier {
     });
   }
 
+  Future<bool> markAsSent(String id) async {
+    return await _executeOperation(() async {
+      final d = _devis.firstWhere((element) => element.id == id);
+      final updated = d.copyWith(statut: 'envoye');
+      await _repository.updateDevis(updated);
+      await fetchDevis();
+    });
+  }
+
   Future<bool> uploadSignature(String devisId, Uint8List bytes) async {
     if (devisId.isEmpty) return false;
     return await _executeOperation(() async {
@@ -231,7 +240,9 @@ class DevisViewModel extends ChangeNotifier {
   /// [type] : 'standard', 'acompte', 'situation', 'solde'
   /// [value] : Pourcentage ou Montant (pour acompte)
   /// [isPercent] : Si la valeur est un pourcentage
-  Facture prepareFacture(Devis d, String type, Decimal value, bool isPercent) {
+  /// [dejaRegle] : Montant total déjà réglé sur ce devis (acomptes, situations...)
+  Facture prepareFacture(Devis d, String type, Decimal value, bool isPercent,
+      {Decimal? dejaRegle}) {
     if (d.id == null) {
       throw Exception("Le devis n'a pas d'ID");
     }
@@ -251,7 +262,8 @@ class DevisViewModel extends ChangeNotifier {
       type: type,
       totalHt: Decimal.zero, // Sera recalculé
       remiseTaux: d.remiseTaux,
-      acompteDejaRegle: Decimal.zero,
+      acompteDejaRegle:
+          Decimal.zero, // Par défaut 0, sauf si on recupère l'historique
     );
 
     if (type == 'standard') {
@@ -269,7 +281,12 @@ class DevisViewModel extends ChangeNotifier {
             estSouligne: l.estSouligne,
             avancement: Decimal.fromInt(100));
       }).toList();
-      return base.copyWith(lignes: newLignes, totalHt: d.totalHt);
+      // Si standard, on peut potentiellement reprendre l'acompte du devis ou l'historique
+      return base.copyWith(
+        lignes: newLignes,
+        totalHt: d.totalHt,
+        acompteDejaRegle: dejaRegle ?? d.acompteMontant,
+      );
     }
 
     if (type == 'acompte') {
@@ -335,20 +352,20 @@ class DevisViewModel extends ChangeNotifier {
             estGras: l.estGras,
             estItalique: l.estItalique,
             estSouligne: l.estSouligne,
-            avancement: Decimal.zero);
+            avancement: value); // Utilise le pourcentage saisi dans le dialog
       }).toList();
 
       return base.copyWith(
           lignes: newLignes,
           totalHt: Decimal.zero,
-          objet: "Situation - ${d.objet}");
+          objet: "Situation - ${d.objet}",
+          acompteDejaRegle: dejaRegle ??
+              Decimal.zero // Situation souvent autonome ou cumulative?
+          );
     }
 
     if (type == 'solde') {
       // Copie à 100%
-      // La déduction des acomptes se fera via "Acompte déjà réglé" ou ligne négative ?
-      // Pour l'instant, faisons une facture complète 100%.
-      // L'utilisateur ajoutera manuellement la ligne de déduction ou on gère ça plus tard via "AcompteDéjaRéglé".
       final newLignes = d.lignes.map((l) {
         return LigneFacture(
             description: l.description,
@@ -363,8 +380,15 @@ class DevisViewModel extends ChangeNotifier {
             avancement: Decimal.fromInt(100));
       }).toList();
 
+      // ICI: On déduit tout ce qui a déjà été réglé (Acomptes, Situations...)
+      // Le champ 'acompteDejaRegle' de la facture servira à soustraire du TotalTTC
       return base.copyWith(
-          lignes: newLignes, totalHt: d.totalHt, objet: "Solde - ${d.objet}");
+        lignes: newLignes,
+        totalHt: d.totalHt,
+        objet: "Solde - ${d.objet}",
+        acompteDejaRegle:
+            dejaRegle ?? d.acompteMontant, // TOTAL déjà payé à déduire
+      );
     }
 
     return base;

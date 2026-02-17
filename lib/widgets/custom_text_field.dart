@@ -16,6 +16,7 @@ class CustomTextField extends StatelessWidget {
   final bool isPassword;
   final Key? fieldKey;
   final TextStyle? style;
+  final String? hint;
 
   const CustomTextField({
     super.key,
@@ -33,6 +34,7 @@ class CustomTextField extends StatelessWidget {
     this.isPassword = false,
     this.fieldKey,
     this.style,
+    this.hint,
   });
 
   @override
@@ -55,6 +57,7 @@ class CustomTextField extends StatelessWidget {
           ),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
         prefixIcon: icon != null ? Icon(icon, color: AppTheme.primary) : null,
         suffixIcon: suffixIcon,
         filled: true,

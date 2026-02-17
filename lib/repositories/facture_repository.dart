@@ -52,6 +52,10 @@ class FactureRepository implements IFactureRepository {
       final data = facture.toMap();
       data['user_id'] = userId;
       data.remove('id'); // L'ID est généré par Supabase
+      // Remove nested lists to avoid SQL errors
+      data.remove('lignes_factures');
+      data.remove('lignes_chiffrages');
+      data.remove('paiements');
 
       // 🔍 DEBUG: Log des données envoyées
       // print('🟦 DEBUG createFacture - Données envoyées:');
@@ -81,6 +85,10 @@ class FactureRepository implements IFactureRepository {
       data.remove('user_id'); // RLS : On ne touche jamais au user_id
       data.remove(
           'numero_facture'); // Sécurité : On ne modifie pas le numéro d'une facture existante
+      // Remove nested lists to avoid SQL errors
+      data.remove('lignes_factures');
+      data.remove('lignes_chiffrages');
+      data.remove('paiements');
 
       // 1. Update Facture
       await _client.from('factures').update(data).eq('id', facture.id!);
@@ -106,8 +114,18 @@ class FactureRepository implements IFactureRepository {
   @override
   Future<void> deleteFacture(String id) async {
     try {
-      // Supabase cascade delete gère normalement les enfants,
-      // mais on peut le forcer si la FK n'est pas en cascade.
+      // 1. Detach Avoirs (Self-referencing FK)
+      // Si cette facture a généré des avoirs, on doit couper le lien avant suppression
+      await _client
+          .from('factures')
+          .update({'facture_source_id': null}).eq('facture_source_id', id);
+
+      // 2. FORCE MANUAL CASCADE
+      await _client.from('lignes_factures').delete().eq('facture_id', id);
+      await _client.from('lignes_chiffrages').delete().eq('facture_id', id);
+      await _client.from('paiements').delete().eq('facture_id', id);
+
+      // 3. Delete Facture
       await _client.from('factures').delete().eq('id', id);
     } catch (e) {
       throw _handleError(e, 'deleteFacture');

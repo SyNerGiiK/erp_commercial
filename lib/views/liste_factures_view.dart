@@ -12,8 +12,10 @@ import '../services/pdf_service.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/app_card.dart';
 import '../widgets/statut_badge.dart';
+import '../widgets/dialogs/paiement_dialog.dart'; // Added
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
+import '../models/paiement_model.dart'; // Added
 import 'package:decimal/decimal.dart';
 
 class ListeFacturesView extends StatefulWidget {
@@ -30,7 +32,7 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this); // 5 Tabs
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final c = context;
       Future.wait([
@@ -41,6 +43,7 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
     });
   }
 
+  // ... (Keep _genererPDF helper) ...
   Future<void> _genererPDF(Facture f) async {
     final clientVM = Provider.of<ClientViewModel>(context, listen: false);
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
@@ -73,6 +76,17 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
     final vm = Provider.of<FactureViewModel>(context);
     final clientVM = Provider.of<ClientViewModel>(context);
 
+    // Filters
+    final brouillons = vm.factures
+        .where((f) =>
+            f.statut.toLowerCase() == 'brouillon' ||
+            f.numeroFacture == 'Brouillon') // Fallback
+        .toList();
+    final validees =
+        vm.factures.where((f) => f.statut.toLowerCase() == 'validee').toList();
+    final envoyees = vm.factures.where((f) => f.statut == 'envoye').toList();
+    final payees = vm.factures.where((f) => f.statut == 'payee').toList();
+
     return BaseScreen(
       menuIndex: 2,
       title: "Mes Factures",
@@ -82,9 +96,12 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
       ),
       appBarBottom: TabBar(
         controller: _tabController,
+        isScrollable: true,
         tabs: const [
           Tab(text: "Toutes"),
-          Tab(text: "En attente"),
+          Tab(text: "Brouillons"),
+          Tab(text: "Validées"),
+          Tab(text: "Envoyées"),
           Tab(text: "Payées"),
         ],
         labelColor: Colors.white,
@@ -95,13 +112,39 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
         controller: _tabController,
         children: [
           _buildList(vm.factures, clientVM),
-          _buildList(
-              vm.factures.where((f) => f.statut != 'payee').toList(), clientVM),
-          _buildList(
-              vm.factures.where((f) => f.statut == 'payee').toList(), clientVM),
+          _buildList(brouillons, clientVM),
+          _buildList(validees, clientVM),
+          _buildList(envoyees, clientVM),
+          _buildList(payees, clientVM),
         ],
       ),
     );
+  }
+
+  Future<void> _showPaiementDialog(Facture f) async {
+    final result = await showDialog<Paiement>(
+      context: context,
+      builder: (_) => const PaiementDialog(),
+    );
+
+    if (result != null && mounted) {
+      if (f.id == null) return;
+
+      final vm = Provider.of<FactureViewModel>(context, listen: false);
+      final p = result.copyWith(factureId: f.id);
+
+      final success = await vm.addPaiement(p);
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Paiement ajouté avec succès")));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Erreur lors de l'ajout")));
+        }
+      }
+    }
   }
 
   Widget _buildList(List<Facture> list, ClientViewModel clientVM) {
@@ -116,17 +159,13 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
             .cast<Client?>()
             .firstWhere((c) => c?.id == f.clientId, orElse: () => null);
 
-        // Calculs locaux (FIX TYPE)
-        final totalRegle =
-            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+        // Calculs locaux
 
-        final montantRemise =
-            ((f.totalHt * f.remiseTaux) / Decimal.fromInt(100)).toDecimal();
-        final netAPayer = f.totalHt - montantRemise;
-        final reste = netAPayer - totalRegle;
-
-        final isPayee = reste <= Decimal.zero || f.statut == 'payee';
-        final itemColor = isPayee ? Colors.green : Colors.orange;
+        Color itemColor = Colors.orange;
+        if (f.statut == 'payee') itemColor = Colors.green;
+        if (f.statut == 'envoye') itemColor = Colors.blue;
+        if (f.statut == 'validee') itemColor = Colors.indigo;
+        if (f.statut == 'brouillon') itemColor = Colors.grey;
 
         return AppCard(
           onTap: () => context.go('/app/ajout_facture/${f.id}', extra: f),
@@ -157,25 +196,51 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                       fontSize: 16,
                       color: itemColor)),
               PopupMenuButton<String>(
-                  onSelected: (val) {
-                    if (val == 'pdf') _genererPDF(f);
+                  onSelected: (val) async {
+                    final vm =
+                        Provider.of<FactureViewModel>(context, listen: false);
+                    if (val == 'pdf') {
+                      _genererPDF(f);
+                      return;
+                    }
+                    if (val == 'sent') {
+                      await vm.markAsSent(f.id!);
+                      return;
+                    }
+                    if (val == 'paiement') {
+                      _showPaiementDialog(f);
+                      return;
+                    }
                     if (val == 'archive') {
-                      Provider.of<FactureViewModel>(context, listen: false)
-                          .toggleArchive(f, true);
+                      vm.toggleArchive(f, true);
+                      return;
                     }
                     if (val == 'delete') {
-                      // Correction: deleteFacture ne prend qu'un argument
-                      Provider.of<FactureViewModel>(context, listen: false)
-                          .deleteFacture(f.id!);
+                      await vm.deleteFacture(f.id!);
+                      if (vm.errorMessage != null && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content:
+                                Text("Erreur deletion: ${vm.errorMessage}")));
+                      }
+                      return;
                     }
                     if (val == 'avoir') {
                       context.go(Uri(
                               path: '/app/ajout_facture',
                               queryParameters: {'source_facture': f.id})
                           .toString());
+                      return;
                     }
                   },
                   itemBuilder: (ctx) => [
+                        if (f.statut == 'validee')
+                          const PopupMenuItem(
+                              value: 'sent',
+                              child: Text("Marquer comme envoyé")),
+                        if (f.statut != 'brouillon' && f.statut != 'annulee')
+                          const PopupMenuItem(
+                              value: 'paiement',
+                              child: Text("Ajouter règlement")),
                         const PopupMenuItem(
                             value: 'pdf', child: Text("Voir PDF")),
                         const PopupMenuItem(

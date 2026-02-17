@@ -399,17 +399,93 @@ class _AjoutFactureViewState extends State<AjoutFactureView>
       builder: (_) => const PaiementDialog(),
     );
 
-    if (result != null && mounted) {
+    if (result == null || !mounted) return;
+
+    // CAS 1: Facture existante -> Sauvegarde directe en BDD
+    if (widget.id != null) {
+      setState(() => _isLoading = true);
+      final vm = Provider.of<FactureViewModel>(context, listen: false);
+
+      // On associe l'ID de la facture
+      final p = result.copyWith(factureId: widget.id);
+
+      final success = await vm.addPaiement(p);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Paiement ajouté avec succès")));
+          // Mise à jour de l'affichage local
+          setState(() {
+            _paiements.add(p);
+            // Refresh du statut qui a pu changer (ex: -> payée)
+            try {
+              final updated = vm.factures.firstWhere((f) => f.id == widget.id);
+              _statut = updated.statut;
+            } catch (_) {}
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Erreur lors de l'ajout")));
+        }
+      }
+    }
+    // CAS 2: Nouvelle Facture -> Ajout local (sera sauvé à la création)
+    else {
       setState(() {
         _paiements.add(result);
       });
     }
   }
 
-  void _supprimerPaiement(int index) {
-    setState(() {
-      _paiements.removeAt(index);
-    });
+  Future<void> _supprimerPaiement(int index) async {
+    final p = _paiements[index];
+
+    // CAS 1: Facture existante -> Suppression en BDD
+    if (widget.id != null && p.id != null) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Supprimer le paiement ?"),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text("Annuler")),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text("Supprimer")),
+          ],
+        ),
+      );
+
+      if (confirm != true || !mounted) return;
+
+      setState(() => _isLoading = true);
+      final vm = Provider.of<FactureViewModel>(context, listen: false);
+
+      final success = await vm.deletePaiement(p.id!, widget.id);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (success) {
+          setState(() {
+            _paiements.removeAt(index);
+            // Refresh du statut qui a pu changer (ex: payée -> validee)
+            try {
+              final updated = vm.factures.firstWhere((f) => f.id == widget.id);
+              _statut = updated.statut;
+            } catch (_) {}
+          });
+        }
+      }
+    }
+    // CAS 2: Nouvelle Facture -> Suppression locale
+    else {
+      setState(() {
+        _paiements.removeAt(index);
+      });
+    }
   }
 
   Future<void> _sauvegarder() async {

@@ -53,7 +53,8 @@ class _TransformationDialogState extends State<TransformationDialog> {
               "Facturer un % du devis avant travaux.",
               Icons.savings,
             ),
-            if (_selectedType == TransformationType.acompte)
+            if (_selectedType == TransformationType.acompte ||
+                _selectedType == TransformationType.situation)
               Padding(
                 padding: const EdgeInsets.only(left: 40, bottom: 10),
                 child: Column(
@@ -77,31 +78,34 @@ class _TransformationDialogState extends State<TransformationDialog> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text("Montant calculé :",
-                                    style: TextStyle(
-                                        fontSize: 10, color: Colors.grey)),
-                                Text(
-                                  FormatUtils.currency(_calculateAmount()),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primary),
-                                ),
-                              ],
+                        // Only show amount calculation for Acompte, as Situation is more complex (per line)
+                        if (_selectedType == TransformationType.acompte) ...[
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text("Montant calculé :",
+                                      style: TextStyle(
+                                          fontSize: 10, color: Colors.grey)),
+                                  Text(
+                                    FormatUtils.currency(_calculateAmount()),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primary),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ]
                       ],
                     ),
                   ],
@@ -191,10 +195,10 @@ class _TransformationDialogState extends State<TransformationDialog> {
 
   void _submit() {
     Decimal val = Decimal.zero;
-    if (_selectedType == TransformationType.acompte) {
+    if (_selectedType == TransformationType.acompte ||
+        _selectedType == TransformationType.situation) {
       val = Decimal.tryParse(_valueCtrl.text.replaceAll(',', '.')) ??
           Decimal.zero;
-      // Toujours en pourcentage désormais
       _isPercent = true;
     }
     Navigator.pop(

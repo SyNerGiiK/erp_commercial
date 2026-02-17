@@ -12,6 +12,7 @@ import '../viewmodels/entreprise_viewmodel.dart';
 import '../models/client_model.dart';
 import '../models/devis_model.dart';
 import '../services/pdf_service.dart';
+import '../viewmodels/facture_viewmodel.dart'; // Added for history
 import '../widgets/base_screen.dart';
 import '../widgets/app_card.dart';
 import '../widgets/statut_badge.dart';
@@ -32,7 +33,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this); // 5 Tabs
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final contextRef = context;
       Future.wait([
@@ -86,13 +87,27 @@ class _ListeDevisViewState extends State<ListeDevisView>
     if (result == null || !mounted) return;
 
     final vm = Provider.of<DevisViewModel>(context, listen: false);
+    final factureVM = Provider.of<FactureViewModel>(context, listen: false);
+
+    // Récupérer l'historique des paiements sur ce devis
+    Decimal dejaRegle = Decimal.zero;
+    if (d.id != null) {
+      try {
+        dejaRegle = await factureVM.calculateHistoriqueReglements(d.id!, "");
+      } catch (e) {
+        debugPrint("Erreur calcul historique: $e");
+      }
+    }
+
+    if (!mounted) return;
 
     try {
       final draftFacture = vm.prepareFacture(
           d,
           result.type.name, // 'standard', 'acompte', ...
           result.value,
-          result.isPercent);
+          result.isPercent,
+          dejaRegle: dejaRegle);
 
       if (!mounted) return;
 
@@ -112,6 +127,17 @@ class _ListeDevisViewState extends State<ListeDevisView>
     final vm = Provider.of<DevisViewModel>(context);
     final clientVM = Provider.of<ClientViewModel>(context);
 
+    // Filtrage
+    final brouillons = vm.devis
+        .where((d) =>
+            d.statut.toLowerCase() == 'brouillon' ||
+            d.numeroDevis == 'Brouillon') // Fallback
+        .toList();
+    final valides =
+        vm.devis.where((d) => d.statut.toLowerCase() == 'en_attente').toList();
+    final envoyes = vm.devis.where((d) => d.statut == 'envoye').toList();
+    final signes = vm.devis.where((d) => d.statut == 'signe').toList();
+
     return BaseScreen(
       menuIndex: 1,
       title: "Mes Devis",
@@ -121,9 +147,12 @@ class _ListeDevisViewState extends State<ListeDevisView>
       ),
       appBarBottom: TabBar(
         controller: _tabController,
+        isScrollable: true, // Scrollable si petit écran
         tabs: const [
           Tab(text: "Tous"),
-          Tab(text: "En cours"),
+          Tab(text: "Brouillons"),
+          Tab(text: "Validés"),
+          Tab(text: "Envoyés"),
           Tab(text: "Signés"),
         ],
         labelColor: Colors.white,
@@ -134,13 +163,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
         controller: _tabController,
         children: [
           _buildList(vm.devis, clientVM),
-          _buildList(
-              vm.devis
-                  .where((d) => d.statut == 'brouillon' || d.statut == 'envoye')
-                  .toList(),
-              clientVM),
-          _buildList(
-              vm.devis.where((d) => d.statut == 'signe').toList(), clientVM),
+          _buildList(brouillons, clientVM),
+          _buildList(valides, clientVM),
+          _buildList(envoyes, clientVM),
+          _buildList(signes, clientVM),
         ],
       ),
     );
@@ -164,6 +190,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
         Color statusColor = Colors.grey;
         if (d.statut == 'signe') statusColor = Colors.green;
         if (d.statut == 'envoye') statusColor = Colors.blue;
+        if (d.statut == 'en_attente') statusColor = Colors.orange;
 
         return AppCard(
           onTap: () => context.go('/app/ajout_devis/${d.id}', extra: d),
@@ -206,21 +233,39 @@ class _ListeDevisViewState extends State<ListeDevisView>
               const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.grey),
-                onSelected: (val) {
+                onSelected: (val) async {
                   if (val == 'pdf') _genererPDF(d);
                   if (val == 'bl') _genererPDF(d, docType: "BON DE LIVRAISON");
                   if (val == 'bc') _genererPDF(d, docType: "BON DE COMMANDE");
                   if (val == 'facture') _showTransformationDialog(d);
+                  if (val == 'sent') {
+                    final success = await Provider.of<DevisViewModel>(context,
+                            listen: false)
+                        .markAsSent(d.id!);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(success
+                              ? "Devis marqué comme envoyé"
+                              : "Erreur lors de la mise à jour")));
+                    }
+                  }
                   if (val == 'archive') {
-                    Provider.of<DevisViewModel>(context, listen: false)
-                        .toggleArchive(d, true);
+                    if (context.mounted) {
+                      Provider.of<DevisViewModel>(context, listen: false)
+                          .toggleArchive(d, true);
+                    }
                   }
                   if (val == 'delete') {
-                    Provider.of<DevisViewModel>(context, listen: false)
-                        .deleteDevis(d.id!);
+                    if (context.mounted) {
+                      Provider.of<DevisViewModel>(context, listen: false)
+                          .deleteDevis(d.id!);
+                    }
                   }
                 },
                 itemBuilder: (ctx) => [
+                  if (d.statut == 'en_attente')
+                    const PopupMenuItem(
+                        value: 'sent', child: Text("Marquer comme envoyé")),
                   const PopupMenuItem(value: 'pdf', child: Text("Voir PDF")),
                   if (d.statut == 'signe') ...[
                     const PopupMenuItem(

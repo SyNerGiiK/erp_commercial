@@ -75,13 +75,13 @@ class ProfilEntreprise {
       bic: map['bic'],
       frequenceCotisation:
           FrequenceCotisationExtension.fromDbValue(map['frequence_cotisation']),
-      logoUrl: map[
-          'logo_base64'], // Mapping vers la colonne historique (qui contient maintenant une URL)
-      signatureUrl: map['signature_base64'], // Idem
+      logoUrl: map['logo_url'],
+      signatureUrl: map['signature_url'],
       mentionsLegales: map['mentions_legales'],
       typeEntreprise: _parseTypeEntreprise(map['type_entreprise']),
       regimeFiscal: _parseRegimeFiscal(map['regime_fiscal']),
       caisseRetraite: _parseCaisseRetraite(map['caisse_retraite']),
+      tvaApplicable: map['tva_applicable'] ?? false,
     );
   }
 
@@ -133,12 +133,13 @@ class ProfilEntreprise {
       'iban': iban,
       'bic': bic,
       'frequence_cotisation': frequenceCotisation.dbValue,
-      'logo_base64': logoUrl, // On écrit l'URL dans la colonne existante
-      'signature_base64': signatureUrl, // Idem
+      'logo_url': logoUrl,
+      'signature_url': signatureUrl,
       'mentions_legales': mentionsLegales,
       'type_entreprise': typeEntreprise.name,
       'regime_fiscal': regimeFiscal?.name,
       'caisse_retraite': caisseRetraite.name,
+      'tva_applicable': tvaApplicable,
     };
   }
 

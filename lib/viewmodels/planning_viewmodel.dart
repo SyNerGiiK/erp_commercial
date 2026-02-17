@@ -3,7 +3,10 @@ import '../repositories/planning_repository.dart';
 import '../models/planning_model.dart';
 
 class PlanningViewModel extends ChangeNotifier {
-  final IPlanningRepository _repository = PlanningRepository();
+  final IPlanningRepository _repository;
+
+  PlanningViewModel({IPlanningRepository? repository})
+      : _repository = repository ?? PlanningRepository();
 
   final List<PlanningEvent> _allEvents = [];
   List<PlanningEvent> _filteredEvents = [];
@@ -12,6 +15,8 @@ class PlanningViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   // Filtres
   bool _showChantiers = true;
@@ -45,8 +50,13 @@ class PlanningViewModel extends ChangeNotifier {
   }
 
   Future<void> fetchEvents(dynamic factures, dynamic devis) async {
-    _isLoading = true;
-    notifyListeners();
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       _allEvents.clear();
 
@@ -95,8 +105,12 @@ class PlanningViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint("Erreur PlanningVM fetchEvents: $e");
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

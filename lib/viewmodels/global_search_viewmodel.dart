@@ -5,10 +5,15 @@ import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 
 class GlobalSearchViewModel extends ChangeNotifier {
-  final IGlobalSearchRepository _repository = GlobalSearchRepository();
+  final IGlobalSearchRepository _repository;
+
+  GlobalSearchViewModel({IGlobalSearchRepository? repository})
+      : _repository = repository ?? GlobalSearchRepository();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   List<Client> _clientsResults = [];
   List<Facture> _facturesResults = [];
@@ -24,8 +29,12 @@ class GlobalSearchViewModel extends ChangeNotifier {
       return;
     }
 
-    _isLoading = true;
-    notifyListeners();
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
       final results = await _repository.searchAll(query);
@@ -35,8 +44,12 @@ class GlobalSearchViewModel extends ChangeNotifier {
     } catch (e) {
       _clearResults();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

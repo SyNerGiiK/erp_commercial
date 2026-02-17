@@ -4,10 +4,15 @@ import '../models/shopping_model.dart';
 import '../repositories/shopping_repository.dart';
 
 class ShoppingViewModel extends ChangeNotifier {
-  final IShoppingRepository _repository = ShoppingRepository();
+  final IShoppingRepository _repository;
+
+  ShoppingViewModel({IShoppingRepository? repository})
+      : _repository = repository ?? ShoppingRepository();
 
   List<ShoppingItem> _items = [];
   bool _isLoading = false;
+
+  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   List<ShoppingItem> get items => _items;
   bool get isLoading => _isLoading;
@@ -16,15 +21,24 @@ class ShoppingViewModel extends ChangeNotifier {
       _items.fold(Decimal.zero, (sum, item) => sum + item.totalLigne);
 
   Future<void> fetchItems() async {
-    _isLoading = true;
-    notifyListeners();
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       _items = await _repository.getItems();
     } catch (e) {
       _items = [];
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -61,10 +75,24 @@ class ShoppingViewModel extends ChangeNotifier {
   }
 
   Future<void> _executeOperation(Future<void> Function() operation) async {
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       await operation();
     } catch (e) {
-      // Géré silencieusement ou via log global
+      debugPrint("ShoppingViewModel Error: $e");
+    } finally {
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

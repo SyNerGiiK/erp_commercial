@@ -8,10 +8,15 @@ import '../models/photo_model.dart';
 import '../repositories/client_repository.dart';
 
 class ClientViewModel extends ChangeNotifier {
-  final IClientRepository _repository = ClientRepository();
+  final IClientRepository _repository;
 
   List<Client> _clients = [];
   bool _isLoading = false;
+
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
+
+  ClientViewModel({IClientRepository? repository})
+      : _repository = repository ?? ClientRepository();
 
   List<Client> get clients => _clients;
   bool get isLoading => _isLoading;
@@ -110,8 +115,14 @@ class ClientViewModel extends ChangeNotifier {
   // --- HELPERS ---
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {
-    _isLoading = true;
-    notifyListeners();
+    _loadingDepth++;
+
+    // Ne marquer comme loading que pour le premier appel (niveau 0 → 1)
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       await operation();
       return true;
@@ -119,8 +130,13 @@ class ClientViewModel extends ChangeNotifier {
       developer.log("🔴 ClientVM Error", error: e);
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      // Ne retirer le loading que quand tous les appels sont terminés
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

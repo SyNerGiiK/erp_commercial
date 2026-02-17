@@ -154,15 +154,14 @@ class Devis {
   /// Taux de marge brute en %
   Decimal get tauxMargeBrute {
     if (totalHt <= Decimal.zero) return Decimal.zero;
-    // Division returns Rational -> toDecimal()
-    final tauxRational = (margeBrute * Decimal.fromInt(100)) / totalHt;
-    return tauxRational.toDecimal();
+    // Division returns Rational -> toDecimal() immédiatement
+    return ((margeBrute * Decimal.fromInt(100)) / totalHt).toDecimal();
   }
 
   /// Net commercial (HT - Remise)
   Decimal get netCommercial {
-    final remiseRational = (totalHt * remiseTaux) / Decimal.fromInt(100);
-    final remiseMontant = remiseRational.toDecimal();
+    final remiseMontant =
+        ((totalHt * remiseTaux) / Decimal.fromInt(100)).toDecimal();
     return totalHt - remiseMontant;
   }
 
@@ -185,8 +184,7 @@ class Devis {
   Decimal calculerTauxResultatNet(ConfigCharges config) {
     if (totalHt <= Decimal.zero) return Decimal.zero;
     final resultat = calculerResultatNet(config);
-    final tauxRational = (resultat * Decimal.fromInt(100)) / totalHt;
-    return tauxRational.toDecimal();
+    return ((resultat * Decimal.fromInt(100)) / totalHt).toDecimal();
   }
 
   Devis({

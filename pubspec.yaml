@@ -56,6 +56,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^3.0.1 # Suffisant, la v6 est très agressive
+  mocktail: ^1.0.0      # Mocking pour tests unitaires
 
 flutter:
   uses-material-design: true

@@ -13,10 +13,15 @@ import '../models/enums/entreprise_enums.dart';
 enum DashboardPeriod { mois, trimestre, annee }
 
 class DashboardViewModel extends ChangeNotifier {
-  final IDashboardRepository _repository = DashboardRepository();
+  final IDashboardRepository _repository;
+
+  DashboardViewModel({IDashboardRepository? repository})
+      : _repository = repository ?? DashboardRepository();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  int _loadingDepth = 0; // Compteur réentrant pour appels imbriqués
 
   DashboardPeriod _selectedPeriod = DashboardPeriod.mois;
   DashboardPeriod get selectedPeriod => _selectedPeriod;
@@ -97,9 +102,12 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshData() async {
-    if (_isLoading) return;
-    _isLoading = true;
-    Future.microtask(() => notifyListeners());
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      Future.microtask(() => notifyListeners());
+    }
 
     try {
       final now = DateTime.now();
@@ -142,8 +150,12 @@ class DashboardViewModel extends ChangeNotifier {
     } catch (e, s) {
       developer.log("🔴 Erreur Dashboard VM", error: e, stackTrace: s);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

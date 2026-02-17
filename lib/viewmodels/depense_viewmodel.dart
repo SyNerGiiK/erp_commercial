@@ -4,10 +4,14 @@ import '../models/depense_model.dart';
 import '../repositories/depense_repository.dart';
 
 class DepenseViewModel extends ChangeNotifier {
-  final IDepenseRepository _repository = DepenseRepository();
+  final IDepenseRepository _repository;
+
+  DepenseViewModel({IDepenseRepository? repository})
+      : _repository = repository ?? DepenseRepository();
 
   List<Depense> _depenses = [];
   bool _isLoading = false;
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   List<Depense> get depenses => _depenses;
   bool get isLoading => _isLoading;
@@ -16,17 +20,9 @@ class DepenseViewModel extends ChangeNotifier {
       _depenses.fold(Decimal.zero, (sum, item) => sum + item.montant);
 
   Future<void> fetchDepenses() async {
-    if (_isLoading) return;
-    _isLoading = true;
-    Future.microtask(() => notifyListeners());
-    try {
+    await _executeOperation(() async {
       _depenses = await _repository.getDepenses();
-    } catch (e) {
-      _depenses = [];
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   Future<bool> addDepense(Depense depense) async {
@@ -51,6 +47,13 @@ class DepenseViewModel extends ChangeNotifier {
   }
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       await operation();
       return true;
@@ -59,6 +62,13 @@ class DepenseViewModel extends ChangeNotifier {
         print("🔴 DepenseViewModel Error: $e");
       }
       return false;
+    } finally {
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

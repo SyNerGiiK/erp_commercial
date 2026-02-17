@@ -6,8 +6,7 @@ class CalculationsUtils {
   static Decimal calculateCharges(Decimal base, Decimal taux) {
     if (base == Decimal.zero || taux == Decimal.zero) return Decimal.zero;
     final baseTimesTaux = base * taux;
-    final result = baseTimesTaux / Decimal.fromInt(100);
-    return result.toDecimal();
+    return (baseTimesTaux / Decimal.fromInt(100)).toDecimal();
   }
 
   /// Calcule une marge nette
@@ -34,8 +33,7 @@ class CalculationsUtils {
     if (totalTTC == Decimal.zero || tauxPercent == Decimal.zero) {
       return Decimal.zero;
     }
-    final val = (totalTTC * tauxPercent) / Decimal.fromInt(100);
-    return val.toDecimal();
+    return ((totalTTC * tauxPercent) / Decimal.fromInt(100)).toDecimal();
   }
 
   /// Calcule un taux d'acompte selon un montant (Retourne Decimal)

@@ -20,25 +20,19 @@ class ConfigCharges {
 
   /// Calcule le montant total des charges sur un chiffre d'affaires
   Decimal calculerCharges(Decimal chiffreAffaires) {
-    // Division returns Rational -> must convert to Decimal
-    final chargesRational =
-        (chiffreAffaires * tauxTotal) / Decimal.fromInt(100);
-    return chargesRational.toDecimal();
+    // Division returns Rational -> must convert to Decimal immédiatement
+    return ((chiffreAffaires * tauxTotal) / Decimal.fromInt(100)).toDecimal();
   }
 
   /// Calcule le détail des charges par type
   Map<String, Decimal> calculerDetailCharges(Decimal chiffreAffaires) {
-    final urssafRational =
-        (chiffreAffaires * tauxUrssaf) / Decimal.fromInt(100);
-    final retraiteRational =
-        (chiffreAffaires * tauxRetraite) / Decimal.fromInt(100);
-    final cfpCsgRational =
-        (chiffreAffaires * tauxCfpCsg) / Decimal.fromInt(100);
-
     return {
-      'urssaf': urssafRational.toDecimal(),
-      'retraite': retraiteRational.toDecimal(),
-      'cfpCsg': cfpCsgRational.toDecimal(),
+      'urssaf':
+          ((chiffreAffaires * tauxUrssaf) / Decimal.fromInt(100)).toDecimal(),
+      'retraite':
+          ((chiffreAffaires * tauxRetraite) / Decimal.fromInt(100)).toDecimal(),
+      'cfpCsg':
+          ((chiffreAffaires * tauxCfpCsg) / Decimal.fromInt(100)).toDecimal(),
     };
   }
 

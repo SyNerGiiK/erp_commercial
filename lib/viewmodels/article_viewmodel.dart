@@ -3,27 +3,25 @@ import '../models/article_model.dart';
 import '../repositories/article_repository.dart';
 
 class ArticleViewModel extends ChangeNotifier {
-  final IArticleRepository _repository = ArticleRepository();
+  final IArticleRepository _repository;
+
+  ArticleViewModel({IArticleRepository? repository})
+      : _repository = repository ?? ArticleRepository();
 
   List<Article> _articles = [];
   bool _isLoading = false;
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   List<Article> get articles => _articles;
   bool get isLoading => _isLoading;
 
   Future<void> fetchArticles() async {
-    _isLoading = true;
-    notifyListeners();
-    try {
+    await _executeOperation(() async {
       _articles = await _repository.getArticles();
-    } catch (e) {
+    }, onError: () {
       // En cas d'erreur, on garde une liste vide pour éviter les crashs UI
       _articles = [];
-      debugPrint("Erreur ArticleVM: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   Future<bool> addArticle(Article article) async {
@@ -47,13 +45,35 @@ class ArticleViewModel extends ChangeNotifier {
     });
   }
 
-  Future<bool> _executeOperation(Future<void> Function() operation) async {
+  Future<bool> _executeOperation(
+    Future<void> Function() operation, {
+    Function()? onError,
+  }) async {
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
     try {
       await operation();
       return true;
     } catch (e) {
-      debugPrint("Erreur opération ArticleVM: $e");
+      if (kDebugMode) {
+        print("🔴 ArticleViewModel Error: $e");
+      }
+      if (onError != null) {
+        onError();
+      }
       return false;
+    } finally {
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

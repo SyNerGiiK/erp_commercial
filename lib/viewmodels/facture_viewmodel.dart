@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/facture_model.dart';
 import '../models/paiement_model.dart';
 import '../models/client_model.dart'; // Added
@@ -13,8 +14,11 @@ import '../config/supabase_config.dart';
 import '../services/local_storage_service.dart';
 
 class FactureViewModel extends ChangeNotifier {
-  final IFactureRepository _repository = FactureRepository();
-  final _client = SupabaseConfig.client;
+  final IFactureRepository _repository;
+  SupabaseClient get _client => SupabaseConfig.client;
+
+  FactureViewModel({IFactureRepository? repository})
+      : _repository = repository ?? FactureRepository();
 
   // --- PDF GENERATION STATE ---
   bool _isRealTimePreviewEnabled = false;
@@ -146,6 +150,8 @@ class FactureViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
@@ -302,8 +308,8 @@ class FactureViewModel extends ChangeNotifier {
           facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
 
       final remiseAmount =
-          (facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100);
-      final netCommercial = facture.totalHt - remiseAmount.toDecimal();
+          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100)).toDecimal();
+      final netCommercial = facture.totalHt - remiseAmount;
 
       final reste = netCommercial - facture.acompteDejaRegle - totalRegle;
 
@@ -367,8 +373,13 @@ class FactureViewModel extends ChangeNotifier {
   // --- HELPERS ---
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {
-    _setLoading(true);
-    _clearError();
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _setLoading(true);
+      _clearError();
+    }
+
     try {
       await operation();
       return true;
@@ -376,7 +387,11 @@ class FactureViewModel extends ChangeNotifier {
       _setError(e);
       return false;
     } finally {
-      _setLoading(false);
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -435,8 +450,8 @@ class FactureViewModel extends ChangeNotifier {
         // Attention: Dans Facture, totalHt est le total des lignes.
         // Remise est déduite du HT.
         // Net Commercial = HT - Remise.
-        final remiseAmount = (f.totalHt * f.remiseTaux) / Decimal.fromInt(100);
-        final netCommercial = f.totalHt - remiseAmount.toDecimal();
+        final remiseAmount = ((f.totalHt * f.remiseTaux) / Decimal.fromInt(100)).toDecimal();
+        final netCommercial = f.totalHt - remiseAmount;
 
         // Reste = Net - AcompteInitial - TotalReglé
         // (On simplifie ici l'historique acomptes liés pour la perf standard,

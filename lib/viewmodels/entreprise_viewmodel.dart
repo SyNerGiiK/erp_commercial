@@ -6,52 +6,38 @@ import '../models/enums/entreprise_enums.dart';
 import '../repositories/entreprise_repository.dart';
 
 class EntrepriseViewModel extends ChangeNotifier {
-  final IEntrepriseRepository _repository = EntrepriseRepository();
+  final IEntrepriseRepository _repository;
+
+  EntrepriseViewModel({IEntrepriseRepository? repository})
+      : _repository = repository ?? EntrepriseRepository();
 
   ProfilEntreprise? _profil;
   bool _isLoading = false;
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   ProfilEntreprise? get profil => _profil;
   bool get isLoading => _isLoading;
 
   /// Récupère le profil entreprise
   Future<void> fetchProfil() async {
-    _isLoading = true;
-    notifyListeners();
-    try {
+    await _executeOperation(() async {
       _profil = await _repository.getProfil();
-    } catch (e) {
-      debugPrint("Erreur ViewModel Profil: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   /// Sauvegarde (Insert ou Update)
   Future<bool> saveProfil(ProfilEntreprise profil) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
+    return await _executeOperation(() async {
       await _repository.saveProfil(profil);
       await fetchProfil();
-      return true;
-    } catch (e) {
-      debugPrint("Erreur saveProfil: $e");
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   /// Upload Logo ou Signature
   Future<bool> uploadImage(XFile file, String type) async {
     if (_profil == null) return false;
 
-    _isLoading = true;
-    notifyListeners();
-    try {
+    return await _executeOperation(() async {
       final url = await _repository.uploadImage(file, type);
 
       // Mise à jour locale du profil avec la nouvelle URL
@@ -65,24 +51,14 @@ class EntrepriseViewModel extends ChangeNotifier {
       // Sauvegarde immédiate en base
       await _repository.saveProfil(newProfil);
       await fetchProfil();
-      return true;
-    } catch (e) {
-      debugPrint("Erreur uploadImage: $e");
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-      notifyListeners();
-    }
+    });
   }
 
   /// Upload Signature depuis Canvas (Bytes)
   Future<bool> uploadSignatureBytes(Uint8List bytes) async {
     if (_profil == null) return false;
 
-    _isLoading = true;
-    notifyListeners();
-    try {
+    return await _executeOperation(() async {
       final url = await _repository.uploadSignatureBytes(bytes);
 
       // MAJ Locale
@@ -91,14 +67,7 @@ class EntrepriseViewModel extends ChangeNotifier {
       // Sauvegarde
       await _repository.saveProfil(newProfil);
       await fetchProfil();
-      return true;
-    } catch (e) {
-      debugPrint("Erreur uploadSignatureBytes: $e");
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   /// Suggère les mentions légales obligatoires selon le type d'entreprise
@@ -115,5 +84,29 @@ class EntrepriseViewModel extends ChangeNotifier {
   bool get isTvaApplicable {
     if (_profil == null) return false;
     return _profil!.tvaApplicable;
+  }
+
+  Future<bool> _executeOperation(Future<void> Function() operation) async {
+    _loadingDepth++;
+
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      notifyListeners();
+    }
+
+    try {
+      await operation();
+      return true;
+    } catch (e) {
+      debugPrint("🔴 EntrepriseViewModel Error: $e");
+      return false;
+    } finally {
+      _loadingDepth--;
+
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 }

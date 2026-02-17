@@ -13,7 +13,10 @@ import '../config/supabase_config.dart'; // Added
 import '../services/local_storage_service.dart'; // Auto-Save
 
 class DevisViewModel extends ChangeNotifier {
-  final IDevisRepository _repository = DevisRepository();
+  final IDevisRepository _repository;
+
+  DevisViewModel({IDevisRepository? repository})
+      : _repository = repository ?? DevisRepository();
 
   // --- PDF GENERATION STATE ---
   bool _isRealTimePreviewEnabled = false;
@@ -143,6 +146,8 @@ class DevisViewModel extends ChangeNotifier {
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  int _loadingDepth = 0; // Compteur pour gérer les appels imbriqués
 
   // Stockage temporaire du draft facture pour la transformation
   Facture? _pendingDraftFacture;
@@ -416,10 +421,10 @@ class DevisViewModel extends ChangeNotifier {
 
     if (total == 0) return Decimal.zero;
 
-    // Fix: Decimal / Decimal -> Rational. Rational * Rational -> Rational.
-    final ratio = Decimal.fromInt(signed) / Decimal.fromInt(total); // Rational
-    final percentage = ratio * Decimal.fromInt(100).toRational(); // Rational
-    return percentage.toDecimal();
+    // Fix: Convertir immédiatement les divisions en Decimal
+    final ratio = (Decimal.fromInt(signed) / Decimal.fromInt(total)).toDecimal();
+    final percentage = ratio * Decimal.fromInt(100);
+    return percentage;
   }
 
   /// Retourne les derniers devis modifiés/créés
@@ -432,9 +437,14 @@ class DevisViewModel extends ChangeNotifier {
   }
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {
-    if (_isLoading) return false;
-    _isLoading = true;
-    Future.microtask(() => notifyListeners());
+    _loadingDepth++;
+
+    // Ne marquer comme loading que pour le premier appel (niveau 0 → 1)
+    if (_loadingDepth == 1) {
+      _isLoading = true;
+      Future.microtask(() => notifyListeners());
+    }
+
     try {
       await operation();
       return true;
@@ -442,8 +452,13 @@ class DevisViewModel extends ChangeNotifier {
       developer.log("🔴 DevisVM Error", error: e);
       return false;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _loadingDepth--;
+
+      // Ne retirer le loading que quand tous les appels sont terminés
+      if (_loadingDepth == 0) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

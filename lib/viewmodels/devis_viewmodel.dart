@@ -57,7 +57,7 @@ class DevisViewModel extends ChangeNotifier {
   /// Tente de charger un brouillon local
   Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
     _isRestoringDraft = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
 
     final key = LocalStorageService.generateKey('devis', id);
     final data = await LocalStorageService.getDraft(key);
@@ -408,8 +408,9 @@ class DevisViewModel extends ChangeNotifier {
   }
 
   Future<bool> _executeOperation(Future<void> Function() operation) async {
+    if (_isLoading) return false;
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
     try {
       await operation();
       return true;

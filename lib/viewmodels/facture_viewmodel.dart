@@ -50,7 +50,7 @@ class FactureViewModel extends ChangeNotifier {
   // --- AUTO-SAVE LOGIC ---
   Future<Map<String, dynamic>?> checkLocalDraft(String? id) async {
     _isRestoringDraft = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
     final key = LocalStorageService.generateKey('facture', id);
     final data = await LocalStorageService.getDraft(key);
     _isRestoringDraft = false;
@@ -354,14 +354,15 @@ class FactureViewModel extends ChangeNotifier {
   }
 
   void _setLoading(bool value) {
+    if (_isLoading == value) return;
     _isLoading = value;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 
   void _setError(dynamic error) {
     _errorMessage = error.toString();
     developer.log("FactureViewModel Error", error: error);
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 
   // --- DASHBOARD & KPI ---

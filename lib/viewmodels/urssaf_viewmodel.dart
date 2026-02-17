@@ -13,8 +13,9 @@ class UrssafViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> loadConfig() async {
+    if (_isLoading) return;
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
     try {
       _config = await _repository.getConfig();
     } catch (e) {

@@ -97,8 +97,9 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshData() async {
+    if (_isLoading) return;
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
 
     try {
       final now = DateTime.now();

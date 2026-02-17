@@ -16,8 +16,9 @@ class DepenseViewModel extends ChangeNotifier {
       _depenses.fold(Decimal.zero, (sum, item) => sum + item.montant);
 
   Future<void> fetchDepenses() async {
+    if (_isLoading) return;
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
     try {
       _depenses = await _repository.getDepenses();
     } catch (e) {

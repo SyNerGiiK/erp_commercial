@@ -268,7 +268,19 @@ class PdfService {
             if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
             pw.SizedBox(height: 20),
             _buildFooterSignatures(
-                notes, entreprise, signatureEntBytes, signatureClientBytes),
+              notes,
+              entreprise,
+              signatureEntBytes,
+              signatureClientBytes,
+              dateEcheance: document is Facture ? document.dateEcheance : null,
+              conditionsReglement:
+                  document is Facture ? document.conditionsReglement : null,
+              numeroBonCommande:
+                  document is Facture ? document.numeroBonCommande : null,
+              motifAvoir: document is Facture ? document.motifAvoir : null,
+              isAvoir: document is Facture && document.type == 'avoir',
+              factureSourceNumero: null, // Resolved by caller if needed
+            ),
           ];
         },
         footer: (context) {
@@ -605,8 +617,22 @@ class PdfService {
         ]);
   }
 
-  static pw.Widget _buildFooterSignatures(String? notes, ProfilEntreprise? ent,
-      Uint8List? signatureEnt, Uint8List? signatureClient) {
+  static pw.Widget _buildFooterSignatures(
+    String? notes,
+    ProfilEntreprise? ent,
+    Uint8List? signatureEnt,
+    Uint8List? signatureClient, {
+    // Informations facture pour mentions légales
+    DateTime? dateEcheance,
+    String? conditionsReglement,
+    String? numeroBonCommande,
+    String? motifAvoir,
+    bool isAvoir = false,
+    String? factureSourceNumero, // Numéro de la facture d'origine (pour avoir)
+  }) {
+    final _legalStyle =
+        pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic);
+
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -615,6 +641,7 @@ class PdfService {
           child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // === NOTES PUBLIQUES ===
                 if (notes != null && notes.isNotEmpty) ...[
                   pw.Container(
                       padding: const pw.EdgeInsets.all(5),
@@ -632,24 +659,84 @@ class PdfService {
                                 style: const pw.TextStyle(fontSize: 8)),
                           ])),
                 ],
-                // MENTIONS LÉGALES OBLIGATOIRES (MICRO-ENTREPRENEUR)
-                if (ent != null && ent.typeEntreprise.isMicroEntrepreneur) ...[
-                  pw.SizedBox(height: 10),
-                  if (!(ent.mentionsLegales?.contains("TVA non applicable") ??
-                      false))
+
+                pw.SizedBox(height: 8),
+
+                // === INFORMATIONS PAIEMENT (factures uniquement) ===
+                if (dateEcheance != null) ...[
+                  pw.Text(
+                    "Date d'échéance : ${DateFormat('dd/MM/yyyy').format(dateEcheance)}",
+                    style: pw.TextStyle(
+                        fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
+                if (conditionsReglement != null &&
+                    conditionsReglement.isNotEmpty)
+                  pw.Text("Conditions de règlement : $conditionsReglement",
+                      style: const pw.TextStyle(fontSize: 8)),
+
+                if (numeroBonCommande != null && numeroBonCommande.isNotEmpty)
+                  pw.Text("N° Bon de Commande : $numeroBonCommande",
+                      style: const pw.TextStyle(fontSize: 8)),
+
+                // === RÉFÉRENCE AVOIR → FACTURE SOURCE ===
+                if (isAvoir && factureSourceNumero != null) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    "Avoir sur facture n° $factureSourceNumero",
+                    style: pw.TextStyle(
+                        fontSize: 8, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
+                if (isAvoir && motifAvoir != null && motifAvoir.isNotEmpty) ...[
+                  pw.Text("Motif : $motifAvoir",
+                      style: const pw.TextStyle(fontSize: 8)),
+                ],
+
+                pw.SizedBox(height: 8),
+
+                // === MENTIONS LÉGALES OBLIGATOIRES ===
+                if (ent != null) ...[
+                  // TVA non applicable (micro-entrepreneur sans TVA)
+                  // Ne pas dupliquer si déjà dans mentionsLegales
+                  if (ent.typeEntreprise.isMicroEntrepreneur &&
+                      !ent.tvaApplicable &&
+                      !(ent.mentionsLegales?.contains("TVA non applicable") ??
+                          false))
                     pw.Text(
                       "TVA non applicable, art. 293 B du CGI.",
-                      style: pw.TextStyle(
-                          fontSize: 8, fontStyle: pw.FontStyle.italic),
+                      style: _legalStyle,
                     ),
-                  // Autre mention obligatoire dispenses
-                  if (!(ent.mentionsLegales?.contains("Dispensé") ?? false))
+
+                  // Dispense d'immatriculation : SEULEMENT si non immatriculé
+                  if (ent.typeEntreprise.isMicroEntrepreneur &&
+                      !ent.estImmatricule &&
+                      !(ent.mentionsLegales?.contains("Dispensé") ?? false))
                     pw.Text(
                       "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).",
-                      style: pw.TextStyle(
-                          fontSize: 8, fontStyle: pw.FontStyle.italic),
+                      style: _legalStyle,
                     ),
-                ]
+
+                  // Pénalités de retard (obligatoire CGI art. 289 / Code Commerce L441-10)
+                  pw.Text(
+                    "En cas de retard de paiement, une pénalité de ${ent.tauxPenalitesRetard.toStringAsFixed(2)}% par an sera appliquée (3 fois le taux d'intérêt légal minimum).",
+                    style: _legalStyle,
+                  ),
+
+                  // Indemnité forfaitaire de recouvrement (obligatoire depuis 01/01/2013)
+                  pw.Text(
+                    "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40,00 €.",
+                    style: _legalStyle,
+                  ),
+
+                  // Escompte
+                  pw.Text(
+                    ent.escompteApplicable
+                        ? "Escompte pour paiement anticipé : selon conditions convenues."
+                        : "Pas d'escompte pour paiement anticipé.",
+                    style: _legalStyle,
+                  ),
+                ],
               ]),
         ),
         pw.SizedBox(width: 20),

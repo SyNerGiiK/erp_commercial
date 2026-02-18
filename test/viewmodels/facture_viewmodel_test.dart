@@ -389,7 +389,7 @@ void main() {
         Facture(
           id: 'facture-1',
           userId: 'user-1',
-          numeroFacture: 'FAC-2024-001',
+          numeroFacture: 'F-2024-0001',
           objet: 'Test',
           clientId: 'client-1',
           dateEmission: DateTime.now(),
@@ -402,9 +402,8 @@ void main() {
         ),
       ];
 
-      when(() => mockRepository.generateNextNumero(any()))
-          .thenAnswer((_) async => 'FAC-2024-001');
-      when(() => mockRepository.updateFacture(any())).thenAnswer((_) async {});
+      when(() => mockRepository.finaliserFacture(any()))
+          .thenAnswer((_) async {});
       when(() => mockRepository.getFactures(archives: false))
           .thenAnswer((_) async => finalizedFactures);
 
@@ -413,8 +412,7 @@ void main() {
 
       // ASSERT
       expect(success, true);
-      verify(() => mockRepository.generateNextNumero(any())).called(1);
-      verify(() => mockRepository.updateFacture(any())).called(1);
+      verify(() => mockRepository.finaliserFacture('facture-1')).called(1);
       verify(() => mockRepository.getFactures(archives: false)).called(1);
     });
 
@@ -831,15 +829,19 @@ void main() {
 
       // ASSERT
       expect(avoir.type, 'avoir');
+      expect(avoir.typeDocument, 'avoir');
       expect(avoir.factureSourceId, 'facture-source');
-      expect(avoir.totalHt, Decimal.parse('-3000'));
-      expect(avoir.totalTva, Decimal.parse('-600'));
-      expect(avoir.totalTtc, Decimal.parse('-3600'));
+      expect(avoir.parentDocumentId, 'facture-source');
+      // Montants positifs (le type 'avoir' signale la nature credit note)
+      expect(avoir.totalHt, Decimal.parse('3000'));
+      expect(avoir.totalTva, Decimal.parse('600'));
+      expect(avoir.totalTtc, Decimal.parse('3600'));
       expect(avoir.statut, 'brouillon');
       expect(avoir.objet, contains('Avoir sur FAC-2024-020'));
       expect(avoir.lignes.length, 1);
-      expect(avoir.lignes[0].prixUnitaire, Decimal.parse('-3000'));
-      expect(avoir.lignes[0].totalLigne, Decimal.parse('-3000'));
+      expect(avoir.lignes[0].prixUnitaire, Decimal.parse('3000'));
+      expect(avoir.lignes[0].totalLigne, Decimal.parse('3000'));
+      expect(avoir.lignes[0].id, isNull);
     });
 
     test('devrait lancer une exception si facture sans ID', () {

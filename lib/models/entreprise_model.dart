@@ -44,6 +44,17 @@ class ProfilEntreprise {
   /// Mode discret (masquer le résumé financier dans l'éditeur)
   final bool modeDiscret;
 
+  // === MENTIONS LÉGALES OBLIGATOIRES ===
+  /// Taux de pénalités de retard (défaut : taux directeur BCE + 10 = 11.62% en 2025)
+  final double tauxPenalitesRetard;
+
+  /// Escompte applicable en cas de paiement anticipé
+  final bool escompteApplicable;
+
+  /// L'entreprise est-elle immatriculée au RCS/RM ?
+  /// Si false ET micro-entrepreneur → mention "Dispensé d'immatriculation" sur PDF
+  final bool estImmatricule;
+
   ProfilEntreprise({
     this.id,
     this.userId,
@@ -69,6 +80,9 @@ class ProfilEntreprise {
     this.pdfTheme = PdfTheme.moderne,
     this.modeFacturation = ModeFacturation.global,
     this.modeDiscret = false,
+    this.tauxPenalitesRetard = 11.62,
+    this.escompteApplicable = false,
+    this.estImmatricule = false,
   });
 
   factory ProfilEntreprise.fromMap(Map<String, dynamic> map) {
@@ -98,6 +112,9 @@ class ProfilEntreprise {
       pdfTheme: _parsePdfTheme(map['pdf_theme']),
       modeFacturation: _parseModeFacturation(map['mode_facturation']),
       modeDiscret: map['mode_discret'] ?? false,
+      tauxPenalitesRetard: (map['taux_penalites_retard'] ?? 11.62).toDouble(),
+      escompteApplicable: map['escompte_applicable'] ?? false,
+      estImmatricule: map['est_immatricule'] ?? false,
     );
   }
 
@@ -184,6 +201,9 @@ class ProfilEntreprise {
       'pdf_theme': pdfTheme.name,
       'mode_facturation': modeFacturation.name,
       'mode_discret': modeDiscret,
+      'taux_penalites_retard': tauxPenalitesRetard,
+      'escompte_applicable': escompteApplicable,
+      'est_immatricule': estImmatricule,
     };
   }
 
@@ -212,6 +232,9 @@ class ProfilEntreprise {
     PdfTheme? pdfTheme,
     ModeFacturation? modeFacturation,
     bool? modeDiscret,
+    double? tauxPenalitesRetard,
+    bool? escompteApplicable,
+    bool? estImmatricule,
   }) {
     return ProfilEntreprise(
       id: id ?? this.id,
@@ -238,6 +261,9 @@ class ProfilEntreprise {
       pdfTheme: pdfTheme ?? this.pdfTheme,
       modeFacturation: modeFacturation ?? this.modeFacturation,
       modeDiscret: modeDiscret ?? this.modeDiscret,
+      tauxPenalitesRetard: tauxPenalitesRetard ?? this.tauxPenalitesRetard,
+      escompteApplicable: escompteApplicable ?? this.escompteApplicable,
+      estImmatricule: estImmatricule ?? this.estImmatricule,
     );
   }
 }

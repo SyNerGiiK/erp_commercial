@@ -162,6 +162,12 @@ class Facture {
   final List<Paiement> paiements;
   final List<LigneChiffrage> chiffrage;
 
+  /// N° de bon de commande client (facultatif, imprimé sur PDF)
+  final String? numeroBonCommande;
+
+  /// Motif de l'avoir (obligatoire pour type == 'avoir')
+  final String? motifAvoir;
+
   Decimal get netAPayer => totalTtc - acompteDejaRegle - totalPaiements;
   Decimal get totalPaiements =>
       paiements.fold(Decimal.zero, (prev, element) => prev + element.montant);
@@ -198,6 +204,8 @@ class Facture {
     this.lignes = const [],
     this.paiements = const [],
     this.chiffrage = const [],
+    this.numeroBonCommande,
+    this.motifAvoir,
   })  : totalTva = totalTva ?? Decimal.zero,
         totalTtc = totalTtc ?? totalHt; // Fallback pour compatibilité
 
@@ -249,6 +257,8 @@ class Facture {
               ?.map((e) => LigneChiffrage.fromMap(e))
               .toList() ??
           [],
+      numeroBonCommande: map['numero_bon_commande'],
+      motifAvoir: map['motif_avoir'],
     );
   }
 
@@ -284,6 +294,8 @@ class Facture {
       'lignes_factures': lignes.map((e) => e.toMap()).toList(),
       'paiements': paiements.map((e) => e.toMap()).toList(),
       'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
+      if (numeroBonCommande != null) 'numero_bon_commande': numeroBonCommande,
+      if (motifAvoir != null) 'motif_avoir': motifAvoir,
     };
   }
 
@@ -318,6 +330,8 @@ class Facture {
     List<LigneFacture>? lignes,
     List<Paiement>? paiements,
     List<LigneChiffrage>? chiffrage,
+    String? numeroBonCommande,
+    String? motifAvoir,
   }) {
     return Facture(
       id: id ?? this.id,
@@ -350,6 +364,8 @@ class Facture {
       lignes: lignes ?? this.lignes,
       paiements: paiements ?? this.paiements,
       chiffrage: chiffrage ?? this.chiffrage,
+      numeroBonCommande: numeroBonCommande ?? this.numeroBonCommande,
+      motifAvoir: motifAvoir ?? this.motifAvoir,
     );
   }
 }

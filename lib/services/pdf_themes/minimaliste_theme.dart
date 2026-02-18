@@ -141,9 +141,6 @@ class MinimalistePdfTheme extends PdfThemeBase {
         pw.Text(mentions,
             style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey),
             textAlign: pw.TextAlign.center),
-      if (!isTvaApplicable)
-        pw.Text("TVA non applicable, art. 293 B du CGI",
-            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey)),
       if (isTvaApplicable && numeroTvaIntra != null)
         pw.Text("TVA Intra : $numeroTvaIntra",
             style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey)),

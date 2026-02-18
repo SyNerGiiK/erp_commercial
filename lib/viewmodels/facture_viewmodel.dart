@@ -83,6 +83,12 @@ class FactureViewModel extends BaseViewModel
 
   Future<bool> updateFacture(Facture facture) async {
     return await executeOperation(() async {
+      // 🛡️ PROTECTION : Bloquer la modification des factures validées
+      if (facture.statutJuridique != 'brouillon') {
+        throw Exception(
+            "Impossible de modifier une facture validée (statut: ${facture.statutJuridique}). "
+            "Seuls les brouillons sont modifiables. Créez un avoir pour corriger.");
+      }
       await _repository.updateFacture(facture);
       await fetchFactures();
     });
@@ -122,23 +128,11 @@ class FactureViewModel extends BaseViewModel
   Future<bool> finaliserFacture(Facture facture) async {
     if (facture.id == null) return false;
     return await executeOperation(() async {
-      // 1. Génération du numéro définitif via RPC (comme Devis)
-      String numeroDefinitif = facture.numeroFacture;
-      if (numeroDefinitif.isEmpty ||
-          numeroDefinitif.trim().toLowerCase() == 'brouillon') {
-        final annee = DateTime.now().year;
-        numeroDefinitif = await _repository.generateNextNumero(annee);
-      }
-
-      // Update local temporaire pour éviter re-fetch immédiat (Optimistic)
-      final updated = facture.copyWith(
-        numeroFacture: numeroDefinitif,
-        statut: 'validee',
-        statutJuridique: 'validee',
-        dateValidation: DateTime.now(),
-      );
-
-      await _repository.updateFacture(updated);
+      // La numérotation est gérée par le trigger SQL (get_next_document_number_strict)
+      // On met simplement le statut à 'validee' avec un numéro vide.
+      // Le trigger détectera le changement de statut_juridique → 'validee'
+      // et assignera automatiquement un numéro séquentiel atomique.
+      await _repository.finaliserFacture(facture.id!);
       await fetchFactures();
     });
   }
@@ -233,21 +227,28 @@ class FactureViewModel extends BaseViewModel
     );
   }
 
-  /// Crée un avoir (credit note) à partir d'une facture validée
-  Facture createAvoir(Facture source) {
+  /// Crée un avoir (credit note) à partir d'une facture validée.
+  /// Les montants restent positifs (le type 'avoir' signale la nature).
+  /// La référence à la facture source est conservée via factureSourceId.
+  Facture createAvoir(Facture source, {String? motif}) {
     if (source.id == null) throw Exception("La facture source n'a pas d'ID");
     if (source.statutJuridique == 'brouillon') {
       throw Exception("Impossible de créer un avoir sur une facture brouillon");
     }
 
-    // Inverser les montants des lignes
+    // Les lignes sont copiées sans ID (nouvelles lignes pour l'avoir)
     final lignesAvoir = source.lignes.map((l) {
-      final montantInverse = Decimal.zero - l.totalLigne;
-      final puInverse = Decimal.zero - l.prixUnitaire;
-      return l.copyWith(
-        id: null,
-        prixUnitaire: puInverse,
-        totalLigne: montantInverse,
+      return LigneFacture(
+        // id omis = null
+        description: l.description,
+        quantite: l.quantite,
+        prixUnitaire: l.prixUnitaire,
+        totalLigne: l.totalLigne,
+        typeActivite: l.typeActivite,
+        unite: l.unite,
+        type: l.type,
+        ordre: l.ordre,
+        tauxTva: l.tauxTva,
       );
     }).toList();
 
@@ -257,20 +258,23 @@ class FactureViewModel extends BaseViewModel
       objet: "Avoir sur ${source.numeroFacture} - ${source.objet}",
       clientId: source.clientId,
       factureSourceId: source.id,
+      parentDocumentId: source.id,
+      typeDocument: 'avoir',
       dateEmission: DateTime.now(),
       dateEcheance: DateTime.now().add(const Duration(days: 30)),
       statut: 'brouillon',
       statutJuridique: 'brouillon',
       type: 'avoir',
-      totalHt: Decimal.zero - source.totalHt,
-      totalTva: Decimal.zero - source.totalTva,
-      totalTtc: Decimal.zero - source.totalTtc,
+      totalHt: source.totalHt,
+      totalTva: source.totalTva,
+      totalTtc: source.totalTtc,
       remiseTaux: source.remiseTaux,
       acompteDejaRegle: Decimal.zero,
       conditionsReglement: source.conditionsReglement,
       notesPubliques: "Avoir sur facture ${source.numeroFacture}",
       tvaIntra: source.tvaIntra,
       lignes: lignesAvoir,
+      motifAvoir: motif ?? '',
     );
   }
 
@@ -414,28 +418,8 @@ class FactureViewModel extends BaseViewModel
 
     for (var f in _factures) {
       if (f.statut == 'validee') {
-        // En théorie 'validee' signifie qu'elle n'est pas encore 'payee' (statut final)
-        // Mais on doit vérifier le reste à payer réel.
-
-        // Calcul du total réglé
-        final totalRegle =
-            f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-        // Calcul acompte devis déjà s'il y a
-        // Note: f.acompteDejaRegle vient du devis, il est considéré payé.
-
-        // Attention: Dans Facture, totalHt est le total des lignes.
-        // Remise est déduite du HT.
-        // Net Commercial = HT - Remise.
-        final remiseAmount =
-            ((f.totalHt * f.remiseTaux) / Decimal.fromInt(100)).toDecimal();
-        final netCommercial = f.totalHt - remiseAmount;
-
-        // Reste = Net - AcompteInitial - TotalReglé
-        // (On simplifie ici l'historique acomptes liés pour la perf standard,
-        // ou on l'ignore si c'est minime. Pour être précis 100%, faudrait charger l'historique)
-
-        final reste = netCommercial - f.acompteDejaRegle - totalRegle;
+        // Utilise le getter du modèle : totalTtc - acompteDejaRegle - totalPaiements
+        final reste = f.netAPayer;
 
         if (reste > Decimal.zero) {
           totalImpaye += reste;

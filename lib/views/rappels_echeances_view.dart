@@ -312,7 +312,7 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${rappels.length} rappel(s) généré(s)'),
-        backgroundColor: AppTheme.success,
+        backgroundColor: AppTheme.accent,
       ),
     );
   }
@@ -373,7 +373,8 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TypeRappel>(
-                  value: selectedType,
+                  key: ValueKey(selectedType),
+                  initialValue: selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Type',
                     border: OutlineInputBorder(),
@@ -390,7 +391,8 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<PrioriteRappel>(
-                  value: selectedPriorite,
+                  key: ValueKey(selectedPriorite),
+                  initialValue: selectedPriorite,
                   decoration: const InputDecoration(
                     labelText: 'Priorité',
                     border: OutlineInputBorder(),

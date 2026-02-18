@@ -14,9 +14,14 @@ class TransformationResult {
 }
 
 class TransformationDialog extends StatefulWidget {
-  final Decimal totalTTC; // Pour info
+  final Decimal totalTTC;
+  final Decimal? acomptePercentage;
 
-  const TransformationDialog({super.key, required this.totalTTC});
+  const TransformationDialog({
+    super.key,
+    required this.totalTTC,
+    this.acomptePercentage,
+  });
 
   @override
   State<TransformationDialog> createState() => _TransformationDialogState();
@@ -24,8 +29,24 @@ class TransformationDialog extends StatefulWidget {
 
 class _TransformationDialogState extends State<TransformationDialog> {
   TransformationType _selectedType = TransformationType.standard;
-  final TextEditingController _valueCtrl = TextEditingController(text: "30");
+  late final TextEditingController _valueCtrl;
   bool _isPercent = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Utilise le taux d'acompte défini sur le devis comme valeur par défaut
+    final defaultPercent = widget.acomptePercentage ?? Decimal.fromInt(30);
+    _valueCtrl = TextEditingController(
+      text: defaultPercent.toStringAsFixed(0),
+    );
+  }
+
+  @override
+  void dispose() {
+    _valueCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

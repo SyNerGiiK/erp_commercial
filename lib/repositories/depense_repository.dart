@@ -7,6 +7,11 @@ abstract class IDepenseRepository {
   Future<void> createDepense(Depense depense);
   Future<void> updateDepense(Depense depense);
   Future<void> deleteDepense(String id);
+
+  // SOFT-DELETE (Corbeille)
+  Future<List<Depense>> getDeletedDepenses();
+  Future<void> restoreDepense(String id);
+  Future<void> purgeDepense(String id);
 }
 
 class DepenseRepository extends BaseRepository implements IDepenseRepository {
@@ -17,6 +22,7 @@ class DepenseRepository extends BaseRepository implements IDepenseRepository {
           .from('depenses')
           .select()
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .order('date', ascending: false);
 
       return (response as List).map((e) => Depense.fromMap(e)).toList();
@@ -49,9 +55,50 @@ class DepenseRepository extends BaseRepository implements IDepenseRepository {
   @override
   Future<void> deleteDepense(String id) async {
     try {
-      await client.from('depenses').delete().eq('id', id);
+      // Soft-delete : marque comme supprimé sans effacer les données
+      await client.from('depenses').update({
+        'deleted_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
     } catch (e) {
       throw handleError(e, 'deleteDepense');
+    }
+  }
+
+  // --- SOFT-DELETE (Corbeille) ---
+
+  @override
+  Future<List<Depense>> getDeletedDepenses() async {
+    try {
+      final response = await client
+          .from('depenses')
+          .select()
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', ascending: false);
+
+      return (response as List).map((e) => Depense.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getDeletedDepenses');
+    }
+  }
+
+  @override
+  Future<void> restoreDepense(String id) async {
+    try {
+      await client.from('depenses').update({
+        'deleted_at': null,
+      }).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'restoreDepense');
+    }
+  }
+
+  @override
+  Future<void> purgeDepense(String id) async {
+    try {
+      await client.from('depenses').delete().eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'purgeDepense');
     }
   }
 }

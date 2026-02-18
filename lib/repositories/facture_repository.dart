@@ -29,6 +29,11 @@ abstract class IFactureRepository {
 
   // FACTURES EN RETARD
   Future<List<Facture>> getFacturesEnRetard();
+
+  // SOFT-DELETE (Corbeille)
+  Future<List<Facture>> getDeletedFactures();
+  Future<void> restoreFacture(String id);
+  Future<void> purgeFacture(String id);
 }
 
 class FactureRepository extends DocumentRepository
@@ -50,6 +55,7 @@ class FactureRepository extends DocumentRepository
           .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
           .eq('est_archive', archives)
+          .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
           .order('ordre', referencedTable: 'lignes_factures', ascending: true);
 
@@ -121,17 +127,10 @@ class FactureRepository extends DocumentRepository
   @override
   Future<void> deleteFacture(String id) async {
     try {
-      // Detach Avoirs (Self-referencing FK)
-      await client
-          .from('factures')
-          .update({'facture_source_id': null}).eq('facture_source_id', id);
-
-      // FORCE MANUAL CASCADE
-      await client.from('lignes_factures').delete().eq('facture_id', id);
-      await client.from('lignes_chiffrages').delete().eq('facture_id', id);
-      await client.from('paiements').delete().eq('facture_id', id);
-
-      await client.from('factures').delete().eq('id', id);
+      // Soft-delete : marque comme supprimé sans effacer les données
+      await client.from('factures').update({
+        'deleted_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
     } catch (e) {
       throw handleError(e, 'deleteFacture');
     }
@@ -202,7 +201,8 @@ class FactureRepository extends DocumentRepository
           .from('factures')
           .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
-          .eq('devis_source_id', devisSourceId);
+          .eq('devis_source_id', devisSourceId)
+          .isFilter('deleted_at', null);
 
       if (excludeFactureId != null && excludeFactureId.isNotEmpty) {
         query = query.neq('id', excludeFactureId);
@@ -223,6 +223,7 @@ class FactureRepository extends DocumentRepository
           .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
           .eq('est_archive', false)
+          .isFilter('deleted_at', null)
           .inFilter('statut', ['validee', 'envoye'])
           .lt('date_echeance', DateTime.now().toIso8601String())
           .order('date_echeance', ascending: true);
@@ -265,6 +266,54 @@ class FactureRepository extends DocumentRepository
         return map;
       }).toList();
       await client.from('paiements').insert(paiementsData);
+    }
+  }
+
+  // --- SOFT-DELETE (Corbeille) ---
+
+  @override
+  Future<List<Facture>> getDeletedFactures() async {
+    try {
+      final response = await client
+          .from('factures')
+          .select('*, lignes_factures(*), paiements(*), lignes_chiffrages(*)')
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', ascending: false);
+
+      return (response as List).map((e) => Facture.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getDeletedFactures');
+    }
+  }
+
+  @override
+  Future<void> restoreFacture(String id) async {
+    try {
+      await client.from('factures').update({
+        'deleted_at': null,
+      }).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'restoreFacture');
+    }
+  }
+
+  @override
+  Future<void> purgeFacture(String id) async {
+    try {
+      // Detach Avoirs (Self-referencing FK)
+      await client
+          .from('factures')
+          .update({'facture_source_id': null}).eq('facture_source_id', id);
+
+      // FORCE MANUAL CASCADE
+      await client.from('lignes_factures').delete().eq('facture_id', id);
+      await client.from('lignes_chiffrages').delete().eq('facture_id', id);
+      await client.from('paiements').delete().eq('facture_id', id);
+
+      await client.from('factures').delete().eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'purgeFacture');
     }
   }
 }

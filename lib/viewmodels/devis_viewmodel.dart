@@ -351,8 +351,8 @@ class DevisViewModel extends BaseViewModel
 
     if (total == 0) return Decimal.zero;
 
-    final ratio =
-        (Decimal.fromInt(signed) / Decimal.fromInt(total)).toDecimal();
+    final ratio = (Decimal.fromInt(signed) / Decimal.fromInt(total))
+        .toDecimal(scaleOnInfinitePrecision: 10);
     final percentage = ratio * Decimal.fromInt(100);
     return percentage;
   }

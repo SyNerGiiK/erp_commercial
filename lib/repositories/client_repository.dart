@@ -13,6 +13,11 @@ abstract class IClientRepository {
   Future<List<PhotoChantier>> getPhotos(String clientId);
   Future<void> uploadPhoto(String clientId, XFile imageFile,
       {String? commentaire});
+
+  // SOFT-DELETE (Corbeille)
+  Future<List<Client>> getDeletedClients();
+  Future<void> restoreClient(String id);
+  Future<void> purgeClient(String id);
 }
 
 class ClientRepository extends BaseRepository implements IClientRepository {
@@ -23,6 +28,7 @@ class ClientRepository extends BaseRepository implements IClientRepository {
           .from('clients')
           .select()
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .order('nom_complet', ascending: true);
 
       return (response as List).map((e) => Client.fromMap(e)).toList();
@@ -57,7 +63,10 @@ class ClientRepository extends BaseRepository implements IClientRepository {
   @override
   Future<void> deleteClient(String id) async {
     try {
-      await client.from('clients').delete().eq('id', id);
+      // Soft-delete : marque comme supprimé sans effacer les données
+      await client.from('clients').update({
+        'deleted_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
     } catch (e) {
       throw handleError(e, 'deleteClient');
     }
@@ -105,6 +114,44 @@ class ClientRepository extends BaseRepository implements IClientRepository {
       });
     } catch (e) {
       throw handleError(e, 'uploadPhoto');
+    }
+  }
+
+  // --- SOFT-DELETE (Corbeille) ---
+
+  @override
+  Future<List<Client>> getDeletedClients() async {
+    try {
+      final response = await client
+          .from('clients')
+          .select()
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', ascending: false);
+
+      return (response as List).map((e) => Client.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getDeletedClients');
+    }
+  }
+
+  @override
+  Future<void> restoreClient(String id) async {
+    try {
+      await client.from('clients').update({
+        'deleted_at': null,
+      }).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'restoreClient');
+    }
+  }
+
+  @override
+  Future<void> purgeClient(String id) async {
+    try {
+      await client.from('clients').delete().eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'purgeClient');
     }
   }
 }

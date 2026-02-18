@@ -93,6 +93,8 @@ class CustomDrawer extends StatelessWidget {
                 _buildSectionLabel("PARAMÈTRES"),
                 _buildItem(context, 9, "Configuration", Icons.tune_rounded,
                     '/app/parametres'),
+                _buildItem(context, 12, "Corbeille",
+                    Icons.delete_outline_rounded, '/app/corbeille'),
               ],
             ),
           ),

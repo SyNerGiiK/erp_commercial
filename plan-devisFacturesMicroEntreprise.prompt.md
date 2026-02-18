@@ -2,7 +2,7 @@
 
 ### TL;DR
 
-L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF, calculs Decimal). Suite aux **Sprints 1-7**, les non-conformités légales critiques sont corrigées : mentions obligatoires PDF, immutabilité des factures validées, piste d'audit, numérotation par trigger SQL, protection contre la suppression physique, référence facture source dans les avoirs PDF. Le nettoyage legacy est effectué, `updated_at` est déployé sur toutes les tables. La gestion TVA (TvaService, alertes steppers, widget dashboard) est opérationnelle. L'UX est modernisée : drawer sectionné, profil entreprise complet (TVA, PDF, mentions légales), onboarding première connexion, validation Luhn SIRET.
+L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF, calculs Decimal). Suite aux **Sprints 1-13**, toutes les non-conformités sont corrigées : mentions obligatoires PDF, immutabilité des factures validées, piste d'audit, numérotation par trigger SQL, soft-delete avec corbeille, exploitation acompte_percentage, statistiques devis sur dashboard. La gestion TVA (TvaService, alertes steppers, widget dashboard) est opérationnelle. L'UX est modernisée : drawer sectionné, profil entreprise complet, onboarding, validation Luhn SIRET, archivage automatique.
 
 **Légende :** ✅ = Fait | ⚠️ = Partiel | ❌ = À faire
 
@@ -46,18 +46,18 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 | M5 | ✅ | `motif_avoir` ajouté à Facture |
 | M10 | ✅ | Doublon `if (widget.type == 'titre')` corrigé dans LigneEditor |
 
-#### IMPORTANT — Reste à faire ❌
+#### IMPORTANT — Tout corrigé ✅
 
 | # | Problème | Statut |
 |---|---|---|
 | I1 | `typeDocument` vs `type` — **conservés** (axes orthogonaux : nature juridique vs mode facturation) | ✅ Classé |
 | I2 | `statut` vs `statutJuridique` — **conservés** (opérationnel vs juridique, trigger SQL synchronise) | ✅ Classé |
 | I3 | `Paiement.isAcompte` stocké mais jamais exploité en logique métier | ✅ Exploité dans PDF (colonne Type: Acompte/Solde) |
-| I4 | `acompte_percentage` sur Devis jamais lu côté métier | ❌ |
+| I4 | `acompte_percentage` sur Devis jamais lu côté métier | ✅ TransformationDialog utilise `devis.acomptePercentage` comme valeur par défaut |
 | I8 | Vues legacy non supprimées (2 203 lignes : ajout_devis 1244L + ajout_facture 959L) | ✅ Supprimées |
 | I9 | Chiffrage/rentabilité : vue séparée à auditer et mettre à jour (PAS dans le stepper, volonté utilisateur) | ✅ Auditée, cohérente |
 | M1 | Pas de `updated_at` sur tables | ✅ Déployé (5 tables + triggers auto) |
-| M2 | Pas de soft-delete | ❌ |
+| M2 | Pas de soft-delete | ✅ `deleted_at` sur 4 tables, corbeille UI, restore/purge, auto-purge 30j |
 | M3 | Pas de validation Luhn SIRET | ✅ Algorithme Luhn + cas La Poste |
 | M7 | Seuils TVA hardcodés | ✅ Seuils versionnés dans UrssafConfig (DB), TvaService + alertes UI |
 | M8 | Pas d'UI relances | ✅ Écran relances complet (RelanceViewModel + RelancesView) |
@@ -73,7 +73,7 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - ✅ Migration appliquée en production
 - ✅ Triggers BEFORE DELETE déjà existants (`prevent_devis_modification`, `prevent_facture_modification`) — bloquent DELETE si non brouillon
 - ✅ `updated_at` déployé sur factures, devis, paiements, clients, depenses + triggers auto-update
-- ❌ Soft-delete (`deleted_at`) non implémenté
+- ✅ Soft-delete (`deleted_at`) déployé sur factures, devis, clients, depenses + vue Corbeille + auto-purge 30j
 
 #### Tests (mise à jour 18/02/2026 — post Sprint 10)
 
@@ -90,6 +90,12 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - **527/527** tests passent (0 échec)
 - Sprint 10 : 0 nouveau test (corrections lint/deprecations uniquement, aucune logique métier modifiée)
 - **527/527** tests passent (0 échec) — ✅ zéro régression
+- Sprint 11 : 11 tests ajoutés (CorbeilleViewModel fetch, restore/purge par type, purgeAll)
+- **538/538** tests passent (0 échec)
+- Sprint 12 : 9 tests ajoutés (getConversionRate 4, creerAvenant 2, refuserDevis 2 + bugfix infinite precision)
+- **547/547** tests passent (0 échec)
+- Sprint 13 : 4 tests ajoutés (DashboardViewModel devis stats : zéro, conversion 50%, pipeline, exclusion annulés)
+- **550/550** tests passent (0 échec) — ✅ zéro régression
 
 ---
 
@@ -171,6 +177,35 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 | 10.7 | **Sécurité async `use_build_context_synchronously`** : ajout `if (!mounted) return;` et `if (!context.mounted) return;` après awaits — 4 corrections | `lib/views/liste_devis_view.dart` (×2), `lib/views/liste_factures_view.dart` (×1), `lib/views/relances_view.dart` (×1) | ✅ |
 | 10.8 | **Validation** : 0 erreur, 0 warning, 527/527 tests passent | — | ✅ |
 
+#### Sprint 11 — Soft-delete & Corbeille (Priorité IMPORTANTE) ✅ TERMINÉ
+
+| # | Tâche | Fichiers | Statut |
+|---|---|---|---|
+| 11.1 | **Migration SQL** : `deleted_at TIMESTAMPTZ` sur factures/devis/clients/depenses, indexes partiels, fonction `purge_old_deleted_items()` (30 jours) | `migrations/migration_sprint11_soft_delete.sql` | ✅ |
+| 11.2 | **Repositories soft-delete** : `deleteX()` → soft-delete (`deleted_at = NOW()`), `.isFilter('deleted_at', null)` sur toutes les requêtes, nouveau `getDeletedX()`, `restoreX()`, `purgeX()` | `lib/repositories/facture_repository.dart`, `devis_repository.dart`, `client_repository.dart`, `depense_repository.dart`, `dashboard_repository.dart` | ✅ |
+| 11.3 | **CorbeilleViewModel** : charge items supprimés depuis 4 repos, restore/purge par type, purgeAll | `lib/viewmodels/corbeille_viewmodel.dart` | ✅ |
+| 11.4 | **CorbeilleView** : TabBar 4 onglets (Factures/Devis/Clients/Dépenses), cartes avec restore/purge, info banner 30j, dialogues confirmation | `lib/views/corbeille_view.dart` | ✅ |
+| 11.5 | **Intégration** : route `/app/corbeille`, entrée Drawer, Provider DI | `lib/config/router.dart`, `lib/widgets/custom_drawer.dart`, `lib/config/dependency_injection.dart` | ✅ |
+| 11.6 | **Tests** : 11 tests (fetchAll, empty detection, restore/purge par type ×4, purgeAll) — 538/538 total | `test/viewmodels/corbeille_viewmodel_test.dart` | ✅ |
+
+#### Sprint 12 — Exploitation acompte_percentage & avenants (Priorité IMPORTANTE) ✅ TERMINÉ
+
+| # | Tâche | Fichiers | Statut |
+|---|---|---|---|
+| 12.1 | **TransformationDialog** : paramètre `acomptePercentage` (nullable Decimal), utilise la valeur du devis comme défaut au lieu de 30% hardcodé | `lib/widgets/dialogs/transformation_dialog.dart` | ✅ |
+| 12.2 | **ListeDevisView** : passe `d.acomptePercentage` au dialog, badge visuel « Avenant » (violet) sur les devis enfants | `lib/views/liste_devis_view.dart` | ✅ |
+| 12.3 | **Bugfix getConversionRate** : `toDecimal(scaleOnInfinitePrecision: 10)` pour éviter crash sur divisions non finies (2/3) | `lib/viewmodels/devis_viewmodel.dart` | ✅ |
+| 12.4 | **Tests** : 9 tests (getConversionRate 4, creerAvenant 2, refuserDevis 2 + edge cases) — 547/547 total | `test/viewmodels/devis_viewmodel_test.dart` | ✅ |
+
+#### Sprint 13 — Statistiques Devis Dashboard (Priorité MOYENNE) ✅ TERMINÉ
+
+| # | Tâche | Fichiers | Statut |
+|---|---|---|---|
+| 13.1 | **DashboardRepository** : nouvelle méthode `getAllDevisYear(year)` — récupère tous les devis de l'année | `lib/repositories/dashboard_repository.dart` | ✅ |
+| 13.2 | **DashboardViewModel** : champs `tauxConversion`, `devisEnCours`, `montantPipeline`, `totalDevisYear` + méthode `_computeDevisStats()` | `lib/viewmodels/dashboard_viewmodel.dart` | ✅ |
+| 13.3 | **Dashboard UI** : section « Pipeline Devis » avec 3 cartes (Taux de conversion, Devis en cours, Montant pipeline) — couleur conditionnelle selon seuils | `lib/views/tableau_de_bord_view.dart` | ✅ |
+| 13.4 | **Tests** : 4 tests (zéro devis, conversion 50%, pipeline brouillon+envoyé, exclusion annulés) — 550/550 total | `test/viewmodels/dashboard_viewmodel_test.dart` | ✅ |
+
 ---
 
 ### Décisions architecturales (mises à jour)
@@ -180,9 +215,10 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - ✅ **Avoirs en montants positifs** : `createAvoir` stocke en valeurs absolues
 - ✅ **`typeDocument` et `type` conservés** : axes orthogonaux (nature juridique ≠ mode facturation)
 - ✅ **`statut` et `statutJuridique` conservés** : trigger SQL synchronise
-- ❌ **Chiffrage hors stepper** : vue `rentabilite_view.dart` dédiée, outil interne artisan non visible client
-- ❌ **Email via `mailto:`** en V1, Supabase Edge Function + SMTP en V2
-- ❌ **Seuils TVA versionnés** : exploités via UrssafConfig existant (DB), pas besoin de table dédiée supplémentaire
+- ✅ **Chiffrage hors stepper** : vue `rentabilite_view.dart` dédiée, outil interne artisan non visible client (décision architecturale)
+- ✅ **Email via `mailto:`** en V1 (fonctionnel), Supabase Edge Function + SMTP = V2 future (hors scope MVP)
+- ✅ **Seuils TVA versionnés** : exploités via UrssafConfig existant (DB), pas besoin de table dédiée supplémentaire
+- ✅ **Soft-delete** : `deleted_at` sur 4 tables, Corbeille UI, restore/purge, auto-purge 30j
 - ✅ **Custom drawer** : refonte complète, sections logiques, header profil cliquable
 - ✅ **Onboarding première connexion** : assistant 4 étapes, détection auto profil vide
 - ✅ **Validation Luhn SIRET** : algorithme standard + cas La Poste

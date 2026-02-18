@@ -16,6 +16,11 @@ abstract class IDevisRepository {
   Future<void> changeStatut(String id, String newStatut);
   Future<int> expireDevisDepasses();
   Future<Devis> createAvenant(String devisParentId);
+
+  // SOFT-DELETE (Corbeille)
+  Future<List<Devis>> getDeletedDevis();
+  Future<void> restoreDevis(String id);
+  Future<void> purgeDevis(String id);
 }
 
 class DevisRepository extends DocumentRepository implements IDevisRepository {
@@ -36,6 +41,7 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
           .select('*, lignes_devis(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
           .eq('est_archive', archives)
+          .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
           .order('ordre', referencedTable: 'lignes_devis', ascending: true);
 
@@ -89,7 +95,10 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
   @override
   Future<void> deleteDevis(String id) async {
     try {
-      await client.from('devis').delete().eq('id', id);
+      // Soft-delete : marque comme supprimé sans effacer les données
+      await client.from('devis').update({
+        'deleted_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
     } catch (e) {
       throw handleError(e, 'deleteDevis');
     }
@@ -209,6 +218,46 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
       );
     } catch (e) {
       throw handleError(e, 'createAvenant');
+    }
+  }
+
+  // --- SOFT-DELETE (Corbeille) ---
+
+  @override
+  Future<List<Devis>> getDeletedDevis() async {
+    try {
+      final response = await client
+          .from('devis')
+          .select('*, lignes_devis(*), lignes_chiffrages(*)')
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', ascending: false);
+
+      return (response as List).map((e) => Devis.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getDeletedDevis');
+    }
+  }
+
+  @override
+  Future<void> restoreDevis(String id) async {
+    try {
+      await client.from('devis').update({
+        'deleted_at': null,
+      }).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'restoreDevis');
+    }
+  }
+
+  @override
+  Future<void> purgeDevis(String id) async {
+    try {
+      await client.from('lignes_devis').delete().eq('devis_id', id);
+      await client.from('lignes_chiffrages').delete().eq('devis_id', id);
+      await client.from('devis').delete().eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'purgeDevis');
     }
   }
 }

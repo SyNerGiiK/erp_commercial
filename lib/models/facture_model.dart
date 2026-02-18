@@ -131,6 +131,8 @@ class Facture {
   final String clientId;
   final String? devisSourceId;
   final String? factureSourceId; // Pour les Avoirs
+  final String? parentDocumentId; // Pour lien parent (avoir -> facture)
+  final String typeDocument; // 'facture' ou 'avoir'
   final DateTime dateEmission;
   final DateTime dateEcheance;
   final DateTime? dateValidation;
@@ -173,6 +175,8 @@ class Facture {
     required this.clientId,
     this.devisSourceId,
     this.factureSourceId,
+    this.parentDocumentId,
+    this.typeDocument = 'facture',
     required this.dateEmission,
     required this.dateEcheance,
     this.dateValidation,
@@ -206,6 +210,8 @@ class Facture {
       clientId: map['client_id'],
       devisSourceId: map['devis_source_id'],
       factureSourceId: map['facture_source_id'],
+      parentDocumentId: map['parent_document_id'],
+      typeDocument: map['type_document'] ?? 'facture',
       dateEmission: DateTime.parse(map['date_emission']),
       dateEcheance: DateTime.parse(map['date_echeance']),
       dateValidation: map['date_validation'] != null
@@ -255,6 +261,8 @@ class Facture {
       'client_id': clientId,
       'devis_source_id': devisSourceId,
       'facture_source_id': factureSourceId,
+      'parent_document_id': parentDocumentId,
+      'type_document': typeDocument,
       'date_emission': dateEmission.toIso8601String(),
       'date_echeance': dateEcheance.toIso8601String(),
       'date_validation': dateValidation?.toIso8601String(),
@@ -287,6 +295,8 @@ class Facture {
     String? clientId,
     String? devisSourceId,
     String? factureSourceId,
+    String? parentDocumentId,
+    String? typeDocument,
     DateTime? dateEmission,
     DateTime? dateEcheance,
     DateTime? dateValidation,
@@ -317,6 +327,8 @@ class Facture {
       clientId: clientId ?? this.clientId,
       devisSourceId: devisSourceId ?? this.devisSourceId,
       factureSourceId: factureSourceId ?? this.factureSourceId,
+      parentDocumentId: parentDocumentId ?? this.parentDocumentId,
+      typeDocument: typeDocument ?? this.typeDocument,
       dateEmission: dateEmission ?? this.dateEmission,
       dateEcheance: dateEcheance ?? this.dateEcheance,
       dateValidation: dateValidation ?? this.dateValidation,

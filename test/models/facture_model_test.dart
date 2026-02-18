@@ -199,6 +199,8 @@ void main() {
         'conditions_reglement': 'Paiement à 30 jours',
         'notes_publiques': 'Merci pour votre confiance',
         'tva_intra': 'FR12345678901',
+        'parent_document_id': 'parent-doc-123',
+        'type_document': 'avoir',
         'lignes_factures': [],
         'paiements': [],
         'lignes_chiffrages': [],
@@ -224,6 +226,8 @@ void main() {
       expect(facture.remiseTaux, Decimal.parse('5'));
       expect(facture.acompteDejaRegle, Decimal.parse('500'));
       expect(facture.signatureUrl, 'https://example.com/signature.png');
+      expect(facture.parentDocumentId, 'parent-doc-123');
+      expect(facture.typeDocument, 'avoir');
     });
 
     test('toMap produit une Map correcte', () {
@@ -249,6 +253,8 @@ void main() {
       expect(map['client_id'], 'client-test');
       expect(map['total_ht'], '1000');
       expect(map['total_ttc'], '1200');
+      expect(map['type_document'], 'facture');
+      expect(map['parent_document_id'], isNull);
     });
   });
 
@@ -555,6 +561,45 @@ void main() {
       expect(factureAcompte.type, 'acompte');
       expect(factureSituation.type, 'situation');
       expect(factureSituation.avancementGlobal, Decimal.parse('50'));
+    });
+
+    test('gère parentDocumentId et typeDocument pour les avoirs', () {
+      final avoir = Facture(
+        objet: 'Avoir sur facture',
+        clientId: 'client-1',
+        dateEmission: DateTime.now(),
+        dateEcheance: DateTime.now(),
+        factureSourceId: 'facture-originale-123',
+        parentDocumentId: 'facture-originale-123',
+        typeDocument: 'avoir',
+        totalHt: Decimal.parse('-500'),
+        totalTtc: Decimal.parse('-600'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+      );
+
+      expect(avoir.parentDocumentId, 'facture-originale-123');
+      expect(avoir.typeDocument, 'avoir');
+
+      final map = avoir.toMap();
+      expect(map['parent_document_id'], 'facture-originale-123');
+      expect(map['type_document'], 'avoir');
+    });
+
+    test('typeDocument par défaut est facture', () {
+      final facture = Facture(
+        objet: 'Standard',
+        clientId: 'client-1',
+        dateEmission: DateTime.now(),
+        dateEcheance: DateTime.now(),
+        totalHt: Decimal.parse('1000'),
+        totalTtc: Decimal.parse('1200'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+      );
+
+      expect(facture.typeDocument, 'facture');
+      expect(facture.parentDocumentId, isNull);
     });
   });
 }

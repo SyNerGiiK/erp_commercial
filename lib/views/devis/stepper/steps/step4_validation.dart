@@ -119,12 +119,16 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
         AppCard(
           child: Column(
             children: [
-              _buildRow("Total HT", FormatUtils.currency(d.totalHt)),
-              if (isTvaApplicable && d.totalTva > Decimal.zero)
-                _buildRow("Total TVA", FormatUtils.currency(d.totalTva)),
-              const Divider(),
-              _buildRow("Total TTC", FormatUtils.currency(d.totalTtc),
-                  isBold: true),
+              if (isTvaApplicable) ...[
+                _buildRow("Total HT", FormatUtils.currency(d.totalHt)),
+                if (d.totalTva > Decimal.zero)
+                  _buildRow("Total TVA", FormatUtils.currency(d.totalTva)),
+                const Divider(),
+                _buildRow("Total TTC", FormatUtils.currency(d.totalTtc),
+                    isBold: true),
+              ] else
+                _buildRow("Total NET", FormatUtils.currency(d.totalTtc),
+                    isBold: true),
               if (d.acompteMontant > Decimal.zero)
                 _buildRow(
                     "Acompte demandé", FormatUtils.currency(d.acompteMontant),

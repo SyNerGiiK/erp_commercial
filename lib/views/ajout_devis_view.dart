@@ -144,6 +144,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
         _dateEmission = devis.dateEmission;
         _dateValidite = devis.dateValidite;
         _statut = devis.statut;
+        _acomptePercentage = devis.acomptePercentage;
 
         // Lignes
         _lignes =
@@ -200,15 +201,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       _chiffrage = List.from(d.chiffrage);
       _remiseTaux = d.remiseTaux;
 
-      if (d.totalHt > Decimal.zero) {
-        // On base le % sur le Net Commercial (HT - Remise)
-        final net = d.totalHt -
-            ((d.totalHt * d.remiseTaux) / Decimal.fromInt(100)).toDecimal();
-        if (net > Decimal.zero) {
-          _acomptePercentage =
-              CalculationsUtils.calculateTauxFromMontant(net, d.acompteMontant);
-        }
-      }
+      _acomptePercentage = d.acomptePercentage;
 
       _statut = d.statut;
       _signatureUrl = d.signatureUrl;
@@ -282,6 +275,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
       totalTtc: _netAPayerFinal,
       remiseTaux: _remiseTaux,
       acompteMontant: _acompteMontant,
+      acomptePercentage: _acomptePercentage,
       conditionsReglement: _conditionsCtrl.text,
       notesPubliques: _notesCtrl.text,
       lignes: _lignes,
@@ -929,7 +923,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
-                    children: [10, 20, 30, 40, 50].map((p) {
+                    children: [0, 10, 20, 30, 40, 50].map((p) {
                       final isSelected =
                           _acomptePercentage == Decimal.fromInt(p);
                       return ChoiceChip(
@@ -944,6 +938,38 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                         },
                       );
                     }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Text("Personnalisé : "),
+                      SizedBox(
+                        width: 80,
+                        child: TextFormField(
+                          key: ValueKey(
+                              'acompte_${_acomptePercentage.toString()}'),
+                          initialValue: _acomptePercentage.toString(),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: const InputDecoration(
+                            suffixText: "%",
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 8),
+                          ),
+                          onChanged: (v) {
+                            final parsed = Decimal.tryParse(v);
+                            if (parsed != null &&
+                                parsed >= Decimal.zero &&
+                                parsed <= Decimal.fromInt(100)) {
+                              setState(() {
+                                _acomptePercentage = parsed;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 15),
                   Row(

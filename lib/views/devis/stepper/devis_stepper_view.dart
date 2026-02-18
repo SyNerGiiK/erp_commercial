@@ -292,6 +292,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
                 _dateEmission = em;
                 _dateValidite = val;
               }),
+              acomptePercentage: _acomptePercentage,
+              acompteMontant: _buildDevisFromState().acompteMontant,
+              onAcompteChanged: (val) =>
+                  setState(() => _acomptePercentage = val),
             ),
             isActive: _currentStep >= 1,
             state: _currentStep > 1 ? StepState.complete : StepState.indexed,

@@ -306,13 +306,12 @@ class _SettingsRootViewState extends State<SettingsRootView> {
                       ExpansionPanel(
                         canTapOnHeader: true,
                         isExpanded: _expanded[0],
-                        headerBuilder: (_, isExpanded) => ListTile(
+                        headerBuilder: (_, isExpanded) => const ListTile(
                           leading:
                               Icon(Icons.business, color: AppTheme.primary),
-                          title: const Text("Mon Entreprise",
+                          title: Text("Mon Entreprise",
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle:
-                              const Text("Infos générales, Contact, Signature"),
+                          subtitle: Text("Infos générales, Contact, Signature"),
                         ),
                         body: Padding(
                           padding: const EdgeInsets.all(16),
@@ -322,12 +321,12 @@ class _SettingsRootViewState extends State<SettingsRootView> {
                       ExpansionPanel(
                         canTapOnHeader: true,
                         isExpanded: _expanded[1],
-                        headerBuilder: (_, isExpanded) => ListTile(
+                        headerBuilder: (_, isExpanded) => const ListTile(
                           leading: Icon(Icons.account_balance,
                               color: AppTheme.primary),
-                          title: const Text("Fiscalité & Légal",
+                          title: Text("Fiscalité & Légal",
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: const Text("SIRET, TVA, URSSAF, ACRE, RIB"),
+                          subtitle: Text("SIRET, TVA, URSSAF, ACRE, RIB"),
                         ),
                         body: Padding(
                           padding: const EdgeInsets.all(16),
@@ -337,12 +336,12 @@ class _SettingsRootViewState extends State<SettingsRootView> {
                       ExpansionPanel(
                         canTapOnHeader: true,
                         isExpanded: _expanded[2],
-                        headerBuilder: (_, isExpanded) => ListTile(
+                        headerBuilder: (_, isExpanded) => const ListTile(
                           leading: Icon(Icons.palette, color: AppTheme.primary),
-                          title: const Text("Préférences d'Édition",
+                          title: Text("Préférences d'Édition",
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: const Text(
-                              "Mode facturation, Thème PDF, Privacy"),
+                          subtitle:
+                              Text("Mode facturation, Thème PDF, Privacy"),
                         ),
                         body: Padding(
                           padding: const EdgeInsets.all(16),

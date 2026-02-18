@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:decimal/decimal.dart';
 import '../../../../widgets/app_card.dart';
 import '../../../../widgets/custom_text_field.dart';
+import '../../../../utils/format_utils.dart';
 
 class DevisStep2Details extends StatelessWidget {
   final TextEditingController objetCtrl;
@@ -11,6 +13,15 @@ class DevisStep2Details extends StatelessWidget {
   final DateTime dateValidite;
   final Function(DateTime, DateTime) onDatesChanged;
 
+  /// Pourcentage d'acompte (ex: 30 = 30%)
+  final Decimal? acomptePercentage;
+
+  /// Montant de l'acompte calculé (pour affichage)
+  final Decimal? acompteMontant;
+
+  /// Callback quand l'utilisateur change le pourcentage
+  final ValueChanged<Decimal>? onAcompteChanged;
+
   const DevisStep2Details({
     super.key,
     required this.objetCtrl,
@@ -19,6 +30,9 @@ class DevisStep2Details extends StatelessWidget {
     required this.dateEmission,
     required this.dateValidite,
     required this.onDatesChanged,
+    this.acomptePercentage,
+    this.acompteMontant,
+    this.onAcompteChanged,
   });
 
   @override
@@ -115,6 +129,78 @@ class DevisStep2Details extends StatelessWidget {
                     controller: notesCtrl!,
                     maxLines: 3,
                   ),
+              ],
+            ),
+          ),
+        ],
+
+        // ACOMPTE
+        if (onAcompteChanged != null) ...[
+          const SizedBox(height: 16),
+          AppCard(
+            title: const Text("Acompte demandé"),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Pourcentage de l'acompte :",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: [0, 10, 20, 30, 40, 50].map((p) {
+                    final isSelected = acomptePercentage == Decimal.fromInt(p);
+                    return ChoiceChip(
+                      label: Text("$p%"),
+                      selected: isSelected,
+                      onSelected: (val) {
+                        if (val) {
+                          onAcompteChanged!(Decimal.fromInt(p));
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Text("Personnalisé : "),
+                    SizedBox(
+                      width: 80,
+                      child: TextFormField(
+                        key: ValueKey(
+                            'acompte_${acomptePercentage?.toString()}'),
+                        initialValue: acomptePercentage?.toString() ?? '30',
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          suffixText: "%",
+                          isDense: true,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        ),
+                        onChanged: (v) {
+                          final parsed = Decimal.tryParse(v);
+                          if (parsed != null &&
+                              parsed >= Decimal.zero &&
+                              parsed <= Decimal.fromInt(100)) {
+                            onAcompteChanged!(parsed);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (acompteMontant != null) ...[
+                  const SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Montant acompte :"),
+                      Text(FormatUtils.currency(acompteMontant!),
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

@@ -39,6 +39,11 @@
 - Génération **PDF** avec 3 thèmes personnalisables
 - **Audit trail** (loi anti-fraude 2018)
 - **Dashboard** avec KPI, graphiques, et alertes
+- **Factures récurrentes** (hebdomadaire, mensuel, trimestriel, annuel)
+- **Suivi du temps** (saisie, taux horaire, facturation)
+- **Rappels & échéances** fiscales et commerciales (URSSAF, CFE, TVA, Impôts)
+- **Multi-devises** (EUR, USD, GBP, CHF) avec taux de change
+- **Corbeille** soft-delete avec restauration (factures, devis, clients, dépenses)
 
 ---
 
@@ -54,7 +59,7 @@
 | Routing | GoRouter | 14.x |
 | PDF | pdf + printing | 3.x |
 | Monétaire | decimal (package) | 3.x |
-| Tests | flutter_test + mocktail | 527 tests |
+| Tests | flutter_test + mocktail | 636 tests |
 | Fonts | google_fonts | 6.x |
 | Charts | fl_chart | 0.x |
 | UUID | uuid | 4.x |
@@ -84,7 +89,7 @@
 │                        SERVICES                                  │
 │  (Classes statiques — calculs purs, pas d'état)                 │
 │  TvaService · RelanceService · ArchivageService · EmailService   │
-│  AuditService · ExportService · PdfService · etc.               │
+│  AuditService · ExportService · PdfService · EcheanceService     │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -104,8 +109,8 @@
 lib/
 ├── main.dart                          # Point d'entrée, initialisation Supabase
 ├── config/
-│   ├── dependency_injection.dart      # 14 Providers enregistrés (MultiProvider)
-│   ├── router.dart                    # ~26 routes GoRouter + auth guard
+│   ├── dependency_injection.dart      # 18 Providers enregistrés (MultiProvider)
+│   ├── router.dart                    # ~30 routes GoRouter + auth guard
 │   ├── supabase_config.dart           # URL + anon key Supabase
 │   └── theme.dart                     # AppTheme : design tokens complets
 ├── core/
@@ -128,9 +133,12 @@ lib/
 │   ├── chiffrage_model.dart           # Chiffrage détaillé
 │   ├── config_charges_model.dart      # Configuration charges sociales
 │   ├── photo_model.dart               # Photo chantier
+│   ├── facture_recurrente_model.dart   # Facture récurrente + LigneFactureRecurrente
+│   ├── temps_activite_model.dart       # Suivi du temps (durée, taux, projet)
+│   ├── rappel_model.dart              # Rappel/échéance (7 types, 4 priorités)
 │   ├── planning_model.dart            # Événement planning
 │   └── shopping_model.dart            # Liste courses / matériaux
-├── repositories/                      # 12 repositories (interface + impl)
+├── repositories/                      # 15 repositories (interface + impl)
 │   ├── facture_repository.dart        # IFactureRepository + FactureRepository
 │   ├── devis_repository.dart          # IDevisRepository + DevisRepository
 │   ├── client_repository.dart         # IClientRepository + ClientRepository
@@ -142,8 +150,11 @@ lib/
 │   ├── auth_repository.dart           # IAuthRepository + AuthRepository
 │   ├── global_search_repository.dart  # IGlobalSearchRepository + impl
 │   ├── planning_repository.dart       # IPlanningRepository + PlanningRepository
+│   ├── facture_recurrente_repository.dart # IFactureRecurrenteRepository + impl
+│   ├── temps_repository.dart          # ITempsRepository + TempsRepository
+│   ├── rappel_repository.dart         # IRappelRepository + RappelRepository
 │   └── shopping_repository.dart       # IShoppingRepository + ShoppingRepository
-├── services/                          # 9 services + sous-dossier PDF themes
+├── services/                          # 10 services + sous-dossier PDF themes
 │   ├── tva_service.dart               # Analyse TVA, seuils franchise
 │   ├── relance_service.dart           # Analyse relances multi-niveaux
 │   ├── archivage_service.dart         # Détection factures archivables
@@ -153,13 +164,14 @@ lib/
 │   ├── pdf_service.dart               # Génération PDF isolate-ready
 │   ├── local_storage_service.dart     # Brouillons SharedPreferences
 │   ├── preferences_service.dart       # Préférences charges sociales
+│   ├── echeance_service.dart          # Rappels fiscaux auto (URSSAF, CFE, TVA, Impôts)
 │   └── pdf_themes/
 │       ├── pdf_theme_base.dart        # Classe abstraite (Strategy Pattern)
 │       ├── classique_theme.dart       # Thème classique sobre
 │       ├── moderne_theme.dart         # Thème moderne coloré
 │       ├── minimaliste_theme.dart     # Thème épuré minimal
 │       └── pdf_themes.dart            # Barrel export
-├── viewmodels/                        # 14 ViewModels
+├── viewmodels/                        # 18 ViewModels
 │   ├── facture_viewmodel.dart         # Cycle facture complet (458 lignes)
 │   ├── devis_viewmodel.dart           # Cycle devis complet (458 lignes)
 │   ├── dashboard_viewmodel.dart       # KPI, graphiques, alertes (390 lignes)
@@ -173,6 +185,10 @@ lib/
 │   ├── global_search_viewmodel.dart   # Recherche globale
 │   ├── planning_viewmodel.dart        # Planning / agenda
 │   ├── shopping_viewmodel.dart        # Listes courses
+│   ├── corbeille_viewmodel.dart       # Corbeille soft-delete (4 entités)
+│   ├── facture_recurrente_viewmodel.dart # Gérer factures récurrentes
+│   ├── temps_viewmodel.dart           # Suivi du temps
+│   ├── rappel_viewmodel.dart          # Rappels & échéances
 │   └── editor_state_provider.dart     # État éditeur partagé
 ├── views/                             # ~26 vues
 │   ├── tableau_de_bord_view.dart      # Dashboard principal
@@ -222,7 +238,7 @@ lib/
     └── validation_utils.dart          # Validations formulaires
 ```
 
-**Total : ~130 fichiers Dart**
+**Total : ~155+ fichiers Dart**
 
 ---
 
@@ -324,9 +340,9 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 
 | Modèle | Table Supabase | Description | Champs clés |
 |---|---|---|---|
-| `Facture` | `factures` | Facture ou avoir | `numeroFacture`, `totalHt/Tva/Ttc` (Decimal), `statut`, `statutJuridique`, `typeDocument`, `estArchive` |
+| `Facture` | `factures` | Facture ou avoir | `numeroFacture`, `totalHt/Tva/Ttc` (Decimal), `statut`, `statutJuridique`, `typeDocument`, `estArchive`, `devise`, `tauxChange`, `notesPrivees` |
 | `LigneFacture` | `lignes_facture` | Ligne de facture | `description`, `quantite`, `prixUnitaire`, `totalLigne` (Decimal), `tauxTva`, `avancement` |
-| `Devis` | `devis` | Devis commercial | `numeroDevis`, `totalHt/Tva/Ttc` (Decimal), `statut`, `dureeValidite`, `tauxAcompte` |
+| `Devis` | `devis` | Devis commercial | `numeroDevis`, `totalHt/Tva/Ttc` (Decimal), `statut`, `dureeValidite`, `tauxAcompte`, `devise`, `tauxChange`, `notesPrivees` |
 | `LigneDevis` | `lignes_devis` | Ligne de devis | Mêmes champs que LigneFacture + `uiKey` (UUID) |
 | `Client` | `clients` | Client (part./pro.) | `nomComplet`, `typeClient`, `siret`, `tvaIntra`, adresse complète |
 | `Paiement` | `paiements` | Paiement unitaire | `montant` (Decimal), `datePaiement`, `typePaiement`, `isAcompte` |
@@ -338,6 +354,10 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 | `Chiffrage` | — (local) | Chiffrage détaillé | Matériaux, main d'œuvre, marge |
 | `Planning` | `events` | Événement calendrier | `titre`, `dateDebut`, `dateFin`, `clientId` |
 | `Shopping` | `shopping_items` | Item liste courses | `nom`, `quantite`, `prix`, `isChecked` |
+| `FactureRecurrente` | `factures_recurrentes` | Facture récurrente | `frequence` (FrequenceRecurrence), `prochaineEmission`, `estActive`, `nbFacturesGenerees`, `totalHt/Tva/Ttc`, `devise`, `remiseTaux` |
+| `LigneFactureRecurrente` | `lignes_facture_recurrente` | Ligne facture récurrente | `description`, `quantite`, `prixUnitaire`, `totalLigne`, `tauxTva`, `typeActivite` |
+| `TempsActivite` | `temps_activites` | Suivi du temps | `dureeMinutes`, `tauxHoraire`, `montant` (Decimal), `projet`, `estFacturable`, `estFacture`, `dureeFormatee` |
+| `Rappel` | `rappels` | Rappel/échéance | `typeRappel` (7 types), `priorite` (4 niveaux), `dateEcheance`, `estComplete`, `estRecurrent`, `joursRestants`, `estEnRetard` |
 
 ### Enums (`lib/models/enums/entreprise_enums.dart`)
 
@@ -353,6 +373,9 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 | `CaisseRetraite` | ssi, cipav, carmf, carpimko |
 | `PdfTheme` | classique, moderne, minimaliste |
 | `ModeFacturation` | global, detaille |
+| `FrequenceRecurrence` | hebdomadaire, mensuel, trimestriel, annuel |
+| `TypeRappel` | urssaf, cfe, impots, tva, echeanceFacture, echeanceDevis, autre |
+| `PrioriteRappel` | basse, normale, haute, urgente |
 
 ---
 
@@ -398,6 +421,9 @@ class FactureRepository extends DocumentRepository implements IFactureRepository
 | `GlobalSearchRepository` | `IGlobalSearchRepository` | toutes tables | `BaseRepository` |
 | `PlanningRepository` | `IPlanningRepository` | events | `BaseRepository` |
 | `ShoppingRepository` | `IShoppingRepository` | shopping_items | `BaseRepository` |
+| `FactureRecurrenteRepository` | `IFactureRecurrenteRepository` | factures_recurrentes, lignes_facture_recurrente | `BaseRepository` |
+| `TempsRepository` | `ITempsRepository` | temps_activites | `BaseRepository` |
+| `RappelRepository` | `IRappelRepository` | rappels | `BaseRepository` |
 
 ---
 
@@ -432,6 +458,10 @@ class FactureViewModel extends BaseViewModel
 | `GlobalSearchViewModel` | ~80 | — | IGlobalSearchRepository | Recherche cross-table |
 | `PlanningViewModel` | ~100 | — | IPlanningRepository | CRUD événements calendrier |
 | `ShoppingViewModel` | ~80 | — | IShoppingRepository | Liste de courses |
+| `CorbeilleViewModel` | ~150 | — | IFacture + IDevis + IClient + IDepense | Corbeille soft-delete, restauration |
+| `FactureRecurrenteViewModel` | ~200 | — | IFactureRecurrenteRepository | CRUD factures récurrentes, toggle actif, génération |
+| `TempsViewModel` | ~150 | — | ITempsRepository | CRUD temps, KPIs, filtrage périodes |
+| `RappelViewModel` | ~200 | — | IRappelRepository | CRUD rappels, génération fiscale, complétion |
 | `EditorStateProvider` | ~50 | — | — | État partagé de l'éditeur |
 
 ---
@@ -545,6 +575,7 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 | `ExportService` | `export_service.dart` | `exportComptabilite()` (2 CSVs), `exportFactures()`, `exportDepenses()` |
 | `LocalStorageService` | `local_storage_service.dart` | `saveDraft()`, `getDraft()`, `clearDraft()`, `generateKey()` |
 | `PreferencesService` | `preferences_service.dart` | `getConfigCharges()`, `saveConfigCharges()`, `resetConfigCharges()` |
+| `EcheanceService` | `echeance_service.dart` | `genererTousRappels(annee, config)` : URSSAF mens/trim, CFE, Impôts, TVA, factures échues, devis expirants |
 
 ---
 
@@ -570,6 +601,10 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 | `ParametresView` | `/app/parametres` | Paramètres application |
 | `OnboardingView` | `/onboarding` | Assistant première configuration |
 | `LoginView` | `/login` | Authentification |
+| `CorbeilleView` | `/app/corbeille` | Corbeille soft-delete (4 onglets) |
+| `FacturesRecurrentesView` | `/app/recurrentes` | Factures récurrentes + toggle actif |
+| `SuiviTempsView` | `/app/temps` | Suivi du temps + saisie + KPIs |
+| `RappelsEcheancesView` | `/app/rappels` | Rappels & échéances (3 onglets) |
 
 ### Widgets Dashboard (11)
 
@@ -614,7 +649,7 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 
 ### Injection de dépendances (`lib/config/dependency_injection.dart`)
 
-14 providers enregistrés via `MultiProvider` :
+18 providers enregistrés via `MultiProvider` :
 
 ```dart
 MultiProvider(
@@ -633,13 +668,17 @@ MultiProvider(
     ChangeNotifierProvider(create: (_) => ShoppingViewModel()),
     ChangeNotifierProvider(create: (_) => RelanceViewModel()),
     ChangeNotifierProvider(create: (_) => EditorStateProvider()),
+    ChangeNotifierProvider(create: (_) => CorbeilleViewModel()),
+    ChangeNotifierProvider(create: (_) => FactureRecurrenteViewModel()),
+    ChangeNotifierProvider(create: (_) => TempsViewModel()),
+    ChangeNotifierProvider(create: (_) => RappelViewModel()),
   ],
 )
 ```
 
 ### Routing (`lib/config/router.dart`)
 
-GoRouter avec ~26 routes et un auth guard :
+GoRouter avec ~30 routes et un auth guard :
 
 - Routes publiques : `/`, `/login`, `/onboarding`, `/splash`
 - Routes protégées : `/app/*` — redirigées vers `/login` si non connecté

@@ -3,12 +3,12 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-green?logo=supabase)](https://supabase.com)
-[![Tests](https://img.shields.io/badge/Tests-527%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-636%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
 **ERP Artisan** est une solution SaaS moderne développée en **Flutter Web**, conçue pour simplifier la gestion quotidienne des **artisans, micro-entrepreneurs et TPE du bâtiment**.
 
-L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Tableaux de bord financiers, Suivi URSSAF et Suivi TVA.
+L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Factures récurrentes, Suivi du temps, Rappels & Échéances fiscales, Tableaux de bord financiers, Suivi URSSAF, Suivi TVA et Multi-devises.
 
 ---
 
@@ -97,6 +97,41 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - **Auto-génération** : Mentions légales générées automatiquement depuis le profil
 - **Design système** : `AppTheme` avec spacing, radius, shadows, couleurs status
 
+### 🔄 Factures Récurrentes
+
+- **4 fréquences** : Hebdomadaire, mensuelle, trimestrielle, annuelle
+- **Toggle actif/inactif** : Activation/désactivation en un clic
+- **Calcul automatique** : Prochaine date d'émission calculée après chaque génération
+- **CRUD complet** : Création, édition, suppression avec lignes imbriquées
+
+### ⏱️ Suivi du Temps
+
+- **Saisie des temps** : Par client, par projet, par activité
+- **CA potentiel** : Calcul automatique basé sur le taux horaire et les heures non facturées
+- **Groupement** : Vue par client et par projet
+- **Marquage** : Passage de temps non facturé à facturé en lot
+
+### 📆 Rappels & Échéances Fiscales
+
+- **7 types de rappels** : URSSAF, CFE, Impôts, TVA, Échéance facture, Fin devis, Custom
+- **Génération automatique** : URSSAF (mensuel ou trimestriel), CFE (15 déc), Impôts (8 juin), TVA trimestrielle
+- **Priorités** : Urgente, haute, normale, basse — code couleur visuel
+- **Suivi** : Jours restants, détection retard, rappels proches (< 7 jours)
+
+### 💱 Multi-Devises
+
+- **Devise configurable** : EUR par défaut, extensible à toute devise
+- **Taux de change** : Stocké sur chaque facture et devis
+- **Notes privées** : Champ notes internes non visibles client
+- **Rétrocompatible** : Les documents existants restent en EUR
+
+### 🗑️ Corbeille & Soft-Delete
+
+- **Suppression douce** : Les documents ne sont pas supprimés mais marqués `deleted_at`
+- **Corbeille UI** : 4 onglets (Factures, Devis, Clients, Dépenses)
+- **Restauration** : Possibilité de restaurer un document supprimé
+- **Purge automatique** : Suppression définitive après 30 jours
+
 ### 🔍 Recherche Globale
 
 - **5 entités** : Recherche simultanée dans clients, factures, devis, dépenses et articles
@@ -153,7 +188,7 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 
 - **ViewModels** héritent de `BaseViewModel` (`lib/core/base_viewmodel.dart`) avec pattern `_loadingDepth` réentrant + `executeOperation()` pour tout appel async
 - **Repositories** : interface abstraite `IXxxRepository` + implémentation concrète héritant de `BaseRepository` (`lib/core/base_repository.dart`) avec `prepareForInsert()`/`prepareForUpdate()`
-- **Injection** : repositories injectés via constructeur optionnel dans les VMs (`IFactureRepository? repository`) → fallback vers impl concrète. 14 Providers enregistrés dans `lib/config/dependency_injection.dart`
+- **Injection** : repositories injectés via constructeur optionnel dans les VMs (`IFactureRepository? repository`) → fallback vers impl concrète. 18 Providers enregistrés dans `lib/config/dependency_injection.dart`
 - **Navigation** : GoRouter avec auth guard (redirige `/app/*` → `/login` si non connecté). Objets passés via `state.extra`
 - **Mixins** : `AutoSaveMixin` (brouillons SharedPreferences) et `PdfGenerationMixin` (génération PDF) sur DevisViewModel/FactureViewModel
 - **Calculs financiers** : 100% `Decimal` (jamais `double` pour l'argent) — référence `lib/utils/calculations_utils.dart`
@@ -165,10 +200,10 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 ## 📁 Structure du Projet
 
 ```
-lib/                          (130 fichiers Dart)
+lib/                          (155+ fichiers Dart)
 ├── config/                   # Configuration (4 fichiers)
-│   ├── dependency_injection.dart   # 14 Providers enregistrés
-│   ├── router.dart                 # 26 routes (GoRouter + auth guard)
+│   ├── dependency_injection.dart   # 18 Providers enregistrés
+│   ├── router.dart                 # ~28 routes (GoRouter + auth guard)
 │   ├── supabase_config.dart        # Connexion Supabase
 │   └── theme.dart                  # AppTheme (Material 3 + design tokens)
 │
@@ -179,23 +214,26 @@ lib/                          (130 fichiers Dart)
 │   ├── autosave_mixin.dart         # Sauvegarde auto brouillons
 │   └── pdf_generation_mixin.dart   # Génération PDF partagée
 │
-├── models/                   # Modèles de données (14 fichiers)
+├── models/                   # Modèles de données (17 fichiers)
 │   ├── article_model.dart          # Article catalogue
 │   ├── chiffrage_model.dart        # Ligne de chiffrage (achats/marge)
 │   ├── client_model.dart           # Client (particulier/pro)
 │   ├── config_charges_model.dart   # Config charges sociales
 │   ├── depense_model.dart          # Dépense professionnelle
-│   ├── devis_model.dart            # Devis + LigneDevis
+│   ├── devis_model.dart            # Devis + LigneDevis + devise/tauxChange/notesPrivees
 │   ├── entreprise_model.dart       # ProfilEntreprise (identité, TVA, PDF, mentions)
-│   ├── facture_model.dart          # Facture + LigneFacture
+│   ├── facture_model.dart          # Facture + LigneFacture + devise/tauxChange/notesPrivees
+│   ├── facture_recurrente_model.dart # FactureRecurrente + LigneFactureRecurrente
 │   ├── paiement_model.dart         # Paiement (partiel/total, acompte/solde)
 │   ├── photo_model.dart            # Photo chantier
 │   ├── planning_model.dart         # Événement planning
+│   ├── rappel_model.dart           # Rappel (7 types, 4 priorités)
 │   ├── shopping_model.dart         # Liste de courses
+│   ├── temps_activite_model.dart   # Suivi du temps (durée, taux horaire, CA)
 │   ├── urssaf_model.dart           # Déclaration URSSAF + UrssafConfig
 │   └── enums/                      # Énumérations (TypeEntreprise, PdfTheme, etc.)
 │
-├── repositories/             # Accès données (12 fichiers)
+├── repositories/             # Accès données (15 fichiers)
 │   ├── article_repository.dart     # IArticleRepository + impl
 │   ├── auth_repository.dart        # IAuthRepository + impl (Supabase Auth)
 │   ├── client_repository.dart      # IClientRepository + impl
@@ -204,30 +242,38 @@ lib/                          (130 fichiers Dart)
 │   ├── devis_repository.dart       # IDevisRepository + impl
 │   ├── entreprise_repository.dart  # IEntrepriseRepository + impl
 │   ├── facture_repository.dart     # IFactureRepository + impl
+│   ├── facture_recurrente_repository.dart # IFactureRecurrenteRepository + impl
 │   ├── global_search_repository.dart # IGlobalSearchRepository + impl
 │   ├── planning_repository.dart    # IPlanningRepository + impl
+│   ├── rappel_repository.dart      # IRappelRepository + impl
 │   ├── shopping_repository.dart    # IShoppingRepository + impl
+│   ├── temps_repository.dart       # ITempsRepository + impl
 │   └── urssaf_repository.dart      # IUrssafRepository + impl
 │
-├── viewmodels/               # Logique métier (14 fichiers)
+├── viewmodels/               # Logique métier (18 fichiers)
 │   ├── article_viewmodel.dart      # CRUD articles
 │   ├── auth_viewmodel.dart         # Auth (login, signup, logout)
 │   ├── client_viewmodel.dart       # CRUD clients
+│   ├── corbeille_viewmodel.dart    # Corbeille (restore, purge, soft-delete)
 │   ├── dashboard_viewmodel.dart    # KPIs, top clients, graphiques, archivage
 │   ├── depense_viewmodel.dart      # CRUD dépenses
 │   ├── devis_viewmodel.dart        # CRUD devis + duplication + PDF + autosave
 │   ├── editor_state_provider.dart  # État éditeur (onglet courant)
 │   ├── entreprise_viewmodel.dart   # Profil entreprise + logo/signature
 │   ├── facture_viewmodel.dart      # CRUD factures + avoir + duplication + PDF
+│   ├── facture_recurrente_viewmodel.dart # CRUD factures récurrentes + toggle actif
 │   ├── global_search_viewmodel.dart # Recherche multi-entités
 │   ├── planning_viewmodel.dart     # CRUD événements + filtres
+│   ├── rappel_viewmodel.dart       # CRUD rappels + génération auto fiscale
 │   ├── relance_viewmodel.dart      # Relances impayés + envoi email
 │   ├── shopping_viewmodel.dart     # CRUD liste de courses
+│   ├── temps_viewmodel.dart        # Suivi temps + CA potentiel + groupement
 │   └── urssaf_viewmodel.dart       # Simulation URSSAF + config seuils TVA
 │
-├── services/                 # Services métier (14 fichiers)
+├── services/                 # Services métier (15 fichiers)
 │   ├── archivage_service.dart      # Détection factures archivables (> 12 mois)
 │   ├── audit_service.dart          # Logging audit_logs (EMAIL_SENT, RELANCE_SENT)
+│   ├── echeance_service.dart       # Génération auto rappels fiscaux (URSSAF, CFE, TVA)
 │   ├── email_service.dart          # Envoi email via url_launcher (mailto:)
 │   ├── export_service.dart         # Export CSV multi-entités
 │   ├── local_storage_service.dart  # Auto-save brouillons (SharedPreferences)
@@ -247,7 +293,7 @@ lib/                          (130 fichiers Dart)
 │   ├── format_utils.dart           # Formatage FR (monnaie, dates, %)
 │   └── validation_utils.dart       # Validation formulaires (12 validateurs + Luhn SIRET)
 │
-├── views/                    # Écrans (34 fichiers)
+├── views/                    # Écrans (37 fichiers)
 │   ├── tableau_de_bord_view.dart   # Dashboard KPIs + graphiques + widgets
 │   ├── liste_factures_view.dart    # Liste factures + actions email/paiement
 │   ├── liste_devis_view.dart       # Liste devis + actions envoi/duplication
@@ -256,7 +302,11 @@ lib/                          (130 fichiers Dart)
 │   ├── planning_view.dart          # Calendrier + événements
 │   ├── global_search_view.dart     # Recherche globale 5 entités
 │   ├── archives_view.dart          # Documents archivés
+│   ├── corbeille_view.dart         # Corbeille soft-delete (4 onglets)
 │   ├── relances_view.dart          # Relances impayés + stats + email
+│   ├── factures_recurrentes_view.dart # Factures récurrentes + toggle
+│   ├── suivi_temps_view.dart       # Suivi du temps + KPIs + saisie
+│   ├── rappels_echeances_view.dart # Rappels fiscaux + onglets + génération
 │   ├── profil_entreprise_view.dart # 7 sections profil (identité → PDF)
 │   ├── onboarding_view.dart        # Assistant 4 étapes première connexion
 │   ├── settings_root_view.dart     # Paramètres URSSAF + thème PDF
@@ -265,9 +315,9 @@ lib/                          (130 fichiers Dart)
 │   ├── devis/stepper/              # Stepper devis 4 étapes
 │   └── ...                         # Autres vues (client, dépense, login, etc.)
 │
-├── widgets/                  # Composants réutilisables (29 fichiers)
+├── widgets/                  # Composants réutilisables (30 fichiers)
 │   ├── base_screen.dart            # Layout responsive avec drawer
-│   ├── custom_drawer.dart          # Drawer sectionné (5 groupes)
+│   ├── custom_drawer.dart          # Drawer sectionné (5 groupes, 16 entrées)
 │   ├── ligne_editor.dart           # Éditeur de lignes documents
 │   ├── tva_alert_banner.dart       # Alerte TVA (seuils approchés/dépassés)
 │   ├── dashboard/                  # 11 widgets tableau de bord
@@ -281,10 +331,10 @@ lib/                          (130 fichiers Dart)
 │
 └── main.dart                 # Point d'entrée
 
-test/                         (37 fichiers)
-├── viewmodels/               # 15 tests ViewModels
-├── services/                 # 7 tests Services
-├── models/                   # 4 tests Models
+test/                         (43 fichiers)
+├── viewmodels/               # 18 tests ViewModels
+├── services/                 # 8 tests Services
+├── models/                   # 6 tests Models
 ├── utils/                    # 3 tests Utilitaires
 ├── widgets/                  # 3 tests Widgets
 ├── integration/              # 3 tests Workflows
@@ -300,15 +350,18 @@ Tous les modèles implémentent `fromMap()`, `toMap()` et `copyWith()`.
 | Modèle | Table Supabase | Description |
 |--------|---------------|-------------|
 | `Client` | `clients` | Fiche client complète (nom, SIRET, TVA intra, adresse, contact) |
-| `Facture` | `factures` | Facture avec lignes, paiements, chiffrage, multi-statut, n° bon commande, motif avoir |
+| `Facture` | `factures` | Facture avec lignes, paiements, chiffrage, multi-statut, n° bon commande, motif avoir, devise, taux change, notes privées |
 | `LigneFacture` | `lignes_factures` | Ligne de facture (description, qté, PU, TVA multi-taux, formatage) |
 | `Paiement` | `paiements` | Paiement partiel/total rattaché à une facture, flag acompte/solde |
-| `Devis` | `devis` | Devis avec analyse de rentabilité intégrée |
+| `Devis` | `devis` | Devis avec analyse de rentabilité, devise, taux change, notes privées |
 | `LigneDevis` | `lignes_devis` | Ligne de devis (idem LigneFacture) |
 | `LigneChiffrage` | `lignes_chiffrages` | Chiffrage matières (achat, marge, fournisseur) |
 | `Depense` | `depenses` | Dépense professionnelle catégorisée |
 | `Article` | `articles` | Article catalogue réutilisable |
 | `ProfilEntreprise` | `entreprises` | Profil entreprise (logo, couleurs custom, thème PDF, mentions légales, TVA) |
+| `FactureRecurrente` | `factures_recurrentes` | Facture récurrente (fréquence, prochaine émission, lignes, toggle actif) |
+| `TempsActivite` | `temps_activites` | Suivi temps (durée, taux horaire, montant calculé, projet) |
+| `Rappel` | `rappels` | Rappel/échéance (7 types, 4 priorités, jours restants, récurrence) |
 | `PlanningEvent` | `planning_events` | Événement calendrier (manuel ou auto-généré) |
 | `ShoppingItem` | `shopping_items` | Article liste de courses |
 | `UrssafDeclaration` | `urssaf_declarations` | Déclaration trimestrielle URSSAF |
@@ -366,6 +419,18 @@ Export CSV : factures (14 col), devis (12 col), clients (7 col), dépenses (5 co
 ### LocalStorageService (`lib/services/local_storage_service.dart`)
 Sauvegarde automatique des brouillons en cours d'édition via `SharedPreferences`.
 
+### EcheanceService (`lib/services/echeance_service.dart`)
+Génération automatique de rappels fiscaux et commerciaux :
+- **URSSAF** : mensuel ou trimestriel selon configuration
+- **CFE** : échéance annuelle au 15 décembre
+- **Impôts** : versement libératoire mensuel/trimestriel
+- **TVA** : si applicable, rappels mensuels
+- **Factures échues** : rappels automatiques pour impayés
+- **Devis expirants** : alertes sur devis proches de l'expiration
+
+### PreferencesService (`lib/services/preferences_service.dart`)
+Gestion de la configuration des charges sociales via `SharedPreferences`.
+
 ---
 
 ## 🔧 Utilitaires
@@ -394,7 +459,7 @@ Formatage locale française (`fr_FR`) :
 
 ## 🗺️ Routes & Navigation
 
-**26 routes** gérées par GoRouter avec guard d'authentification.
+**~30 routes** gérées par GoRouter avec guard d'authentification.
 
 ### Routes publiques
 | Route | Vue | Description |
@@ -421,6 +486,10 @@ Formatage locale française (`fr_FR`) :
 | `/app/archives` | `ArchivesView` | Documents archivés |
 | `/app/relances` | `RelancesView` | Relances impayés + stats |
 | `/app/search` | `GlobalSearchView` | Recherche globale 5 entités |
+| `/app/recurrentes` | `FacturesRecurrentesView` | Factures récurrentes (toggle, fréquence) |
+| `/app/temps` | `SuiviTempsView` | Suivi du temps + saisie + KPIs |
+| `/app/rappels` | `RappelsEcheancesView` | Rappels & échéances fiscales (3 onglets) |
+| `/app/corbeille` | `CorbeilleView` | Corbeille soft-delete (4 onglets) |
 | `/app/ajout_devis` | `DevisStepperView` | Création devis (stepper 4 étapes) |
 | `/app/ajout_devis/:id` | `DevisStepperView` | Édition devis existant |
 | `/app/ajout_facture` | `FactureStepperView` | Création facture (stepper 4 étapes) |
@@ -449,10 +518,10 @@ Formatage locale française (`fr_FR`) :
 
 ## ✅ Tests
 
-**527 tests — 100% passés** | **0 issue d'analyse statique**
+**636 tests — 100% passés** | **0 issue d'analyse statique**
 
 ```bash
-flutter test    → 527 tests passed
+flutter test    → 636 tests passed
 flutter analyze → No issues found!
 ```
 
@@ -460,9 +529,9 @@ flutter analyze → No issues found!
 
 | Catégorie | Fichiers | Tests | Détail |
 |-----------|----------|-------|--------|
-| **ViewModels** | 15 | ~340 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage |
-| **Services** | 7 | ~75 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, design system, PDF themes |
-| **Models** | 4 | ~55 | `fromMap`, `toMap`, `copyWith`, getters calculés, champs complets |
+| **ViewModels** | 18 | ~400 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage, corbeille, récurrence, temps, rappels |
+| **Services** | 8 | ~90 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, EcheanceService, design system, PDF themes |
+| **Models** | 6 | ~75 | `fromMap`, `toMap`, `copyWith`, getters calculés, champs complets, FactureRecurrente, TempsActivite, Rappel |
 | **Utils** | 3 | ~35 | Calculs Decimal, formatage FR, validation (Luhn SIRET, TVA, etc.) |
 | **Widgets** | 3 | ~12 | FacturesRetardCard, ListeClientsView, LoginView |
 | **Intégration** | 3 | ~10 | Workflows complets (client → devis → facture, articles) |
@@ -500,7 +569,7 @@ flutter analyze → No issues found!
 ```bash
 flutter run -d chrome           # Dev web
 flutter build windows           # Build Windows (production)
-flutter test                    # 527 tests unitaires + intégration
+flutter test                    # 636 tests unitaires + intégration
 flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```

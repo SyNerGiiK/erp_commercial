@@ -69,7 +69,7 @@ flutter pub get
 | Commande | Description |
 |---|---|
 | `flutter pub get` | Installe les dépendances |
-| `flutter test` | Lance les 527 tests |
+| `flutter test` | Lance les 636 tests |
 | `flutter test test/viewmodels/` | Tests d'un dossier |
 | `flutter test test/viewmodels/facture_viewmodel_test.dart` | Test d'un fichier |
 | `dart analyze` | Analyse statique (0 issues attendu) |
@@ -343,7 +343,7 @@ borderRadius: BorderRadius.circular(12.0),
 
 ### Statistiques actuelles
 
-- **527 tests** — 100% passants
+- **636 tests** — 100% passants
 - Structure miroir : `test/` ↔ `lib/`
 - Commande : `flutter test`
 
@@ -409,7 +409,9 @@ test/
 │   ├── client_model_test.dart         # Tests fromMap/toMap/copyWith
 │   ├── devis_model_test.dart
 │   ├── entreprise_model_test.dart
-│   └── facture_model_test.dart
+│   ├── facture_model_test.dart
+│   ├── facture_recurrente_model_test.dart  # Tests FactureRecurrente + LigneFactureRecurrente
+│   └── rappel_model_test.dart             # Tests Rappel + getters (joursRestants, etc.)
 ├── viewmodels/
 │   ├── facture_viewmodel_test.dart    # Tests VM complets (CRUD, workflow, etc.)
 │   ├── devis_viewmodel_test.dart
@@ -423,13 +425,18 @@ test/
 │   ├── relance_viewmodel_test.dart
 │   ├── global_search_viewmodel_test.dart
 │   ├── planning_viewmodel_test.dart
-│   └── shopping_viewmodel_test.dart
+│   ├── shopping_viewmodel_test.dart
+│   ├── corbeille_viewmodel_test.dart       # Tests corbeille soft-delete (4 entités)
+│   ├── facture_recurrente_viewmodel_test.dart # Tests récurrence, toggle, compteur
+│   ├── temps_viewmodel_test.dart           # Tests suivi temps, KPIs, filtrage
+│   └── rappel_viewmodel_test.dart          # Tests rappels, génération fiscale
 ├── services/
 │   ├── tva_service_test.dart          # Tests calculs TVA
 │   ├── relance_service_test.dart      # Tests niveaux relance
 │   ├── archivage_service_test.dart    # Tests détection archivage
 │   ├── email_service_test.dart        # Tests envoi email
 │   ├── audit_service_test.dart        # Tests logging audit
+│   ├── echeance_service_test.dart     # Tests génération rappels fiscaux
 │   ├── pdf_theme_custom_test.dart     # Tests thèmes PDF
 │   └── design_system_test.dart        # Tests design tokens
 ├── utils/
@@ -483,7 +490,7 @@ Types :
 
 ## Checklist avant commit
 
-- [ ] `flutter test` → 527/527 tests verts (ou plus si nouveaux tests ajoutés)
+- [ ] `flutter test` → 636/636 tests verts (ou plus si nouveaux tests ajoutés)
 - [ ] `dart analyze` → 0 issues
 - [ ] Pas de `double` pour l'argent → `Decimal` partout
 - [ ] `mounted` / `context.mounted` vérifié après chaque `await` dans les widgets

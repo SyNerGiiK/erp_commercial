@@ -305,6 +305,77 @@ Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`.
 | `date_paiement` | `TIMESTAMPTZ` | Date de règlement |
 | `est_paye` | `BOOLEAN` | Cotisation réglée |
 
+### factures_recurrentes
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `client_id` | `UUID` | NOT NULL | — | FK → clients.id |
+| `objet` | `TEXT` | NOT NULL | — | Objet de la facture |
+| `frequence` | `TEXT` | NOT NULL | `'mensuel'` | hebdomadaire, mensuel, trimestriel, annuel |
+| `prochaine_emission` | `TIMESTAMPTZ` | NOT NULL | — | Date prochaine génération |
+| `est_active` | `BOOLEAN` | NOT NULL | `true` | Toggle actif/inactif |
+| `nb_factures_generees` | `INTEGER` | NOT NULL | `0` | Compteur factures générées |
+| `total_ht` | `NUMERIC` | NOT NULL | `0` | Total HT |
+| `total_tva` | `NUMERIC` | NOT NULL | `0` | Total TVA |
+| `total_ttc` | `NUMERIC` | NOT NULL | `0` | Total TTC |
+| `devise` | `TEXT` | NOT NULL | `'EUR'` | Devise |
+| `remise_taux` | `NUMERIC` | NOT NULL | `0` | Taux de remise |
+| `conditions_reglement` | `TEXT` | NOT NULL | `'30 jours'` | Conditions de règlement |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
+
+### lignes_facture_recurrente
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `facture_recurrente_id` | `UUID` | NOT NULL | — | FK → factures_recurrentes.id |
+| `description` | `TEXT` | NOT NULL | — | Description |
+| `quantite` | `NUMERIC` | NOT NULL | — | Quantité |
+| `prix_unitaire` | `NUMERIC` | NOT NULL | — | Prix unitaire HT |
+| `total_ligne` | `NUMERIC` | NOT NULL | — | Total HT ligne |
+| `type_activite` | `TEXT` | NOT NULL | `'service'` | service ou commerce |
+| `taux_tva` | `NUMERIC` | NOT NULL | `20.0` | Taux TVA applicable |
+
+### temps_activites
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `client_id` | `UUID` | NULL | — | FK → clients.id |
+| `projet` | `TEXT` | NOT NULL | — | Nom du projet |
+| `description` | `TEXT` | NULL | — | Description |
+| `date_activite` | `TIMESTAMPTZ` | NOT NULL | — | Date de l'activité |
+| `duree_minutes` | `INTEGER` | NOT NULL | — | Durée en minutes |
+| `taux_horaire` | `NUMERIC` | NOT NULL | — | Taux horaire HT |
+| `est_facturable` | `BOOLEAN` | NOT NULL | `true` | Facturable au client |
+| `est_facture` | `BOOLEAN` | NOT NULL | `false` | Déjà facturé |
+| `facture_id` | `UUID` | NULL | — | FK → factures.id |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
+
+### rappels
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `titre` | `TEXT` | NOT NULL | — | Titre du rappel |
+| `description` | `TEXT` | NULL | — | Description détaillée |
+| `type_rappel` | `TEXT` | NOT NULL | `'autre'` | urssaf, cfe, impots, tva, echeance_facture, echeance_devis, autre |
+| `date_echeance` | `TIMESTAMPTZ` | NOT NULL | — | Date d'échéance |
+| `est_complete` | `BOOLEAN` | NOT NULL | `false` | Complété |
+| `priorite` | `TEXT` | NOT NULL | `'normale'` | basse, normale, haute, urgente |
+| `est_recurrent` | `BOOLEAN` | NOT NULL | `false` | Récurrent |
+| `frequence_recurrence` | `TEXT` | NULL | — | Fréquence si récurrent |
+| `entite_liee_id` | `UUID` | NULL | — | Entité liée (facture, devis) |
+| `entite_liee_type` | `TEXT` | NULL | — | Type entité liée |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
+
 ---
 
 ## Relations (Foreign Keys)
@@ -321,7 +392,10 @@ auth.users (Supabase Auth)
   ├── 1:N → cotisations.user_id
   ├── 1:N → audit_logs.user_id
   ├── 1:N → events.user_id
-  └── 1:N → shopping_items.user_id
+  ├── 1:N → shopping_items.user_id
+  ├── 1:N → factures_recurrentes.user_id
+  ├── 1:N → temps_activites.user_id
+  └── 1:N → rappels.user_id
 
 clients
   ├── 1:N → factures.client_id
@@ -336,6 +410,16 @@ devis
   ├── 1:N → lignes_devis.devis_id
   ├── 1:1 → factures.devis_source_id (transformation)
   └── self → devis.devis_parent_id (avenants)
+
+factures_recurrentes
+  └── 1:N → lignes_facture_recurrente.facture_recurrente_id
+
+clients
+  ├── 1:N → factures_recurrentes.client_id
+  └── 1:N → temps_activites.client_id
+
+factures
+  └── 1:N → temps_activites.facture_id
 ```
 
 ---
@@ -373,6 +457,9 @@ devis
 | `trg_paiements_updated_at` | `paiements` |
 | `trg_clients_updated_at` | `clients` |
 | `trg_depenses_updated_at` | `depenses` |
+| `trg_factures_recurrentes_updated_at` | `factures_recurrentes` |
+| `trg_temps_activites_updated_at` | `temps_activites` |
+| `trg_rappels_updated_at` | `rappels` |
 
 **Fonction commune :** `set_updated_at()` — met `NEW.updated_at = NOW()` avant chaque UPDATE.
 
@@ -446,6 +533,16 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 1. **Colonne `pdf_primary_color`** : Couleur hex personnalisée pour les thèmes PDF
 2. **Colonne `logo_footer_url`** : Logo footer (certifications, labels qualité)
 
+### Sprint 14-20 : Fonctionnalités avancées (`migration_sprint14_20_features.sql`)
+
+1. **Table `factures_recurrentes`** : Factures récurrentes avec fréquence, prochaine émission, toggle, compteur + RLS
+2. **Table `lignes_facture_recurrente`** : Lignes détaillées des factures récurrentes + RLS
+3. **Table `temps_activites`** : Suivi du temps (durée, taux horaire, projet, facturable) + RLS
+4. **Table `rappels`** : Rappels & échéances (7 types, 4 priorités, récurrence) + RLS
+5. **ALTER `factures`** : Ajout `devise`, `taux_change`, `notes_privees`
+6. **ALTER `devis`** : Ajout `devise`, `taux_change`, `notes_privees`
+7. **3 triggers `updated_at`** sur factures_recurrentes, temps_activites, rappels
+
 ### Ordre d'exécution
 
 ```
@@ -453,6 +550,7 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 2. migration_sprint5_updated_at.sql         (Sprint 5)
 3. migration_sprint8_audit_email.sql        (Sprint 8)
 4. migration_sprint9_pdf_custom.sql         (Sprint 9)
+5. migration_sprint14_20_features.sql       (Sprint 14-20)
 ```
 
 > **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Seules les 4 migrations ci-dessus sont effectives.

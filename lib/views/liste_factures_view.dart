@@ -16,6 +16,7 @@ import '../widgets/dialogs/paiement_dialog.dart'; // Added
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
 import '../models/paiement_model.dart'; // Added
+import '../services/email_service.dart';
 import 'package:decimal/decimal.dart';
 
 class ListeFacturesView extends StatefulWidget {
@@ -136,6 +137,40 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
     );
   }
 
+  Future<void> _envoyerParEmail(Facture f) async {
+    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+    final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+
+    Client? client;
+    try {
+      client = clientVM.clients.firstWhere((c) => c.id == f.clientId);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Client introuvable pour ce document")));
+      return;
+    }
+
+    final result = await EmailService.envoyerFacture(
+        facture: f, client: client, profil: entVM.profil);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      // Marquer comme envoyé si encore en statut validée
+      if (f.statut == 'validee') {
+        final vm = Provider.of<FactureViewModel>(context, listen: false);
+        await vm.markAsSent(f.id!);
+        if (!mounted) return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Client email ouvert avec succès")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.errorMessage ?? "Erreur email")));
+    }
+  }
+
   Future<void> _showPaiementDialog(Facture f) async {
     final result = await showDialog<Paiement>(
       context: context,
@@ -218,6 +253,10 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                       _genererPDF(f);
                       return;
                     }
+                    if (val == 'email') {
+                      _envoyerParEmail(f);
+                      return;
+                    }
                     if (val == 'sent') {
                       await vm.markAsSent(f.id!);
                       return;
@@ -249,6 +288,15 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                           const PopupMenuItem(
                               value: 'sent',
                               child: Text("Marquer comme envoyé")),
+                        if (f.statut == 'validee' || f.statut == 'envoye')
+                          const PopupMenuItem(
+                              value: 'email',
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.email_rounded, size: 20),
+                                title: Text("Envoyer par email"),
+                              )),
                         if (f.statut != 'brouillon' && f.statut != 'annulee')
                           const PopupMenuItem(
                               value: 'paiement',

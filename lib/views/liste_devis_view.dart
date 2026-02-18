@@ -18,6 +18,7 @@ import '../widgets/app_card.dart';
 import '../widgets/statut_badge.dart';
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
+import '../services/email_service.dart';
 
 class ListeDevisView extends StatefulWidget {
   const ListeDevisView({super.key});
@@ -74,6 +75,40 @@ class _ListeDevisViewState extends State<ListeDevisView>
     await Printing.layoutPdf(
         onLayout: (format) async => bytes,
         name: '${docType.replaceAll(" ", "_")}_${d.numeroDevis}.pdf');
+  }
+
+  Future<void> _envoyerDevisParEmail(Devis d) async {
+    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+    final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+
+    Client? client;
+    try {
+      client = clientVM.clients.firstWhere((c) => c.id == d.clientId);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Client introuvable pour ce devis")));
+      return;
+    }
+
+    final result = await EmailService.envoyerDevis(
+        devis: d, client: client, profil: entVM.profil);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      // Marquer comme envoyé si encore brouillon
+      if (d.statut == 'brouillon') {
+        final vm = Provider.of<DevisViewModel>(context, listen: false);
+        await vm.markAsSent(d.id!);
+        if (!mounted) return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Client email ouvert avec succès")));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.errorMessage ?? "Erreur email")));
+    }
   }
 
   void _showTransformationDialog(Devis d) async {
@@ -258,6 +293,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
                 icon: const Icon(Icons.more_vert, color: Colors.grey),
                 onSelected: (val) async {
                   if (val == 'pdf') _genererPDF(d);
+                  if (val == 'email') _envoyerDevisParEmail(d);
                   if (val == 'bl') _genererPDF(d, docType: "BON DE LIVRAISON");
                   if (val == 'bc') _genererPDF(d, docType: "BON DE COMMANDE");
                   if (val == 'facture') _showTransformationDialog(d);
@@ -282,8 +318,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
                       await Provider.of<DevisViewModel>(context, listen: false)
                           .refuserDevis(d.id!);
                     }
-                  }
-                  if (val == 'annuler') {
+                  } else if (val == 'annuler') {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -342,6 +377,17 @@ class _ListeDevisViewState extends State<ListeDevisView>
                 itemBuilder: (ctx) => [
                   // PDF toujours disponible
                   const PopupMenuItem(value: 'pdf', child: Text("Voir PDF")),
+
+                  // Email : brouillon et envoyé
+                  if (d.statut == 'brouillon' || d.statut == 'envoye')
+                    const PopupMenuItem(
+                        value: 'email',
+                        child: ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.email_rounded, size: 20),
+                          title: Text("Envoyer par email"),
+                        )),
 
                   // Brouillon : dupliquer, supprimer
                   if (d.statut == 'brouillon') ...[

@@ -9,14 +9,22 @@ import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
 import '../core/base_viewmodel.dart';
+import '../services/tva_service.dart';
+import '../services/relance_service.dart';
+import '../services/archivage_service.dart';
+import '../repositories/facture_repository.dart';
 
 enum DashboardPeriod { mois, trimestre, annee }
 
 class DashboardViewModel extends BaseViewModel {
   final IDashboardRepository _repository;
+  final IFactureRepository _factureRepository;
 
-  DashboardViewModel({IDashboardRepository? repository})
-      : _repository = repository ?? DashboardRepository();
+  DashboardViewModel({
+    IDashboardRepository? repository,
+    IFactureRepository? factureRepository,
+  })  : _repository = repository ?? DashboardRepository(),
+        _factureRepository = factureRepository ?? FactureRepository();
 
   DashboardPeriod _selectedPeriod = DashboardPeriod.mois;
   DashboardPeriod get selectedPeriod => _selectedPeriod;
@@ -89,6 +97,42 @@ class DashboardViewModel extends BaseViewModel {
   ProfilEntreprise? get profilEntreprise => _profilEntreprise;
   UrssafConfig? get urssafConfig => _urssafConfig;
 
+  // Analyse TVA
+  BilanTva? _bilanTva;
+  BilanTva? get bilanTva => _bilanTva;
+
+  // Factures en retard (relances)
+  List<RelanceInfo> _relances = [];
+  List<RelanceInfo> get relances => _relances;
+  int get nbFacturesEnRetard => _relances.length;
+  Decimal get montantTotalRetard =>
+      _relances.fold(Decimal.zero, (sum, r) => sum + r.resteAPayer);
+
+  // Archivage automatique
+  List<Facture> _facturesArchivables = [];
+  List<Facture> get facturesArchivables => _facturesArchivables;
+  bool _archivageDismissed = false;
+  bool get showArchivageSuggestion =>
+      _facturesArchivables.isNotEmpty && !_archivageDismissed;
+
+  void dismissArchivageSuggestion() {
+    _archivageDismissed = true;
+    notifyListeners();
+  }
+
+  /// Archive toutes les factures archivables en lot.
+  Future<void> archiverToutesLesFactures() async {
+    await executeOperation(() async {
+      for (final f in _facturesArchivables) {
+        if (f.id != null) {
+          await _factureRepository.updateArchiveStatus(f.id!, true);
+        }
+      }
+      _facturesArchivables = [];
+      _archivageDismissed = false;
+    });
+  }
+
   // --- ACTIONS ---
 
   void setPeriod(DashboardPeriod period) {
@@ -135,6 +179,24 @@ class DashboardViewModel extends BaseViewModel {
       _generateGraphData(allFacturesYear);
       _generateTopClients(factures);
       _generateExpenseBreakdown(depenses);
+
+      // Analyse TVA YTD
+      if (_urssafConfig != null) {
+        final caYtd = TvaService.calculerCaYtd(allFacturesYear);
+        _bilanTva = TvaService.analyser(
+          caVenteYtd: caYtd.caVente,
+          caServiceYtd: caYtd.caService,
+          config: _urssafConfig!,
+        );
+      }
+
+      // Relances — factures en retard
+      _relances = RelanceService.analyserRelances(allFacturesYear);
+
+      // Archivage automatique — factures soldées depuis plus d'un an
+      _facturesArchivables =
+          ArchivageService.detecterArchivables(allFacturesYear);
+      _archivageDismissed = false;
     });
   }
 

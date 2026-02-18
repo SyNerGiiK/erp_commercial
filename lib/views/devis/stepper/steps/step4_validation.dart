@@ -8,7 +8,9 @@ import 'package:decimal/decimal.dart';
 import '../../../../models/devis_model.dart';
 import '../../../../viewmodels/devis_viewmodel.dart';
 import '../../../../viewmodels/entreprise_viewmodel.dart';
+import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../../../../widgets/dialogs/signature_dialog.dart';
+import '../../../../widgets/tva_alert_banner.dart';
 import '../../../../config/theme.dart';
 import '../../../../utils/format_utils.dart';
 import '../../../../widgets/app_card.dart';
@@ -107,10 +109,15 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
   Widget build(BuildContext context) {
     final isTvaApplicable =
         Provider.of<EntrepriseViewModel>(context).isTvaApplicable;
+    final dashboardVm = Provider.of<DashboardViewModel>(context);
     final d = widget.devis;
 
     return Column(
       children: [
+        // Alerte TVA si dépassement détecté
+        if (dashboardVm.bilanTva != null)
+          TvaAlertBanner(bilan: dashboardVm.bilanTva!),
+
         const Text(
           "Récapitulatif",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

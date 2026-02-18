@@ -38,6 +38,13 @@ class ProfilEntreprise {
   /// Thème PDF sélectionné
   final PdfTheme pdfTheme;
 
+  /// Couleur primaire personnalisée pour les PDF (hex sans #, ex: '1E5572')
+  /// Si null, la couleur par défaut du thème est utilisée
+  final String? pdfPrimaryColor;
+
+  /// URL du logo footer (ex: certification, label qualité)
+  final String? logoFooterUrl;
+
   /// Mode de facturation (global vs détaillé)
   final ModeFacturation modeFacturation;
 
@@ -78,6 +85,8 @@ class ProfilEntreprise {
     this.tvaApplicable = false,
     this.numeroTvaIntra,
     this.pdfTheme = PdfTheme.moderne,
+    this.pdfPrimaryColor,
+    this.logoFooterUrl,
     this.modeFacturation = ModeFacturation.global,
     this.modeDiscret = false,
     this.tauxPenalitesRetard = 11.62,
@@ -110,6 +119,8 @@ class ProfilEntreprise {
       tvaApplicable: map['tva_applicable'] ?? false,
       numeroTvaIntra: map['numero_tva_intra'],
       pdfTheme: _parsePdfTheme(map['pdf_theme']),
+      pdfPrimaryColor: map['pdf_primary_color'],
+      logoFooterUrl: map['logo_footer_url'],
       modeFacturation: _parseModeFacturation(map['mode_facturation']),
       modeDiscret: map['mode_discret'] ?? false,
       tauxPenalitesRetard: (map['taux_penalites_retard'] ?? 11.62).toDouble(),
@@ -199,6 +210,8 @@ class ProfilEntreprise {
       'tva_applicable': tvaApplicable,
       'numero_tva_intra': numeroTvaIntra,
       'pdf_theme': pdfTheme.name,
+      'pdf_primary_color': pdfPrimaryColor,
+      'logo_footer_url': logoFooterUrl,
       'mode_facturation': modeFacturation.name,
       'mode_discret': modeDiscret,
       'taux_penalites_retard': tauxPenalitesRetard,
@@ -230,6 +243,8 @@ class ProfilEntreprise {
     bool? tvaApplicable,
     String? numeroTvaIntra,
     PdfTheme? pdfTheme,
+    String? pdfPrimaryColor,
+    String? logoFooterUrl,
     ModeFacturation? modeFacturation,
     bool? modeDiscret,
     double? tauxPenalitesRetard,
@@ -259,6 +274,8 @@ class ProfilEntreprise {
       tvaApplicable: tvaApplicable ?? this.tvaApplicable,
       numeroTvaIntra: numeroTvaIntra ?? this.numeroTvaIntra,
       pdfTheme: pdfTheme ?? this.pdfTheme,
+      pdfPrimaryColor: pdfPrimaryColor ?? this.pdfPrimaryColor,
+      logoFooterUrl: logoFooterUrl ?? this.logoFooterUrl,
       modeFacturation: modeFacturation ?? this.modeFacturation,
       modeDiscret: modeDiscret ?? this.modeDiscret,
       tauxPenalitesRetard: tauxPenalitesRetard ?? this.tauxPenalitesRetard,

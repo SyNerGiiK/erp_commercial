@@ -11,11 +11,16 @@ import '../mocks/repository_mocks.dart';
 
 void main() {
   late MockDashboardRepository mockRepository;
+  late MockFactureRepository mockFactureRepository;
   late DashboardViewModel viewModel;
 
   setUp(() {
     mockRepository = MockDashboardRepository();
-    viewModel = DashboardViewModel(repository: mockRepository);
+    mockFactureRepository = MockFactureRepository();
+    viewModel = DashboardViewModel(
+      repository: mockRepository,
+      factureRepository: mockFactureRepository,
+    );
   });
 
   group('refreshData', () {
@@ -55,7 +60,6 @@ void main() {
           montant: Decimal.parse('100'),
           titre: "Test",
           date: now,
-          
         ),
       ];
 
@@ -197,7 +201,6 @@ void main() {
           montant: Decimal.parse('100'),
           titre: "Test",
           date: now,
-          
         ),
         Depense(
           id: 'dep-2',
@@ -206,7 +209,6 @@ void main() {
           montant: Decimal.parse('50'),
           titre: "Test",
           date: now,
-          
         ),
       ];
 

@@ -4,16 +4,21 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:decimal/decimal.dart';
 
+import '../config/theme.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_drawer.dart';
 
 import '../viewmodels/dashboard_viewmodel.dart';
+import '../viewmodels/entreprise_viewmodel.dart';
 import '../widgets/dashboard/gradient_kpi_card.dart';
 import '../widgets/dashboard/revenue_chart.dart';
 import '../widgets/dashboard/recent_activity_list.dart';
 import '../widgets/dashboard/cotisation_detail_card.dart';
 import '../widgets/dashboard/plafonds_card.dart';
 import '../widgets/dashboard/expense_pie_chart.dart';
+import '../widgets/dashboard/suivi_seuil_tva_card.dart';
+import '../widgets/dashboard/factures_retard_card.dart';
+import '../widgets/dashboard/archivage_suggestion_card.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 
@@ -29,8 +34,25 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardViewModel>().refreshData();
+      _initDashboard();
     });
+  }
+
+  Future<void> _initDashboard() async {
+    final dashVM = context.read<DashboardViewModel>();
+    await dashVM.refreshData();
+    if (!mounted) return;
+
+    // Onboarding : si le profil n'a pas de nom d'entreprise → première connexion
+    final entrepriseVM =
+        Provider.of<EntrepriseViewModel>(context, listen: false);
+    await entrepriseVM.fetchProfil();
+    if (!mounted) return;
+
+    final profil = entrepriseVM.profil;
+    if (profil == null || profil.nomEntreprise.trim().isEmpty) {
+      context.go('/app/onboarding');
+    }
   }
 
   @override
@@ -65,7 +87,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 children: [
                   // --- HEADER ---
                   _buildHeader(context, vm),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppTheme.spacing32),
 
                   // --- KPI GRID (Cards Premium) ---
                   LayoutBuilder(builder: (context, constraints) {
@@ -143,7 +165,55 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                     );
                   }),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppTheme.spacing32),
+
+                  // --- FACTURES EN RETARD ---
+                  if (vm.relances.isNotEmpty)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: AppTheme.spacing32),
+                      child: FacturesRetardCard(
+                        relances: vm.relances,
+                        onTap: () => context.go('/app/relances'),
+                      ),
+                    ),
+
+                  // --- ARCHIVAGE AUTOMATIQUE ---
+                  if (vm.showArchivageSuggestion)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: AppTheme.spacing32),
+                      child: ArchivageSuggestionCard(
+                        facturesArchivables: vm.facturesArchivables,
+                        onArchiver: () async {
+                          final count = vm.facturesArchivables.length;
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Archiver les factures'),
+                              content: Text(
+                                'Archiver $count facture${count > 1 ? 's' : ''} soldée${count > 1 ? 's' : ''} depuis plus d\'un an ?\n\n'
+                                'Vous pourrez les retrouver dans l\'onglet Archives.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Annuler'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('Archiver'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            await vm.archiverToutesLesFactures();
+                          }
+                        },
+                        onDismiss: vm.dismissArchivageSuggestion,
+                      ),
+                    ),
 
                   // --- GRAPHIQUES & DETAILS ---
                   LayoutBuilder(builder: (context, constraints) {
@@ -160,7 +230,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                   monthlyRevenue: vm.monthlyRevenue,
                                   year: DateTime.now().year,
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: AppTheme.spacing24),
                                 if (vm.cotisationBreakdown.isNotEmpty)
                                   CotisationDetailCard(
                                     breakdown: vm.cotisationBreakdown,
@@ -169,13 +239,15 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: AppTheme.spacing24),
                           Expanded(
                             flex: 1,
                             child: Column(
                               children: [
-                                _buildSectionTitle("Répartition Dépenses"),
-                                const SizedBox(height: 16),
+                                const SectionHeader(
+                                  title: 'Répartition Dépenses',
+                                  icon: Icons.pie_chart_outline_rounded,
+                                ),
                                 Card(
                                   elevation: 2,
                                   shape: RoundedRectangleBorder(
@@ -186,7 +258,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                         data: vm.expenseBreakdown),
                                   ),
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: AppTheme.spacing24),
                                 if (vm.urssafConfig != null &&
                                     vm.profilEntreprise != null)
                                   PlafondsCard(
@@ -196,6 +268,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                     type: vm.profilEntreprise!.typeEntreprise,
                                     config: vm.urssafConfig!,
                                   ),
+                                if (vm.bilanTva != null) ...[
+                                  const SizedBox(height: AppTheme.spacing24),
+                                  SuiviSeuilTvaCard(bilan: vm.bilanTva!),
+                                ],
                               ],
                             ),
                           ),
@@ -209,17 +285,19 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             monthlyRevenue: vm.monthlyRevenue,
                             year: DateTime.now().year,
                           ),
-                          const SizedBox(height: 24),
-                          _buildSectionTitle("Répartition Dépenses"),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppTheme.spacing24),
+                          const SectionHeader(
+                            title: 'Répartition Dépenses',
+                            icon: Icons.pie_chart_outline_rounded,
+                          ),
                           ExpensePieChart(data: vm.expenseBreakdown),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppTheme.spacing24),
                           if (vm.cotisationBreakdown.isNotEmpty)
                             CotisationDetailCard(
                               breakdown: vm.cotisationBreakdown,
                               total: vm.totalCotisations,
                             ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: AppTheme.spacing24),
                           if (vm.urssafConfig != null &&
                               vm.profilEntreprise != null)
                             PlafondsCard(
@@ -229,16 +307,22 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                               type: vm.profilEntreprise!.typeEntreprise,
                               config: vm.urssafConfig!,
                             ),
+                          if (vm.bilanTva != null) ...[
+                            const SizedBox(height: AppTheme.spacing24),
+                            SuiviSeuilTvaCard(bilan: vm.bilanTva!),
+                          ],
                         ],
                       );
                     }
                   }),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppTheme.spacing32),
 
                   // --- ACTIVITÉ RÉCENTE ---
-                  _buildSectionTitle("Activité Récente"),
-                  const SizedBox(height: 16),
+                  const SectionHeader(
+                    title: 'Activité Récente',
+                    icon: Icons.history_rounded,
+                  ),
                   RecentActivityList(
                     items: vm.recentActivity,
                     onTap: (item) {
@@ -273,29 +357,23 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
           children: [
             Text(
               dateStr.toUpperCase(),
-              style: TextStyle(
-                color: Colors.grey[600],
+              style: const TextStyle(
+                color: AppTheme.textLight,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.0,
               ),
             ),
-            // Title removed to avoid duplication with AppBar
           ],
         ),
 
         // Sélecteur de Période Moderne
         Container(
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.all(AppTheme.spacing4),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2)),
-            ],
+            borderRadius: AppTheme.borderRadiusMedium,
+            boxShadow: AppTheme.shadowSmall,
           ),
           child: Row(
             children: [
@@ -317,31 +395,18 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       onTap: () => vm.setPeriod(period),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacing16, vertical: AppTheme.spacing8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue[600] : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? AppTheme.primary : Colors.transparent,
+          borderRadius: AppTheme.borderRadiusSmall,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[600],
+            color: isSelected ? Colors.white : AppTheme.textLight,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1A1A1A),
         ),
       ),
     );

@@ -512,18 +512,23 @@ class _SettingsRootViewState extends State<SettingsRootView> {
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primary)),
         const SizedBox(height: 10),
-        ...StatutEntrepreneur.values
-            .map((s) => RadioListTile<StatutEntrepreneur>(
-                  title: Text(s.label),
-                  value: s,
-                  groupValue: _statut,
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() => _statut = v);
-                      _applyStatutDefaults(v);
-                    }
-                  },
-                )),
+        RadioGroup<StatutEntrepreneur>(
+          groupValue: _statut,
+          onChanged: (v) {
+            if (v != null) {
+              setState(() => _statut = v);
+              _applyStatutDefaults(v);
+            }
+          },
+          child: Column(
+            children: StatutEntrepreneur.values
+                .map((s) => RadioListTile<StatutEntrepreneur>(
+                      title: Text(s.label),
+                      value: s,
+                    ))
+                .toList(),
+          ),
+        ),
         const SizedBox(height: 10),
         DropdownButtonFormField<TypeActiviteMicro>(
           key: ValueKey(_activite),
@@ -695,14 +700,22 @@ class _SettingsRootViewState extends State<SettingsRootView> {
         const SizedBox(height: 20),
         const Text("Thème PDF", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...PdfTheme.values.map((theme) => RadioListTile<PdfTheme>(
-              title: Text(theme.label),
-              subtitle:
-                  Text(theme.description, style: const TextStyle(fontSize: 12)),
-              value: theme,
-              groupValue: _pdfTheme,
-              onChanged: (v) => setState(() => _pdfTheme = v!),
-            )),
+        RadioGroup<PdfTheme>(
+          groupValue: _pdfTheme,
+          onChanged: (v) {
+            if (v != null) setState(() => _pdfTheme = v);
+          },
+          child: Column(
+            children: PdfTheme.values
+                .map((theme) => RadioListTile<PdfTheme>(
+                      title: Text(theme.label),
+                      subtitle: Text(theme.description,
+                          style: const TextStyle(fontSize: 12)),
+                      value: theme,
+                    ))
+                .toList(),
+          ),
+        ),
         const SizedBox(height: 16),
         SwitchListTile(
           title: const Text("Mode Discret (Privacy)"),

@@ -27,6 +27,8 @@ import '../views/global_search_view.dart';
 import '../views/shopping_list_view.dart';
 import '../views/archives_view.dart';
 import '../views/rentabilite_view.dart';
+import '../views/onboarding_view.dart';
+import '../views/relances_view.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -65,6 +67,10 @@ class AppRouter {
         GoRoute(
           path: '/login',
           builder: (_, __) => const LoginView(),
+        ),
+        GoRoute(
+          path: '/app/onboarding',
+          builder: (_, __) => const OnboardingView(),
         ),
 
         // ========== ROUTES PRIVÉES (Préfixe /app) ==========
@@ -119,6 +125,10 @@ class AppRouter {
         GoRoute(
           path: '/app/archives',
           builder: (_, __) => const ArchivesView(),
+        ),
+        GoRoute(
+          path: '/app/relances',
+          builder: (_, __) => const RelancesView(),
         ),
         GoRoute(
           path: '/app/search',

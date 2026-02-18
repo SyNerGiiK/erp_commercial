@@ -1,18 +1,20 @@
-﻿import 'package:flutter/foundation.dart'; // Pour kIsWeb
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:go_router/go_router.dart';
 import 'dart:typed_data';
 
 import '../config/theme.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
+import '../utils/validation_utils.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/dialogs/signature_dialog.dart';
 
+/// Vue profil entreprise complète — toutes les données du [ProfilEntreprise].
+/// Sections : Identité, Adresse, Facturation, TVA, Mentions légales,
+/// Personnalisation PDF, Signature, Logo.
 class ProfilEntrepriseView extends StatefulWidget {
   const ProfilEntrepriseView({super.key});
 
@@ -24,6 +26,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
+  // ── Contrôleurs texte ──
   final _nomEntController = TextEditingController();
   final _nomGerantController = TextEditingController();
   final _adresseController = TextEditingController();
@@ -35,24 +38,31 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _ibanController = TextEditingController();
   final _bicController = TextEditingController();
   final _mentionsController = TextEditingController();
+  final _numeroTvaIntraController = TextEditingController();
+  final _tauxPenalitesController = TextEditingController();
 
+  // ── État dropdowns / toggles ──
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
   TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurService;
   RegimeFiscal? _regimeFiscal;
   CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
+  bool _tvaApplicable = false;
+  PdfTheme _pdfTheme = PdfTheme.moderne;
+  String? _pdfPrimaryColor;
+  ModeFacturation _modeFacturation = ModeFacturation.global;
+  bool _modeDiscret = false;
+  bool _escompteApplicable = false;
+  bool _estImmatricule = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _chargerProfil();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _chargerProfil());
   }
 
-  void _chargerProfil() async {
+  Future<void> _chargerProfil() async {
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
     await vm.fetchProfil();
-
     if (!mounted) return;
 
     final p = vm.profil;
@@ -68,11 +78,20 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       _ibanController.text = p.iban ?? "";
       _bicController.text = p.bic ?? "";
       _mentionsController.text = p.mentionsLegales ?? "";
+      _numeroTvaIntraController.text = p.numeroTvaIntra ?? "";
+      _tauxPenalitesController.text = p.tauxPenalitesRetard.toString();
       setState(() {
         _frequenceCotisation = p.frequenceCotisation;
         _typeEntreprise = p.typeEntreprise;
         _regimeFiscal = p.regimeFiscal;
         _caisseRetraite = p.caisseRetraite;
+        _tvaApplicable = p.tvaApplicable;
+        _pdfTheme = p.pdfTheme;
+        _pdfPrimaryColor = p.pdfPrimaryColor;
+        _modeFacturation = p.modeFacturation;
+        _modeDiscret = p.modeDiscret;
+        _escompteApplicable = p.escompteApplicable;
+        _estImmatricule = p.estImmatricule;
       });
     }
   }
@@ -90,21 +109,27 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     _ibanController.dispose();
     _bicController.dispose();
     _mentionsController.dispose();
+    _numeroTvaIntraController.dispose();
+    _tauxPenalitesController.dispose();
     super.dispose();
   }
+
+  // ── Sauvegarde ──
 
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
 
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
-
     final existingId = vm.profil?.id;
     final existingLogo = vm.profil?.logoUrl;
     final existingSignature = vm.profil?.signatureUrl;
 
+    final tauxPenalites =
+        double.tryParse(_tauxPenalitesController.text.replaceAll(',', '.')) ??
+            11.62;
+
     final profilToSave = ProfilEntreprise(
       id: existingId,
-      // userId géré par le Repo
       nomEntreprise: _nomEntController.text.trim(),
       nomGerant: _nomGerantController.text.trim(),
       adresse: _adresseController.text.trim(),
@@ -122,68 +147,77 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       typeEntreprise: _typeEntreprise,
       regimeFiscal: _regimeFiscal,
       caisseRetraite: _caisseRetraite,
+      tvaApplicable: _tvaApplicable,
+      numeroTvaIntra: _numeroTvaIntraController.text.trim().isNotEmpty
+          ? _numeroTvaIntraController.text.trim()
+          : null,
+      pdfTheme: _pdfTheme,
+      pdfPrimaryColor: _pdfPrimaryColor,
+      modeFacturation: _modeFacturation,
+      modeDiscret: _modeDiscret,
+      tauxPenalitesRetard: tauxPenalites,
+      escompteApplicable: _escompteApplicable,
+      estImmatricule: _estImmatricule,
     );
 
     final success = await vm.saveProfil(profilToSave);
-
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profil enregistré avec succès !")));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success
+          ? "Profil enregistré avec succès !"
+          : "Erreur lors de l'enregistrement"),
+      backgroundColor: success ? Colors.green.shade700 : AppTheme.error,
+    ));
   }
 
+  // ── Upload images ──
+
   Future<void> _pickAndUpload(String type) async {
-    // 1. Sélection image (XFile, compatible Web)
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image == null) return;
+    if (image == null || !mounted) return;
 
-    if (!mounted) return;
-
-    // 2. Upload via ViewModel
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
     final success = await vm.uploadImage(image, type);
-
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Image mise à jour !")));
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Erreur upload")));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success ? "Image mise à jour !" : "Erreur upload"),
+    ));
   }
 
   Future<void> _drawAndUpload() async {
-    // 1. Ouvrir le dialog de signature
-    // ATTENTION: Il faut importer SignatureDialog (à créer/importer)
     final Uint8List? signatureBytes = await showDialog(
       context: context,
       builder: (context) => const SignatureDialog(),
     );
+    if (signatureBytes == null || !mounted) return;
 
-    if (signatureBytes == null) return;
-    if (!mounted) return;
-
-    // 2. Upload via ViewModel
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
     final success = await vm.uploadSignatureBytes(signatureBytes);
-
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Signature mise à jour !")));
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Erreur upload")));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success ? "Signature mise à jour !" : "Erreur upload"),
+    ));
   }
+
+  // ── Auto-fill mentions légales ──
+
+  void _regenererMentions() {
+    final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
+    setState(() {
+      _mentionsController.text = vm.getLegalMentionsSuggestion(
+        _typeEntreprise,
+        estImmatricule: _estImmatricule,
+        tvaApplicable: _tvaApplicable,
+      );
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -196,268 +230,345 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       child: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // LOGO ZONE
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => _pickAndUpload('logo'),
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey.shade200,
-                          backgroundImage: (profil?.logoUrl != null)
-                              ? NetworkImage(profil!.logoUrl!)
-                              : null,
-                          child: (profil?.logoUrl == null)
-                              ? const Icon(Icons.add_a_photo,
-                                  size: 30, color: Colors.grey)
-                              : null,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Center(
-                      child: Text("Logo Entreprise",
-                          style: TextStyle(color: Colors.grey)),
-                    ),
-                    const SizedBox(height: 30),
+                    // ── LOGO ──
+                    _buildLogoSection(profil),
+                    const SizedBox(height: 28),
 
-                    // CHAMPS PRINCIPAUX
-                    const Text("Identité",
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 15),
-                    CustomTextField(
-                        label: "Nom de l'entreprise (Raison Sociale)",
-                        controller: _nomEntController,
-                        validator: (v) => v!.isEmpty ? "Nom requis" : null),
-                    const SizedBox(height: 10),
-                    CustomTextField(
-                        label: "Nom du Gérant",
-                        controller: _nomGerantController,
-                        validator: (v) => v!.isEmpty ? "Nom requis" : null),
-                    const SizedBox(height: 10),
-                    CustomTextField(
-                        label: "SIRET",
-                        controller: _siretController,
-                        validator: (v) => v!.isEmpty ? "SIRET requis" : null),
-                    const SizedBox(height: 20),
-
-                    // TYPE D'ENTREPRISE
-                    DropdownButtonFormField<TypeEntreprise>(
-                      key: ValueKey(_typeEntreprise),
-                      initialValue: _typeEntreprise,
-                      decoration: InputDecoration(
-                        labelText: "Type d'entreprise (régime fiscal)",
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      items: TypeEntreprise.values
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type.label),
-                              ))
-                          .toList(),
-                      onChanged: (v) {
-                        setState(() {
-                          _typeEntreprise = v!;
-                          // Auto-fill Mentions si vide
-                          if (_mentionsController.text.isEmpty) {
-                            final vm = Provider.of<EntrepriseViewModel>(context,
-                                listen: false);
-                            _mentionsController.text =
-                                vm.getLegalMentionsSuggestion(v);
-                          }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    CustomTextField(
-                        label: "Email contact",
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) => v!.isEmpty ? "Email requis" : null),
-                    const SizedBox(height: 10),
-                    CustomTextField(
-                        label: "Téléphone",
-                        controller: _telController,
-                        keyboardType: TextInputType.phone),
-
-                    const SizedBox(height: 30),
-                    const Text("Adresse",
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 15),
-                    CustomTextField(
-                        label: "Adresse complète",
-                        controller: _adresseController,
-                        validator: (v) => v!.isEmpty ? "Requis" : null),
-                    const SizedBox(height: 10),
-                    Row(
+                    // ── 1. IDENTITÉ ──
+                    _buildSectionCard(
+                      icon: Icons.badge_rounded,
+                      title: "Identité",
                       children: [
-                        Expanded(
-                          flex: 1,
-                          child: CustomTextField(
-                              label: "Code Postal",
-                              controller: _cpController,
-                              keyboardType: TextInputType.number,
-                              validator: (v) => v!.isEmpty ? "Requis" : null),
+                        CustomTextField(
+                          label: "Nom de l'entreprise (Raison Sociale)",
+                          controller: _nomEntController,
+                          validator: (v) => v!.isEmpty ? "Nom requis" : null,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: CustomTextField(
-                              label: "Ville",
-                              controller: _villeController,
-                              validator: (v) => v!.isEmpty ? "Requis" : null),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: "Nom du Gérant",
+                          controller: _nomGerantController,
+                          validator: (v) => v!.isEmpty ? "Nom requis" : null,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: "SIRET (14 chiffres)",
+                          controller: _siretController,
+                          keyboardType: TextInputType.number,
+                          validator: ValidationUtils.validateSiret,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown<TypeEntreprise>(
+                          label: "Type d'entreprise",
+                          value: _typeEntreprise,
+                          items: TypeEntreprise.values,
+                          itemLabel: (e) => e.label,
+                          onChanged: (v) {
+                            setState(() => _typeEntreprise = v!);
+                            if (_mentionsController.text.isEmpty) {
+                              _regenererMentions();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: "Email contact",
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: ValidationUtils.validateEmailRequired,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: "Téléphone",
+                          controller: _telController,
+                          keyboardType: TextInputType.phone,
+                          validator: ValidationUtils.validatePhone,
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 30),
-                    const Text("Facturation & Bancaire",
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 15),
-                    CustomTextField(label: "IBAN", controller: _ibanController),
-                    const SizedBox(height: 10),
-                    CustomTextField(label: "BIC", controller: _bicController),
                     const SizedBox(height: 20),
 
-                    // CORRECTION DROPDOWN: Utilisation Key+InitialValue
-                    // CORRECTION DROPDOWN: Utilisation Key+InitialValue
-                    DropdownButtonFormField<FrequenceCotisation>(
-                      key: ValueKey(_frequenceCotisation), // Key Stable
-                      initialValue: _frequenceCotisation,
-                      decoration: InputDecoration(
-                        labelText: "Fréquence déclaration URSSAF",
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      items: FrequenceCotisation.values
-                          .map((f) => DropdownMenuItem(
-                                value: f,
-                                child: Text(f.label),
-                              ))
-                          .toList(),
-                      onChanged: (v) =>
-                          setState(() => _frequenceCotisation = v!),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // RÉGIME FISCAL (Optionnel)
-                    DropdownButtonFormField<RegimeFiscal?>(
-                      key: ValueKey(_regimeFiscal),
-                      initialValue: _regimeFiscal,
-                      decoration: InputDecoration(
-                        labelText: "Régime fiscal (si différent du type)",
-                        hintText: "Déterminé automatiquement",
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text("Auto")),
-                        ...RegimeFiscal.values.map((r) => DropdownMenuItem(
-                              value: r,
-                              child: Text(r.label),
-                            )),
-                      ],
-                      onChanged: (v) => setState(() => _regimeFiscal = v),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // CAISSE RETRAITE
-                    DropdownButtonFormField<CaisseRetraite>(
-                      key: ValueKey(_caisseRetraite),
-                      initialValue: _caisseRetraite,
-                      decoration: InputDecoration(
-                        labelText: "Caisse de retraite",
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      items: CaisseRetraite.values
-                          .map((c) => DropdownMenuItem(
-                                value: c,
-                                child: Text(c.label),
-                              ))
-                          .toList(),
-                      onChanged: (v) => setState(() => _caisseRetraite = v!),
-                    ),
-
-                    const SizedBox(height: 30),
-                    const Text("Mentions Légales (Pied de page)",
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 15),
-                    CustomTextField(
-                      label: "Texte libre (Ex: TVA non applicable...)",
-                      controller: _mentionsController,
-                      maxLines: 3,
-                    ),
-
-                    const SizedBox(height: 30),
-                    const Text("Signature / Tampon",
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: Column(
-                        children: [
-                          if (profil?.signatureUrl != null)
-                            Container(
-                              height: 100,
-                              width: 200,
-                              margin: const EdgeInsets.only(bottom: 10),
-                              decoration: BoxDecoration(
-                                  border:
-                                      Border.all(color: Colors.grey.shade300),
-                                  color: Colors.white),
-                              child: Image.network(profil!.signatureUrl!,
-                                  fit: BoxFit.contain),
+                    // ── 2. ADRESSE ──
+                    _buildSectionCard(
+                      icon: Icons.location_on_rounded,
+                      title: "Adresse",
+                      children: [
+                        CustomTextField(
+                          label: "Adresse complète",
+                          controller: _adresseController,
+                          validator: (v) => v!.isEmpty ? "Requis" : null,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: CustomTextField(
+                                label: "Code Postal",
+                                controller: _cpController,
+                                keyboardType: TextInputType.number,
+                                validator: ValidationUtils.validateCodePostal,
+                              ),
                             ),
-                          ElevatedButton.icon(
-                            onPressed: _drawAndUpload, // NEW: _drawAndUpload
-                            icon: const Icon(Icons.draw), // CHANGED ICON
-                            label: const Text("Dessiner ma Signature"),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppTheme.textDark,
-                                side: const BorderSide(color: Colors.grey)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: CustomTextField(
+                                label: "Ville",
+                                controller: _villeController,
+                                validator: (v) => v!.isEmpty ? "Requis" : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 3. FACTURATION & BANCAIRE ──
+                    _buildSectionCard(
+                      icon: Icons.account_balance_rounded,
+                      title: "Facturation & Bancaire",
+                      children: [
+                        CustomTextField(
+                            label: "IBAN", controller: _ibanController),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                            label: "BIC", controller: _bicController),
+                        const SizedBox(height: 16),
+                        _buildDropdown<FrequenceCotisation>(
+                          label: "Fréquence déclaration URSSAF",
+                          value: _frequenceCotisation,
+                          items: FrequenceCotisation.values,
+                          itemLabel: (e) => e.label,
+                          onChanged: (v) =>
+                              setState(() => _frequenceCotisation = v!),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdownNullable<RegimeFiscal>(
+                          label: "Régime fiscal",
+                          hint: "Déterminé automatiquement",
+                          value: _regimeFiscal,
+                          items: RegimeFiscal.values,
+                          itemLabel: (e) => e.label,
+                          onChanged: (v) => setState(() => _regimeFiscal = v),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdown<CaisseRetraite>(
+                          label: "Caisse de retraite",
+                          value: _caisseRetraite,
+                          items: CaisseRetraite.values,
+                          itemLabel: (e) => e.label,
+                          onChanged: (v) =>
+                              setState(() => _caisseRetraite = v!),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 4. TVA ──
+                    _buildSectionCard(
+                      icon: Icons.percent_rounded,
+                      title: "TVA",
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text("Assujetti à la TVA"),
+                          subtitle: Text(
+                            _tvaApplicable
+                                ? "TVA collectée et déductible"
+                                : "Franchise en base (art. 293 B du CGI)",
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                          value: _tvaApplicable,
+                          activeTrackColor: AppTheme.primary,
+                          onChanged: (v) => setState(() => _tvaApplicable = v),
+                        ),
+                        if (_tvaApplicable) ...[
+                          const SizedBox(height: 12),
+                          CustomTextField(
+                            label: "N° TVA Intracommunautaire",
+                            controller: _numeroTvaIntraController,
+                            validator: ValidationUtils.validateTvaIntra,
                           ),
                         ],
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 5. MENTIONS LÉGALES ──
+                    _buildSectionCard(
+                      icon: Icons.gavel_rounded,
+                      title: "Mentions Légales",
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text("Immatriculé RCS / RM"),
+                          subtitle: Text(
+                            _estImmatricule
+                                ? "Numéro d'immatriculation affiché sur les PDF"
+                                : "Mention « Dispensé d'immatriculation » sur les PDF",
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                          value: _estImmatricule,
+                          activeTrackColor: AppTheme.primary,
+                          onChanged: (v) => setState(() => _estImmatricule = v),
+                        ),
+                        const SizedBox(height: 12),
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text("Escompte pour paiement anticipé"),
+                          subtitle: Text(
+                            _escompteApplicable
+                                ? "Escompte mentionné sur les factures"
+                                : "Pas d'escompte — mention obligatoire « Pas d'escompte »",
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                          value: _escompteApplicable,
+                          activeTrackColor: AppTheme.primary,
+                          onChanged: (v) =>
+                              setState(() => _escompteApplicable = v),
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: "Taux pénalités de retard (%)",
+                          controller: _tauxPenalitesController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          validator: ValidationUtils.validatePourcentage,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CustomTextField(
+                                label: "Mentions légales libres",
+                                controller: _mentionsController,
+                                maxLines: 3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _regenererMentions,
+                            icon: const Icon(Icons.auto_fix_high_rounded,
+                                size: 18),
+                            label: const Text("Régénérer automatiquement"),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 6. PERSONNALISATION PDF ──
+                    _buildSectionCard(
+                      icon: Icons.palette_rounded,
+                      title: "Personnalisation PDF",
+                      children: [
+                        _buildDropdown<PdfTheme>(
+                          label: "Thème PDF",
+                          value: _pdfTheme,
+                          items: PdfTheme.values,
+                          itemLabel: (e) => "${e.label} — ${e.description}",
+                          onChanged: (v) => setState(() => _pdfTheme = v!),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Couleur primaire personnalisée
+                        Text("Couleur primaire du PDF",
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey.shade700)),
+                        const SizedBox(height: 8),
+                        _buildColorPicker(),
+                        const SizedBox(height: 16),
+                        _buildDropdown<ModeFacturation>(
+                          label: "Mode de facturation",
+                          value: _modeFacturation,
+                          items: ModeFacturation.values,
+                          itemLabel: (e) => "${e.label} — ${e.description}",
+                          onChanged: (v) =>
+                              setState(() => _modeFacturation = v!),
+                        ),
+                        const SizedBox(height: 12),
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text("Mode discret"),
+                          subtitle: Text(
+                            "Masque le résumé financier dans l'éditeur",
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                          value: _modeDiscret,
+                          activeTrackColor: AppTheme.primary,
+                          onChanged: (v) => setState(() => _modeDiscret = v),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── 7. SIGNATURE ──
+                    _buildSectionCard(
+                      icon: Icons.draw_rounded,
+                      title: "Signature / Tampon",
+                      children: [
+                        Center(
+                          child: Column(
+                            children: [
+                              if (profil?.signatureUrl != null)
+                                Container(
+                                  height: 100,
+                                  width: 200,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    border:
+                                        Border.all(color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.white,
+                                  ),
+                                  child: Image.network(profil!.signatureUrl!,
+                                      fit: BoxFit.contain),
+                                ),
+                              ElevatedButton.icon(
+                                onPressed: _drawAndUpload,
+                                icon: const Icon(Icons.draw, size: 20),
+                                label: const Text("Dessiner ma Signature"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppTheme.textDark,
+                                  side: BorderSide(color: Colors.grey.shade400),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
+
+                    // ── BOUTON ENREGISTRER ──
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+                      height: 52,
+                      child: ElevatedButton.icon(
                         onPressed: _sauvegarder,
-                        child: const Text("ENREGISTRER LE PROFIL"),
+                        icon: const Icon(Icons.save_rounded),
+                        label: const Text("ENREGISTRER LE PROFIL",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5)),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -465,6 +576,195 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                 ),
               ),
             ),
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // WIDGETS HELPERS
+  // ────────────────────────────────────────────────────────────────────────
+
+  /// Sélecteur de couleur primaire pour les PDF
+  Widget _buildColorPicker() {
+    // Palette de couleurs prédéfinies
+    const presetColors = <String, String>{
+      '1E5572': 'Bleu Pétrole',
+      '2C3E50': 'Bleu Nuit',
+      '2A769E': 'Bleu Acier',
+      '3498DB': 'Bleu Ciel',
+      '1ABC9C': 'Turquoise',
+      '27AE60': 'Vert Émeraude',
+      '8E44AD': 'Violet',
+      'E74C3C': 'Rouge Brique',
+      'D35400': 'Orange Brûlé',
+      '555555': 'Gris Anthracite',
+    };
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        // Bouton "Par défaut"
+        _buildColorChip(null, 'Défaut du thème'),
+        ...presetColors.entries.map((e) => _buildColorChip(e.key, e.value)),
+      ],
+    );
+  }
+
+  Widget _buildColorChip(String? hex, String label) {
+    final isSelected = _pdfPrimaryColor == hex;
+    final displayColor =
+        hex != null ? Color(int.parse('FF$hex', radix: 16)) : AppTheme.primary;
+
+    return Tooltip(
+      message: label,
+      child: GestureDetector(
+        onTap: () => setState(() => _pdfPrimaryColor = hex),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: displayColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? AppTheme.textDark : Colors.grey.shade300,
+              width: isSelected ? 3 : 1,
+            ),
+            boxShadow: isSelected ? AppTheme.shadowSmall : null,
+          ),
+          child: isSelected
+              ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+              : null,
+        ),
+      ),
+    );
+  }
+
+  /// Section avec carte et titre.
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppTheme.primary, size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Logo section.
+  Widget _buildLogoSection(ProfilEntreprise? profil) {
+    return Center(
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => _pickAndUpload('logo'),
+            child: CircleAvatar(
+              radius: 48,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: (profil?.logoUrl != null)
+                  ? NetworkImage(profil!.logoUrl!)
+                  : null,
+              child: (profil?.logoUrl == null)
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_rounded,
+                            size: 26, color: Colors.grey.shade500),
+                        const SizedBox(height: 2),
+                        Text("Logo",
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey.shade500)),
+                      ],
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text("Appuyez pour changer le logo",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
+  }
+
+  /// Dropdown générique non-nullable.
+  Widget _buildDropdown<T>({
+    required String label,
+    required T value,
+    required List<T> items,
+    required String Function(T) itemLabel,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return DropdownButtonFormField<T>(
+      key: ValueKey(value),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(itemLabel(e))))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  /// Dropdown générique nullable (avec option "Auto").
+  Widget _buildDropdownNullable<T>({
+    required String label,
+    required String hint,
+    required T? value,
+    required List<T> items,
+    required String Function(T) itemLabel,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return DropdownButtonFormField<T?>(
+      key: ValueKey(value),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      items: [
+        const DropdownMenuItem<Null>(value: null, child: Text("Auto")),
+        ...items
+            .map((e) => DropdownMenuItem(value: e, child: Text(itemLabel(e)))),
+      ],
+      onChanged: onChanged,
     );
   }
 }

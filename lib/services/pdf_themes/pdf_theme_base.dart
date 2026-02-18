@@ -7,12 +7,29 @@ abstract class PdfThemeBase {
   /// Identifiant du thème
   String get name;
 
+  /// Couleur primaire personnalisée (override par l'utilisateur)
+  PdfColor? _customPrimaryColor;
+
+  /// Applique une couleur primaire personnalisée au thème
+  void setCustomPrimaryColor(String? hexColor) {
+    if (hexColor != null && hexColor.isNotEmpty) {
+      try {
+        final hex = hexColor.replaceFirst('#', '');
+        final intColor = int.parse('FF$hex', radix: 16);
+        _customPrimaryColor = PdfColor.fromInt(intColor);
+      } catch (_) {
+        _customPrimaryColor = null;
+      }
+    }
+  }
+
   // === COULEURS ===
-  PdfColor get primaryColor;
+  PdfColor get defaultPrimaryColor;
+  PdfColor get primaryColor => _customPrimaryColor ?? defaultPrimaryColor;
   PdfColor get accentColor;
   PdfColor get lightGrey;
   PdfColor get darkGrey;
-  PdfColor get tableHeaderBg;
+  PdfColor get tableHeaderBg => primaryColor;
   PdfColor get tableHeaderText => PdfColors.white;
   PdfColor get sectionTitleBg => lightGrey;
   PdfColor get sectionTitleColor => primaryColor;
@@ -75,5 +92,5 @@ abstract class PdfThemeBase {
   // === FOOTER ===
   pw.Widget buildFooterMentions(String? nomEntreprise, String? siret,
       String? iban, String? bic, String? mentions, bool isTvaApplicable,
-      {String? numeroTvaIntra});
+      {String? numeroTvaIntra, pw.MemoryImage? logoFooter});
 }

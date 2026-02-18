@@ -3,12 +3,12 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-green?logo=supabase)](https://supabase.com)
-[![Tests](https://img.shields.io/badge/Tests-385%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-527%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
 **ERP Artisan** est une solution SaaS moderne développée en **Flutter Web**, conçue pour simplifier la gestion quotidienne des **artisans, micro-entrepreneurs et TPE du bâtiment**.
 
-L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Tableaux de bord financiers et Suivi URSSAF.
+L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Tableaux de bord financiers, Suivi URSSAF et Suivi TVA.
 
 ---
 
@@ -25,7 +25,6 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - [Sécurité & Conformité](#-sécurité--conformité)
 - [Tests](#-tests)
 - [Installation & Démarrage](#-installation--démarrage)
-- [Changelog — Optimisation Février 2026](#-changelog--optimisation-février-2026)
 
 ---
 
@@ -35,22 +34,24 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 
 | Module | Description |
 |--------|-------------|
-| **Clients** | Fichier client complet (particulier/professionnel), SIRET, TVA intra, notes privées |
-| **Devis** | Création par stepper 4 étapes, calculs automatiques HT/TVA/TTC, remises, acomptes |
-| **Factures** | Cycle complet brouillon → validée → envoyée → payée, paiements partiels, historique |
+| **Clients** | Fichier client complet (particulier/professionnel), SIRET avec validation Luhn, TVA intra, notes privées |
+| **Devis** | Création par stepper 4 étapes, calculs automatiques HT/TVA/TTC, remises, acomptes, rentabilité |
+| **Factures** | Cycle complet brouillon → validée → envoyée → payée, paiements partiels, historique, immutabilité |
 | **Acomptes** | Gestion native déduite automatiquement du solde facture |
-| **Avoirs** | Création d'avoir depuis une facture validée avec inversion automatique des montants |
+| **Avoirs** | Création d'avoir depuis une facture validée, montants positifs, référence source dans le PDF |
 | **Duplication** | Duplication en 1 clic de devis et factures (copie brouillon avec nouvelles dates) |
 | **Dépenses** | Suivi des dépenses professionnelles par catégorie |
 | **Articles** | Bibliothèque de produits/services réutilisables pour saisie rapide |
 | **Liste de courses** | Gestion des achats matériaux avec calcul des quantités |
 
-### 🎨 Éditeur de Documents Riche
+### 🎨 Éditeur de Documents & PDF
 
 - **Mise en page avancée** : Titres, sous-titres, textes libres, sauts de page, lignes de chiffrage
 - **Formatage** : Gras, italique, souligné par ligne
 - **Calculs temps réel** : Aperçu immédiat des totaux, TVA multi-taux, net commercial
-- **Rendu PDF** : Génération professionnelle avec logo, couleurs entreprise, mentions légales
+- **3 thèmes PDF** : Classique, Moderne, Minimaliste (Strategy Pattern)
+- **Personnalisation** : Couleur primaire custom (10 presets + défaut), logo header/footer
+- **Mentions légales** : Pénalités de retard, indemnité 40€, escompte, conditions de paiement
 - **Signature électronique** : Signature directe à l'écran (tablette/souris)
 - **Auto-save** : Sauvegarde automatique des brouillons en local (`SharedPreferences`)
 
@@ -61,6 +62,9 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - **Graphiques** : Évolution CA mensuel/annuel (`fl_chart`)
 - **Répartition dépenses** : Camembert par catégorie
 - **Activité récente** : Dernières factures, devis et paiements
+- **Suivi seuil TVA** : Jauges vente/service (base + majoré), chip statut, alertes
+- **Factures en retard** : Badge, montant total, retard max, répartition par niveau
+- **Archivage automatique** : Détection factures soldées > 12 mois, suggestion d'archivage lot
 
 ### 📅 Planning
 
@@ -75,13 +79,23 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - **Multi-statuts** : Micro-entreprise, TNS, SASU
 - **Plafonds** : Suivi des plafonds CA avec alertes
 - **Détail par caisse** : Ventilation CIPAV, URSSAF, CSG/CRDS
+- **Seuils TVA versionnés** : Configurables par l'utilisateur, alertes approche/dépassement
 
 ### 📬 Relances Impayés
 
 - **Analyse automatique** : Détection des factures en retard de paiement
 - **4 niveaux de relance** : Amiable (1-14j) → Ferme (15-30j) → Mise en demeure (31-60j) → Contentieux (60j+)
 - **Génération de textes** : Courriers professionnels pré-rédigés par niveau
+- **Envoi email** : Via `url_launcher` (mailto:) avec sujet/corps pré-remplis
 - **Statistiques** : Montant total impayé, retard moyen, répartition par niveau
+
+### 🧑‍💼 Profil Entreprise & Onboarding
+
+- **Profil complet** : 7 sections en cartes (Identité, Adresse, Facturation & Bancaire, TVA, Mentions légales, Personnalisation PDF, Signature)
+- **Onboarding guidé** : Assistant 4 étapes (Identité → Coordonnées → Facturation/TVA → Logo/Récap)
+- **Validation SIRET** : Algorithme Luhn standard + cas spécial La Poste
+- **Auto-génération** : Mentions légales générées automatiquement depuis le profil
+- **Design système** : `AppTheme` avec spacing, radius, shadows, couleurs status
 
 ### 🔍 Recherche Globale
 
@@ -93,6 +107,7 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 
 - **Export CSV** : Factures (14 colonnes), devis (12 colonnes), clients (7 colonnes), dépenses (5 colonnes)
 - **Archives** : Archivage/désarchivage des documents obsolètes
+- **Archivage intelligent** : Suggestion automatique des factures soldées depuis plus de 12 mois
 - **Annulation** : Annulation de devis avec protection des devis signés
 
 ---
@@ -128,35 +143,38 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
                            │
                     ┌──────┴──────┐
                     │  Services   │
-                    │  (PDF, CSV, │
-                    │   Relance)  │
+                    │ (PDF, TVA,  │
+                    │  Relance,   │
+                    │  Archivage) │
                     └─────────────┘
 ```
 
 ### Principes clés
 
-- **ViewModels** héritent de `BaseViewModel` (extends `ChangeNotifier`) avec pattern `_loadingDepth` réentrant
-- **Repositories** : Interface abstraite (`IXxxRepository`) + implémentation concrète pour faciliter les tests
-- **Injection** : Les repositories sont injectés via constructeur dans les ViewModels
-- **Mixins** : `AutoSaveMixin` (brouillons) et `PdfGenerationMixin` (génération PDF) sur les documents
-- **Decimal obligatoire** : Jamais de `double` pour les montants financiers
-- **Sécurité async** : `if (!mounted) return;` après chaque `await` dans les widgets
+- **ViewModels** héritent de `BaseViewModel` (`lib/core/base_viewmodel.dart`) avec pattern `_loadingDepth` réentrant + `executeOperation()` pour tout appel async
+- **Repositories** : interface abstraite `IXxxRepository` + implémentation concrète héritant de `BaseRepository` (`lib/core/base_repository.dart`) avec `prepareForInsert()`/`prepareForUpdate()`
+- **Injection** : repositories injectés via constructeur optionnel dans les VMs (`IFactureRepository? repository`) → fallback vers impl concrète. 14 Providers enregistrés dans `lib/config/dependency_injection.dart`
+- **Navigation** : GoRouter avec auth guard (redirige `/app/*` → `/login` si non connecté). Objets passés via `state.extra`
+- **Mixins** : `AutoSaveMixin` (brouillons SharedPreferences) et `PdfGenerationMixin` (génération PDF) sur DevisViewModel/FactureViewModel
+- **Calculs financiers** : 100% `Decimal` (jamais `double` pour l'argent) — référence `lib/utils/calculations_utils.dart`
+- **Sécurité async** : `if (!mounted) return;` / `if (!context.mounted) return;` après chaque `await` dans les widgets
+- **PDF** : Strategy Pattern — `PdfThemeBase` → `ClassiqueTheme`, `ModerneTheme`, `MinimalisteTheme`. Isolate-ready via `PdfGenerationRequest`
 
 ---
 
 ## 📁 Structure du Projet
 
 ```
-lib/                          (~108 fichiers Dart)
+lib/                          (130 fichiers Dart)
 ├── config/                   # Configuration (4 fichiers)
-│   ├── dependency_injection.dart   # 13 Providers enregistrés
-│   ├── router.dart                 # 22 routes (GoRouter + auth guard)
+│   ├── dependency_injection.dart   # 14 Providers enregistrés
+│   ├── router.dart                 # 26 routes (GoRouter + auth guard)
 │   ├── supabase_config.dart        # Connexion Supabase
-│   └── theme.dart                  # Thème Material 3
+│   └── theme.dart                  # AppTheme (Material 3 + design tokens)
 │
 ├── core/                     # Classes de base (5 fichiers)
-│   ├── base_viewmodel.dart         # ChangeNotifier + loading/error pattern
-│   ├── base_repository.dart        # Accès Supabase centralisé
+│   ├── base_viewmodel.dart         # ChangeNotifier + _loadingDepth + executeOperation
+│   ├── base_repository.dart        # prepareForInsert/Update + handleError
 │   ├── document_repository.dart    # Repository abstrait documents
 │   ├── autosave_mixin.dart         # Sauvegarde auto brouillons
 │   └── pdf_generation_mixin.dart   # Génération PDF partagée
@@ -168,75 +186,109 @@ lib/                          (~108 fichiers Dart)
 │   ├── config_charges_model.dart   # Config charges sociales
 │   ├── depense_model.dart          # Dépense professionnelle
 │   ├── devis_model.dart            # Devis + LigneDevis
-│   ├── entreprise_model.dart       # Profil entreprise
+│   ├── entreprise_model.dart       # ProfilEntreprise (identité, TVA, PDF, mentions)
 │   ├── facture_model.dart          # Facture + LigneFacture
-│   ├── paiement_model.dart         # Paiement (partiel/total)
+│   ├── paiement_model.dart         # Paiement (partiel/total, acompte/solde)
 │   ├── photo_model.dart            # Photo chantier
 │   ├── planning_model.dart         # Événement planning
 │   ├── shopping_model.dart         # Liste de courses
-│   ├── urssaf_model.dart           # Déclaration URSSAF
-│   └── enums/                      # Énumérations
+│   ├── urssaf_model.dart           # Déclaration URSSAF + UrssafConfig
+│   └── enums/                      # Énumérations (TypeEntreprise, PdfTheme, etc.)
 │
 ├── repositories/             # Accès données (12 fichiers)
-│   ├── article_repository.dart
-│   ├── auth_repository.dart
-│   ├── client_repository.dart
-│   ├── dashboard_repository.dart
-│   ├── depense_repository.dart
-│   ├── devis_repository.dart
-│   ├── entreprise_repository.dart
-│   ├── facture_repository.dart
-│   ├── global_search_repository.dart
-│   ├── planning_repository.dart
-│   ├── shopping_repository.dart
-│   └── urssaf_repository.dart
+│   ├── article_repository.dart     # IArticleRepository + impl
+│   ├── auth_repository.dart        # IAuthRepository + impl (Supabase Auth)
+│   ├── client_repository.dart      # IClientRepository + impl
+│   ├── dashboard_repository.dart   # IDashboardRepository + impl
+│   ├── depense_repository.dart     # IDepenseRepository + impl
+│   ├── devis_repository.dart       # IDevisRepository + impl
+│   ├── entreprise_repository.dart  # IEntrepriseRepository + impl
+│   ├── facture_repository.dart     # IFactureRepository + impl
+│   ├── global_search_repository.dart # IGlobalSearchRepository + impl
+│   ├── planning_repository.dart    # IPlanningRepository + impl
+│   ├── shopping_repository.dart    # IShoppingRepository + impl
+│   └── urssaf_repository.dart      # IUrssafRepository + impl
 │
-├── viewmodels/               # Logique métier (13 fichiers)
-│   ├── article_viewmodel.dart
-│   ├── auth_viewmodel.dart
-│   ├── client_viewmodel.dart
-│   ├── dashboard_viewmodel.dart
-│   ├── depense_viewmodel.dart
-│   ├── devis_viewmodel.dart
-│   ├── editor_state_provider.dart
-│   ├── entreprise_viewmodel.dart
-│   ├── facture_viewmodel.dart
-│   ├── global_search_viewmodel.dart
-│   ├── planning_viewmodel.dart
-│   ├── shopping_viewmodel.dart
-│   └── urssaf_viewmodel.dart
+├── viewmodels/               # Logique métier (14 fichiers)
+│   ├── article_viewmodel.dart      # CRUD articles
+│   ├── auth_viewmodel.dart         # Auth (login, signup, logout)
+│   ├── client_viewmodel.dart       # CRUD clients
+│   ├── dashboard_viewmodel.dart    # KPIs, top clients, graphiques, archivage
+│   ├── depense_viewmodel.dart      # CRUD dépenses
+│   ├── devis_viewmodel.dart        # CRUD devis + duplication + PDF + autosave
+│   ├── editor_state_provider.dart  # État éditeur (onglet courant)
+│   ├── entreprise_viewmodel.dart   # Profil entreprise + logo/signature
+│   ├── facture_viewmodel.dart      # CRUD factures + avoir + duplication + PDF
+│   ├── global_search_viewmodel.dart # Recherche multi-entités
+│   ├── planning_viewmodel.dart     # CRUD événements + filtres
+│   ├── relance_viewmodel.dart      # Relances impayés + envoi email
+│   ├── shopping_viewmodel.dart     # CRUD liste de courses
+│   └── urssaf_viewmodel.dart       # Simulation URSSAF + config seuils TVA
 │
-├── services/                 # Services métier (5 fichiers)
+├── services/                 # Services métier (14 fichiers)
+│   ├── archivage_service.dart      # Détection factures archivables (> 12 mois)
+│   ├── audit_service.dart          # Logging audit_logs (EMAIL_SENT, RELANCE_SENT)
+│   ├── email_service.dart          # Envoi email via url_launcher (mailto:)
 │   ├── export_service.dart         # Export CSV multi-entités
-│   ├── local_storage_service.dart  # Auto-save brouillons
-│   ├── pdf_service.dart            # Génération PDF avec isolates
+│   ├── local_storage_service.dart  # Auto-save brouillons (SharedPreferences)
+│   ├── pdf_service.dart            # Génération PDF isolate-ready
 │   ├── preferences_service.dart    # Préférences utilisateur
-│   └── relance_service.dart        # Analyse relances impayés
+│   ├── relance_service.dart        # Analyse relances impayés (4 niveaux)
+│   ├── tva_service.dart            # TvaService (StatutTva, AnalyseTva, seuils)
+│   └── pdf_themes/                 # Thèmes PDF (Strategy Pattern)
+│       ├── pdf_theme_base.dart     # Classe abstraite + couleur custom
+│       ├── classique_theme.dart    # Thème classique
+│       ├── moderne_theme.dart      # Thème moderne
+│       ├── minimaliste_theme.dart  # Thème minimaliste
+│       └── pdf_themes.dart         # Barrel export
 │
 ├── utils/                    # Utilitaires (3 fichiers)
-│   ├── calculations_utils.dart     # Calculs financiers (Decimal)
+│   ├── calculations_utils.dart     # Calculs financiers 100% Decimal
 │   ├── format_utils.dart           # Formatage FR (monnaie, dates, %)
-│   └── validation_utils.dart       # Validation formulaires
+│   └── validation_utils.dart       # Validation formulaires (12 validateurs + Luhn SIRET)
 │
-├── views/                    # Écrans (~31 fichiers)
-│   ├── tableau_de_bord_view.dart
-│   ├── liste_factures_view.dart
-│   ├── liste_devis_view.dart
-│   ├── liste_clients_view.dart
-│   ├── liste_depenses_view.dart
-│   ├── planning_view.dart
-│   ├── global_search_view.dart
-│   ├── archives_view.dart
+├── views/                    # Écrans (34 fichiers)
+│   ├── tableau_de_bord_view.dart   # Dashboard KPIs + graphiques + widgets
+│   ├── liste_factures_view.dart    # Liste factures + actions email/paiement
+│   ├── liste_devis_view.dart       # Liste devis + actions envoi/duplication
+│   ├── liste_clients_view.dart     # Liste clients + recherche
+│   ├── liste_depenses_view.dart    # Liste dépenses
+│   ├── planning_view.dart          # Calendrier + événements
+│   ├── global_search_view.dart     # Recherche globale 5 entités
+│   ├── archives_view.dart          # Documents archivés
+│   ├── relances_view.dart          # Relances impayés + stats + email
+│   ├── profil_entreprise_view.dart # 7 sections profil (identité → PDF)
+│   ├── onboarding_view.dart        # Assistant 4 étapes première connexion
+│   ├── settings_root_view.dart     # Paramètres URSSAF + thème PDF
+│   ├── rentabilite_view.dart       # Outil interne chiffrage/rentabilité
 │   ├── facture/stepper/            # Stepper facture 4 étapes
 │   ├── devis/stepper/              # Stepper devis 4 étapes
-│   └── ...
+│   └── ...                         # Autres vues (client, dépense, login, etc.)
 │
-├── widgets/                  # Composants réutilisables (~25 fichiers)
-│   ├── dashboard/                  # Widgets tableau de bord (8)
-│   ├── dialogs/                    # Dialogues spécialisés (4)
-│   └── ...                         # Widgets partagés (13)
+├── widgets/                  # Composants réutilisables (29 fichiers)
+│   ├── base_screen.dart            # Layout responsive avec drawer
+│   ├── custom_drawer.dart          # Drawer sectionné (5 groupes)
+│   ├── ligne_editor.dart           # Éditeur de lignes documents
+│   ├── tva_alert_banner.dart       # Alerte TVA (seuils approchés/dépassés)
+│   ├── dashboard/                  # 11 widgets tableau de bord
+│   │   ├── gradient_kpi_card.dart
+│   │   ├── revenue_chart.dart
+│   │   ├── suivi_seuil_tva_card.dart
+│   │   ├── factures_retard_card.dart
+│   │   ├── archivage_suggestion_card.dart
+│   │   └── ...
+│   └── dialogs/                    # Dialogues spécialisés (4)
 │
 └── main.dart                 # Point d'entrée
+
+test/                         (37 fichiers)
+├── viewmodels/               # 15 tests ViewModels
+├── services/                 # 7 tests Services
+├── models/                   # 4 tests Models
+├── utils/                    # 3 tests Utilitaires
+├── widgets/                  # 3 tests Widgets
+├── integration/              # 3 tests Workflows
+└── mocks/                    # Mocks partagés (Mocktail)
 ```
 
 ---
@@ -248,19 +300,19 @@ Tous les modèles implémentent `fromMap()`, `toMap()` et `copyWith()`.
 | Modèle | Table Supabase | Description |
 |--------|---------------|-------------|
 | `Client` | `clients` | Fiche client complète (nom, SIRET, TVA intra, adresse, contact) |
-| `Facture` | `factures` | Facture avec lignes, paiements, chiffrage, multi-statut |
-| `LigneFacture` | `lignes_factures` | Ligne de facture (description, qté, PU, TVA, formatage) |
-| `Paiement` | `paiements` | Paiement partiel/total rattaché à une facture |
+| `Facture` | `factures` | Facture avec lignes, paiements, chiffrage, multi-statut, n° bon commande, motif avoir |
+| `LigneFacture` | `lignes_factures` | Ligne de facture (description, qté, PU, TVA multi-taux, formatage) |
+| `Paiement` | `paiements` | Paiement partiel/total rattaché à une facture, flag acompte/solde |
 | `Devis` | `devis` | Devis avec analyse de rentabilité intégrée |
 | `LigneDevis` | `lignes_devis` | Ligne de devis (idem LigneFacture) |
 | `LigneChiffrage` | `lignes_chiffrages` | Chiffrage matières (achat, marge, fournisseur) |
 | `Depense` | `depenses` | Dépense professionnelle catégorisée |
 | `Article` | `articles` | Article catalogue réutilisable |
-| `Entreprise` | `entreprises` | Profil entreprise (logo, couleurs, mentions légales) |
+| `ProfilEntreprise` | `entreprises` | Profil entreprise (logo, couleurs custom, thème PDF, mentions légales, TVA) |
 | `PlanningEvent` | `planning_events` | Événement calendrier (manuel ou auto-généré) |
 | `ShoppingItem` | `shopping_items` | Article liste de courses |
 | `UrssafDeclaration` | `urssaf_declarations` | Déclaration trimestrielle URSSAF |
-| `ConfigCharges` | — | Configuration charges sociales (model local) |
+| `UrssafConfig` | `urssaf_configs` | Configuration charges + seuils TVA versionnés |
 
 ### Règles Decimal
 
@@ -273,81 +325,76 @@ final prixUnitaire = (totalHt / quantite).toDecimal();
 
 // Multiplication → retourne Decimal → pas de .toDecimal()
 final totalLigne = prixUnitaire * quantite;
+
+// Parsing depuis Supabase
+final montant = Decimal.parse(json['montant'].toString());
 ```
 
 ---
 
 ## ⚙️ Services
 
-### PdfService
-Génération de PDF professionnels pour factures et devis avec :
-- Logo et couleurs de l'entreprise
-- Calcul des totaux, TVA multi-taux, net commercial
-- Mentions légales obligatoires
-- Exécution en isolate pour les calculs lourds
+### PdfService (`lib/services/pdf_service.dart`)
+Génération de PDF professionnels pour factures et devis :
+- 3 thèmes interchangeables (Strategy Pattern) : `ClassiqueTheme`, `ModerneTheme`, `MinimalisteTheme`
+- Couleur primaire custom configurable par utilisateur
+- Logo header + footer, mentions légales obligatoires (pénalités, indemnité 40€, escompte)
+- Référence facture source dans les avoirs
+- Exécution isolate-ready via `PdfGenerationRequest`
 
-### ExportService
-Export CSV compatible comptabilité :
-- `exportFactures()` — 14 colonnes (n° facture, client, dates, montants HT/TVA/TTC, statut...)
-- `exportDevis()` — 12 colonnes
-- `exportClients()` — 7 colonnes
-- `exportDepenses()` — 5 colonnes
+### TvaService (`lib/services/tva_service.dart`)
+Analyse TVA pour micro-entrepreneurs :
+- `StatutTva` : enFranchise / approcheSeuil / seuilBaseDepasse / seuilMajoreDepasse
+- `AnalyseTva`, `BilanTva`, `calculerCaYtd` (ventilation vente/service par lignes)
+- `simulerAvecMontant` : simulation avec montant hypothétique
 
-### RelanceService
-Gestion automatisée des impayés :
-- `analyserRelances(factures, clients)` — Détecte et classe les factures en retard
-- `getStatistiquesRelances(relances)` — Montant total, retard moyen, répartition par niveau
-- `genererTexteRelance(relance)` — Texte professionnel adapté au niveau (amiable → contentieux)
+### ArchivageService (`lib/services/archivage_service.dart`)
+Détection intelligente des factures archivables (soldées depuis > 12 mois).
 
-### LocalStorageService
+### EmailService (`lib/services/email_service.dart`)
+Envoi email via `url_launcher` (mailto:) avec sujet/corps pré-remplis pour devis, factures et relances.
+
+### AuditService (`lib/services/audit_service.dart`)
+Logging dans `audit_logs` : `EMAIL_SENT`, `RELANCE_SENT`.
+
+### RelanceService (`lib/services/relance_service.dart`)
+Gestion automatisée des impayés : 4 niveaux, statistiques, textes professionnels pré-rédigés.
+
+### ExportService (`lib/services/export_service.dart`)
+Export CSV : factures (14 col), devis (12 col), clients (7 col), dépenses (5 col).
+
+### LocalStorageService (`lib/services/local_storage_service.dart`)
 Sauvegarde automatique des brouillons en cours d'édition via `SharedPreferences`.
-
-### PreferencesService
-Gestion des préférences utilisateur (thème, paramètres d'affichage).
 
 ---
 
 ## 🔧 Utilitaires
 
-### CalculationsUtils
+### CalculationsUtils (`lib/utils/calculations_utils.dart`)
 Calculs financiers avec précision `Decimal` :
-- `calculateHT`, `calculateTVA`, `calculateTTC` — Calculs de base
-- `calculateCharges` — Calcul des charges sur un montant
-- `calculateNetCommercial` — HT après remise commerciale
-- `calculateResteAPayer` — Solde restant dû (TTC - acompte - paiements)
-- `calculateTauxMarge` — Marge en % entre prix vente et prix achat
-- `calculateTotalTva` — TVA totale multi-taux depuis liste de lignes
-- `roundDecimal` — Arrondi configurable à N décimales
+- `calculateCharges`, `calculateNetCommercial`, `calculateResteAPayer`
+- `calculateTotalLigne` (gestion mode situation/avancement)
+- `calculateTauxMarge`, `calculateTotalTva` (multi-taux)
+- `roundDecimal`, `ventilerCA` (vente/service)
 
-### FormatUtils
+### FormatUtils (`lib/utils/format_utils.dart`)
 Formatage locale française (`fr_FR`) :
-- `currency(value)` — Format monétaire (1 250,50 €)
-- `amount(Decimal)` — Format montant compact
-- `percentage(value)` — Format pourcentage (12,50 %)
-- `phone(String)` — Format téléphone français
-- `shortDate(DateTime)` — Date courte (17/02/2026)
-- `monthYear(DateTime)` — Mois et année (Février 2026)
-- `relativeDate(DateTime)` — Date relative (il y a 3 jours, dans 2h...)
-- `truncate(String, maxLength)` — Troncature avec ellipsis
+- `currency(value)` → `1 250,50 €`
+- `amount(Decimal)`, `percentage(value)`, `phone(String)`
+- `shortDate`, `monthYear`, `relativeDate`, `truncate`
 
-### ValidationUtils
-12 validateurs pour formulaires Flutter :
-- `validateEmail` / `validateEmailRequired` — Email optionnel/obligatoire
-- `validatePhone` / `validatePhoneRequired` — Téléphone français
-- `validateSiret` — SIRET 14 chiffres
-- `validateTvaIntra` — TVA intracommunautaire (FR + 11 chiffres)
-- `validateRequired(value, fieldName)` — Champ obligatoire
-- `validateMontant(value, allowZero)` — Montant Decimal positif
-- `validateCodePostal` — Code postal français 5 chiffres
-- `validateDateEcheance(echeance, emission)` — Date postérieure à émission
-- `validatePourcentage` — Valeur entre 0 et 100
-- `validateQuantite` — Quantité Decimal strictement positive
+### ValidationUtils (`lib/utils/validation_utils.dart`)
+12+ validateurs pour formulaires Flutter :
+- `validateSiret` (Luhn standard + cas La Poste)
+- `validateEmail`, `validatePhone`, `validateTvaIntra`
+- `validateMontant`, `validateCodePostal`, `validatePourcentage`, `validateQuantite`
+- `validateDateEcheance`, `validateRequired`
 
 ---
 
 ## 🗺️ Routes & Navigation
 
-**22 routes** gérées par GoRouter avec guard d'authentification.
+**26 routes** gérées par GoRouter avec guard d'authentification.
 
 ### Routes publiques
 | Route | Vue | Description |
@@ -358,19 +405,22 @@ Formatage locale française (`fr_FR`) :
 ### Routes privées (`/app/*`)
 | Route | Vue | Description |
 |-------|-----|-------------|
-| `/app/home` | `TableauDeBordView` | Dashboard KPIs et graphiques |
+| `/app/onboarding` | `OnboardingView` | Assistant première connexion (4 étapes) |
+| `/app/home` | `TableauDeBordView` | Dashboard KPIs, graphiques, widgets |
 | `/app/planning` | `PlanningView` | Calendrier et événements |
 | `/app/devis` | `ListeDevisView` | Liste des devis |
 | `/app/factures` | `ListeFacturesView` | Liste des factures |
 | `/app/clients` | `ListeClientsView` | Liste des clients |
 | `/app/depenses` | `ListeDepensesView` | Liste des dépenses |
 | `/app/courses` | `ShoppingListView` | Liste de courses |
+| `/app/rentabilite` | `RentabiliteView` | Outil chiffrage/rentabilité |
+| `/app/parametres` | `SettingsRootView` | Paramètres généraux + thème PDF |
+| `/app/config_urssaf` | `ParametresView` | Configuration charges URSSAF |
+| `/app/profil` | `ProfilEntrepriseView` | Profil entreprise (7 sections) |
 | `/app/bibliotheque` | `BibliothequePrixView` | Catalogue articles |
 | `/app/archives` | `ArchivesView` | Documents archivés |
+| `/app/relances` | `RelancesView` | Relances impayés + stats |
 | `/app/search` | `GlobalSearchView` | Recherche globale 5 entités |
-| `/app/parametres` | `SettingsRootView` | Paramètres généraux |
-| `/app/config_urssaf` | `ParametresView` | Configuration charges URSSAF |
-| `/app/profil` | `ProfilEntrepriseView` | Profil entreprise |
 | `/app/ajout_devis` | `DevisStepperView` | Création devis (stepper 4 étapes) |
 | `/app/ajout_devis/:id` | `DevisStepperView` | Édition devis existant |
 | `/app/ajout_facture` | `FactureStepperView` | Création facture (stepper 4 étapes) |
@@ -385,21 +435,24 @@ Formatage locale française (`fr_FR`) :
 ## 🔐 Sécurité & Conformité
 
 - [x] **RLS (Row Level Security)** : Isolation stricte — chaque utilisateur ne voit que ses propres données
-- [x] **Protection Anti-Injection** : Usage exclusif des méthodes Query paramétrées Supabase
-- [x] **Droit à l'oubli** : CASCADE DELETE configuré
-- [x] **Numérotation certifiée** : Séquences sans trou (conformité anti-fraude TVA)
+- [x] **Immutabilité factures** : Trigger SQL `protect_validated_facture` bloque toute modification post-validation
+- [x] **Piste d'audit** : Table `audit_logs` + triggers sur factures/devis/paiements
+- [x] **Numérotation certifiée** : Séquences sans trou par trigger SQL (conformité anti-fraude TVA art. 286 I-3° bis CGI)
+- [x] **Protection suppression** : Triggers `BEFORE DELETE` bloquent la suppression des documents non-brouillon
+- [x] **Mentions légales** : Pénalités de retard, indemnité forfaitaire 40€, escompte (CGI art. 289, Code Commerce L441-10)
 - [x] **Contraintes SQL** : Prix positifs, emails valides, quantités cohérentes
-- [x] **Validation côté client** : `ValidationUtils` avec 12 validateurs
-- [x] **Type Safety** : `Decimal` obligatoire pour tous les montants financiers
+- [x] **Validation côté client** : `ValidationUtils` avec 12+ validateurs dont Luhn SIRET
+- [x] **Type Safety** : `Decimal` obligatoire pour tous les montants financiers — jamais `double`
+- [x] **Sécurité async** : `mounted` / `context.mounted` vérifié après chaque `await`
 
 ---
 
 ## ✅ Tests
 
-**385 tests — 100% passés** | **0 issue d'analyse statique**
+**527 tests — 100% passés** | **0 issue d'analyse statique**
 
-```
-flutter test   → 385 tests passed
+```bash
+flutter test    → 527 tests passed
 flutter analyze → No issues found!
 ```
 
@@ -407,17 +460,18 @@ flutter analyze → No issues found!
 
 | Catégorie | Fichiers | Tests | Détail |
 |-----------|----------|-------|--------|
-| **ViewModels** | 12 | ~280 | CRUD, logique métier, duplication, avoir, relance |
-| **Models** | 3 | ~40 | `fromMap`, `toMap`, `copyWith`, getters calculés |
-| **Utils** | 3 | ~35 | Calculs Decimal, formatage FR, validation |
-| **Services** | 1 | ~25 | RelanceService (niveaux, stats, textes) |
-| **Widgets** | 2 | ~5 | Rendu, navigation |
-| **Intégration** | 3 | ~10 | Workflows complets (client → devis → facture) |
+| **ViewModels** | 15 | ~340 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage |
+| **Services** | 7 | ~75 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, design system, PDF themes |
+| **Models** | 4 | ~55 | `fromMap`, `toMap`, `copyWith`, getters calculés, champs complets |
+| **Utils** | 3 | ~35 | Calculs Decimal, formatage FR, validation (Luhn SIRET, TVA, etc.) |
+| **Widgets** | 3 | ~12 | FacturesRetardCard, ListeClientsView, LoginView |
+| **Intégration** | 3 | ~10 | Workflows complets (client → devis → facture, articles) |
 
 ### Stack de test
 - **Framework** : `flutter_test`
-- **Mocking** : `mocktail` — Mocks centralisés dans `test/mocks/repository_mocks.dart`
-- **Pattern** : Interface repository → Mock → injection constructeur ViewModel
+- **Mocking** : `mocktail` — mocks dans `test/mocks/`
+- **Pattern** : interface repository → mock → injection constructeur ViewModel
+- **Nommage** : descriptions en français dans `test()` et `group()`
 
 ---
 
@@ -425,7 +479,7 @@ flutter analyze → No issues found!
 
 ### Pré-requis
 - Flutter SDK ≥ 3.2.2
-- Compte Supabase configuré avec les tables/RLS
+- Compte Supabase configuré avec les tables, RLS, triggers
 
 ### Configuration
 
@@ -441,72 +495,16 @@ flutter analyze → No issues found!
    flutter pub get
    ```
 
-### Lancer l'application
-```bash
-flutter run -d chrome
-```
+### Commandes
 
-### Lancer les tests
 ```bash
-flutter test                 # 385 tests unitaires + intégration
-flutter analyze              # Analyse statique (0 issues)
+flutter run -d chrome           # Dev web
+flutter build windows           # Build Windows (production)
+flutter test                    # 527 tests unitaires + intégration
+flutter analyze                 # Analyse statique (0 issues)
+flutter clean                   # Si fichiers éphémères corrompus
 ```
 
 ---
 
-## 📋 Changelog — Optimisation Février 2026
-
-### Bugs critiques corrigés
-
-| # | Bug | Fichier | Correction |
-|---|-----|---------|------------|
-| 1 | `getFacturesPeriod` ne filtrait pas par dates | `dashboard_repository.dart` | Ajout filtres `.gte()` / `.lte()` sur `date_emission` |
-| 2 | CRUD Planning ne rafraîchissait pas la liste | `planning_viewmodel.dart` | `addEvent`/`updateEvent`/`deleteEvent` re-fetch + `_applyFilters()` |
-| 3 | Top Clients retournait une liste vide | `dashboard_viewmodel.dart` | Implémentation calcul CA clients depuis paiements |
-| 4 | `calculateHistoriqueReglements` contournait le repository | `facture_viewmodel.dart` | Suppression import Supabase, utilisation `_repository.getLinkedFactures()` |
-
-### Nouvelles fonctionnalités
-
-| Fonctionnalité | Fichier(s) | Description |
-|----------------|-----------|-------------|
-| **Duplication facture** | `facture_viewmodel.dart` | `duplicateFacture()` — Copie brouillon avec nouvelles dates, lignes dupliquées sans ID |
-| **Avoir (credit note)** | `facture_viewmodel.dart` | `createAvoir()` — Facture avoir avec montants inversés, référence source |
-| **Factures en retard** | `facture_viewmodel.dart` | Getter `facturesEnRetard` + `retardMoyen` (jours moyens de retard) |
-| **Duplication devis** | `devis_viewmodel.dart` | `duplicateDevis()` — Copie brouillon avec dates reset |
-| **Annulation devis** | `devis_viewmodel.dart` | `annulerDevis()` — Avec protection des devis signés |
-| **Recherche 5 entités** | `global_search_repository.dart`, `global_search_viewmodel.dart` | +Dépenses, +Articles, getter `totalResults` |
-| **RelanceService** | `relance_service.dart` | Service complet d'analyse des impayés (4 niveaux, textes, stats) |
-| **ValidationUtils** | `validation_utils.dart` | 12 validateurs formulaires (email, SIRET, TVA, montant, etc.) |
-| **Export CSV enrichi** | `export_service.dart` | 4 exports (factures, devis, clients, dépenses) avec helpers centralisés |
-
-### Enrichissements utilitaires
-
-| Méthode | Fichier | Description |
-|---------|---------|-------------|
-| `calculateNetCommercial` | `calculations_utils.dart` | HT après remise commerciale |
-| `calculateResteAPayer` | `calculations_utils.dart` | Solde dû = TTC - acompte - paiements |
-| `calculateTauxMarge` | `calculations_utils.dart` | Marge % entre vente et achat |
-| `calculateTotalTva` | `calculations_utils.dart` | TVA totale multi-taux |
-| `roundDecimal` | `calculations_utils.dart` | Arrondi à N décimales |
-| `amount`, `percentage`, `phone` | `format_utils.dart` | Formatage montant, %, téléphone |
-| `shortDate`, `monthYear` | `format_utils.dart` | Dates courtes et mois/année |
-| `relativeDate`, `truncate` | `format_utils.dart` | Date relative, troncature texte |
-
-### Corrections d'analyse
-
-- Ajout `const` sur constructeurs `AuthException` dans les tests
-- Conversion lambda → déclaration de fonction (`shopping_viewmodel_test.dart`)
-- Renommage `mise_en_demeure` → `miseEnDemeure` (convention lowerCamelCase)
-- Ajout accolades sur tous les `if` mono-ligne (`format_utils.dart`)
-- Utilisation interpolation string au lieu de concaténation (`calculations_utils.dart`)
-
-### Résultat final
-
-```
-flutter analyze → No issues found!
-flutter test    → 385 tests passed (257 existants + 128 nouveaux)
-```
-
----
-
-*ERP Artisan 3.0 — Dernière mise à jour : 17 février 2026*
+*ERP Artisan 3.0 — Dernière mise à jour : 18 février 2026*

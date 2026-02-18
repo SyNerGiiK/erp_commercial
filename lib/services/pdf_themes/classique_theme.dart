@@ -8,15 +8,13 @@ class ClassiquePdfTheme extends PdfThemeBase {
   String get name => 'classique';
 
   @override
-  PdfColor get primaryColor => const PdfColor.fromInt(0xFF2C3E50);
+  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF2C3E50);
   @override
   PdfColor get accentColor => const PdfColor.fromInt(0xFF34495E);
   @override
   PdfColor get lightGrey => const PdfColor.fromInt(0xFFF5F5F5);
   @override
   PdfColor get darkGrey => const PdfColor.fromInt(0xFF2C3E50);
-  @override
-  PdfColor get tableHeaderBg => const PdfColor.fromInt(0xFF2C3E50);
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
@@ -148,7 +146,7 @@ class ClassiquePdfTheme extends PdfThemeBase {
   @override
   pw.Widget buildFooterMentions(String? nomEntreprise, String? siret,
       String? iban, String? bic, String? mentions, bool isTvaApplicable,
-      {String? numeroTvaIntra}) {
+      {String? numeroTvaIntra, pw.MemoryImage? logoFooter}) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 5),
       decoration: const pw.BoxDecoration(
@@ -156,6 +154,11 @@ class ClassiquePdfTheme extends PdfThemeBase {
               top: pw.BorderSide(
                   color: PdfColor.fromInt(0xFF2C3E50), width: 1))),
       child: pw.Column(children: [
+        if (logoFooter != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 5),
+            child: pw.Image(logoFooter, width: 60, height: 30),
+          ),
         pw.Text(
           "${nomEntreprise ?? ''} | SIRET: ${siret ?? ''}",
           style: const pw.TextStyle(

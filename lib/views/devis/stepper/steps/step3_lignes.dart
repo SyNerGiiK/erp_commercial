@@ -163,7 +163,8 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
           ),
 
         // LIGNES
-        Expanded(
+        SizedBox(
+          height: (widget.lignes.length * 120.0).clamp(100.0, 500.0),
           child: ReorderableListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: widget.lignes.length,

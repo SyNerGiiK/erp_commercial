@@ -116,14 +116,24 @@ class _DevisStepperViewState extends State<DevisStepperView> {
   }
 
   Devis _buildDevisFromState() {
+    final isTva = Provider.of<EntrepriseViewModel>(context, listen: false)
+        .isTvaApplicable;
+
     final totalHt = _lignes.fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
-    final totalTva = _lignes.fold(Decimal.zero, (sum, l) => sum + l.montantTva);
 
     final remiseAmount =
         CalculationsUtils.calculateCharges(totalHt, _remiseTaux);
     final netCommercial = totalHt - remiseAmount;
-    final totalTvaRemisee =
-        totalTva - CalculationsUtils.calculateCharges(totalTva, _remiseTaux);
+
+    // TVA uniquement si l'entreprise est assujettie
+    Decimal totalTvaRemisee = Decimal.zero;
+    if (isTva) {
+      final totalTva =
+          _lignes.fold(Decimal.zero, (sum, l) => sum + l.montantTva);
+      totalTvaRemisee =
+          totalTva - CalculationsUtils.calculateCharges(totalTva, _remiseTaux);
+    }
+
     final netAPayer = netCommercial + totalTvaRemisee;
 
     // Acompte Calculation

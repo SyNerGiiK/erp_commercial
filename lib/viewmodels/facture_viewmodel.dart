@@ -285,18 +285,8 @@ class FactureViewModel extends BaseViewModel
         orElse: () => throw Exception("Facture introuvable"),
       );
 
-      // Calcul du total déjà réglé
-      final totalRegle =
-          facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-      // Calcul du net commercial (HT - Remise)
-      final remiseAmount =
-          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100))
-              .toDecimal();
-      final netCommercial = facture.totalHt - remiseAmount;
-
-      // Reste à payer = Net - Acompte déjà réglé - Total des paiements
-      final resteAPayer = netCommercial - facture.acompteDejaRegle - totalRegle;
+      // Reste à payer via le modèle (totalTtc - acomptes - paiements)
+      final resteAPayer = facture.netAPayer;
 
       // Tolérance d'1 centime pour arrondi
       if (paiement.montant > resteAPayer + Decimal.parse('0.01')) {
@@ -336,16 +326,8 @@ class FactureViewModel extends BaseViewModel
       // Si elle est brouillon ou annulée, on ne touche pas
       if (facture.statut == 'brouillon' || facture.statut == 'annulee') return;
 
-      // Calcul du Reste à Payer
-      final totalRegle =
-          facture.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
-
-      final remiseAmount =
-          ((facture.totalHt * facture.remiseTaux) / Decimal.fromInt(100))
-              .toDecimal();
-      final netCommercial = facture.totalHt - remiseAmount;
-
-      final reste = netCommercial - facture.acompteDejaRegle - totalRegle;
+      // Utilise le getter du modèle : totalTtc - acomptes - paiements
+      final reste = facture.netAPayer;
 
       // Tolérance pour les erreurs d'arrondi décimales infimes
       final isPaid = reste <= Decimal.parse('0.01');

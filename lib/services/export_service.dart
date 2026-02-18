@@ -57,7 +57,8 @@ class ExportService {
   }
 
   /// Export liste des factures avec détails
-  static Future<void> exportFactures(List<Facture> factures) async {
+  static Future<void> exportFactures(List<Facture> factures,
+      {bool isTvaApplicable = true}) async {
     try {
       List<List<dynamic>> rows = [];
       rows.add([
@@ -68,9 +69,9 @@ class ExportService {
         "CLIENT ID",
         "TYPE",
         "STATUT",
-        "TOTAL HT",
-        "TOTAL TVA",
-        "TOTAL TTC",
+        isTvaApplicable ? "TOTAL HT" : "TOTAL",
+        if (isTvaApplicable) "TOTAL TVA",
+        isTvaApplicable ? "TOTAL TTC" : "TOTAL NET",
         "REMISE %",
         "ACOMPTE",
         "TOTAL REGLE",
@@ -89,7 +90,7 @@ class ExportService {
           f.type,
           f.statut,
           _formatDecimalCSV(f.totalHt),
-          _formatDecimalCSV(f.totalTva),
+          if (isTvaApplicable) _formatDecimalCSV(f.totalTva),
           _formatDecimalCSV(f.totalTtc),
           _formatDecimalCSV(f.remiseTaux),
           _formatDecimalCSV(f.acompteDejaRegle),
@@ -106,7 +107,8 @@ class ExportService {
   }
 
   /// Export liste des devis avec détails
-  static Future<void> exportDevis(List<Devis> devisList) async {
+  static Future<void> exportDevis(List<Devis> devisList,
+      {bool isTvaApplicable = true}) async {
     try {
       List<List<dynamic>> rows = [];
       rows.add([
@@ -116,9 +118,9 @@ class ExportService {
         "OBJET",
         "CLIENT ID",
         "STATUT",
-        "TOTAL HT",
-        "TOTAL TVA",
-        "TOTAL TTC",
+        isTvaApplicable ? "TOTAL HT" : "TOTAL",
+        if (isTvaApplicable) "TOTAL TVA",
+        isTvaApplicable ? "TOTAL TTC" : "TOTAL NET",
         "REMISE %",
         "ACOMPTE",
         "TRANSFORME",
@@ -133,7 +135,7 @@ class ExportService {
           d.clientId,
           d.statut,
           _formatDecimalCSV(d.totalHt),
-          _formatDecimalCSV(d.totalTva),
+          if (isTvaApplicable) _formatDecimalCSV(d.totalTva),
           _formatDecimalCSV(d.totalTtc),
           _formatDecimalCSV(d.remiseTaux),
           _formatDecimalCSV(d.acompteMontant),

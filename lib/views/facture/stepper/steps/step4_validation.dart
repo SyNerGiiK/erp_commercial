@@ -119,12 +119,16 @@ class _Step4ValidationState extends State<Step4Validation> {
         AppCard(
           child: Column(
             children: [
-              _buildRow("Total HT", FormatUtils.currency(f.totalHt)),
-              if (isTvaApplicable && f.totalTva > Decimal.zero)
-                _buildRow("Total TVA", FormatUtils.currency(f.totalTva)),
-              const Divider(),
-              _buildRow("Total TTC", FormatUtils.currency(f.totalTtc),
-                  isBold: true),
+              if (isTvaApplicable) ...[
+                _buildRow("Total HT", FormatUtils.currency(f.totalHt)),
+                if (f.totalTva > Decimal.zero)
+                  _buildRow("Total TVA", FormatUtils.currency(f.totalTva)),
+                const Divider(),
+                _buildRow("Total TTC", FormatUtils.currency(f.totalTtc),
+                    isBold: true),
+              ] else
+                _buildRow("Total NET", FormatUtils.currency(f.totalTtc),
+                    isBold: true),
               if (f.acompteDejaRegle > Decimal.zero)
                 _buildRow(
                     "Déjà réglé", FormatUtils.currency(f.acompteDejaRegle),

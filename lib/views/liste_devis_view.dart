@@ -77,11 +77,7 @@ class _ListeDevisViewState extends State<ListeDevisView>
   void _showTransformationDialog(Devis d) async {
     final result = await showDialog<TransformationResultWrapper>(
       context: context,
-      builder: (ctx) => TransformationDialog(
-          totalTTC: d.totalHt *
-              (Decimal.one +
-                  (Decimal.parse(
-                      d.tvaIntra != null ? "0" : "0.20")))), // Basic Approx TTC
+      builder: (ctx) => TransformationDialog(totalTTC: d.totalTtc),
     );
 
     if (result == null || !mounted) return;

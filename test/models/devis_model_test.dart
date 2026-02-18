@@ -140,6 +140,7 @@ void main() {
         'total_ttc': '1200',
         'remise_taux': '10',
         'acompte_montant': '300',
+        'acompte_percentage': '40',
         'conditions_reglement': 'Paiement à 30 jours',
         'notes_publiques': 'Notes publiques ici',
         'signature_url': 'https://example.com/signature.png',
@@ -164,9 +165,62 @@ void main() {
       expect(devis.totalTtc, Decimal.parse('1200'));
       expect(devis.remiseTaux, Decimal.parse('10'));
       expect(devis.acompteMontant, Decimal.parse('300'));
+      expect(devis.acomptePercentage, Decimal.parse('40'));
       expect(devis.conditionsReglement, 'Paiement à 30 jours');
       expect(devis.signatureUrl, 'https://example.com/signature.png');
       expect(devis.dateSignature, DateTime.parse('2026-02-18T10:00:00.000Z'));
+    });
+
+    test('acomptePercentage par défaut à 30 si absent de la Map', () {
+      final map = {
+        'objet': 'Test défaut',
+        'client_id': 'client-1',
+        'date_emission': '2026-02-17T00:00:00.000Z',
+        'date_validite': '2026-03-17T00:00:00.000Z',
+        'total_ht': '1000',
+        'total_tva': '200',
+        'total_ttc': '1200',
+        'remise_taux': '0',
+        'acompte_montant': '0',
+      };
+
+      final devis = Devis.fromMap(map);
+      expect(devis.acomptePercentage, Decimal.fromInt(30));
+    });
+
+    test('acomptePercentage est persisté dans toMap', () {
+      final devis = Devis(
+        objet: 'Test percentage toMap',
+        clientId: 'client-1',
+        dateEmission: DateTime(2026, 2, 17),
+        dateValidite: DateTime(2026, 3, 17),
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.zero,
+        acompteMontant: Decimal.parse('200'),
+        acomptePercentage: Decimal.parse('20'),
+      );
+
+      final map = devis.toMap();
+      expect(map['acompte_percentage'], '20');
+      expect(map['acompte_montant'], '200');
+    });
+
+    test('copyWith modifie acomptePercentage', () {
+      final original = Devis(
+        objet: 'Test',
+        clientId: 'client-1',
+        dateEmission: DateTime(2026, 2, 17),
+        dateValidite: DateTime(2026, 3, 17),
+        totalHt: Decimal.parse('1000'),
+        remiseTaux: Decimal.zero,
+        acompteMontant: Decimal.zero,
+        acomptePercentage: Decimal.fromInt(30),
+      );
+
+      final modified =
+          original.copyWith(acomptePercentage: Decimal.fromInt(50));
+      expect(modified.acomptePercentage, Decimal.fromInt(50));
+      expect(original.acomptePercentage, Decimal.fromInt(30)); // inchangé
     });
 
     test('toMap produit une Map correcte', () {

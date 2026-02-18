@@ -78,7 +78,17 @@ class RecentActivityList extends StatelessWidget {
       date = DateFormat('dd/MM').format(item.dateEmission);
     } else if (item is Devis) {
       icon = Icons.description;
-      color = item.statut == 'signe' ? Colors.green : Colors.blue;
+      if (item.statut == 'signe') {
+        color = Colors.green;
+      } else if (item.statut == 'refuse') {
+        color = Colors.red;
+      } else if (item.statut == 'expire') {
+        color = Colors.orange;
+      } else if (item.statut == 'annule') {
+        color = Colors.black45;
+      } else {
+        color = Colors.blue;
+      }
       title = "Devis ${item.numeroDevis}";
       subtitle = item.objet;
       amount = "${FormatUtils.currency(item.totalHt)} HT";

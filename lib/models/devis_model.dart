@@ -140,8 +140,17 @@ class Devis {
   final DateTime? dateSignature;
   final String? tvaIntra;
 
+  // Avenant : reference au devis parent
+  final String? devisParentId;
+
   final List<LigneDevis> lignes;
   final List<LigneChiffrage> chiffrage;
+
+  // --- GETTERS WORKFLOW ---
+  bool get isAvenant => devisParentId != null;
+  bool get isEditable => statut == 'brouillon' || statut == 'envoye';
+  bool get isLocked => statut == 'signe';
+  bool get isTerminal => statut == 'annule';
 
   // --- GETTERS ANALYSE DE RENTABILITÉ ---
 
@@ -210,6 +219,7 @@ class Devis {
     this.signatureUrl,
     this.dateSignature,
     this.tvaIntra,
+    this.devisParentId,
     this.lignes = const [],
     this.chiffrage = const [],
   })  : totalTva = totalTva ?? Decimal.zero,
@@ -242,6 +252,7 @@ class Devis {
       conditionsReglement: map['conditions_reglement'] ?? '',
       notesPubliques: map['notes_publiques'],
       tvaIntra: map['tva_intra'],
+      devisParentId: map['devis_parent_id'],
       lignes: (map['lignes_devis'] as List<dynamic>?)
               ?.map((e) => LigneDevis.fromMap(e))
               .toList() ??
@@ -276,6 +287,7 @@ class Devis {
       'signature_url': signatureUrl,
       'date_signature': dateSignature?.toIso8601String(),
       'tva_intra': tvaIntra,
+      if (devisParentId != null) 'devis_parent_id': devisParentId,
       'lignes_devis': lignes.map((e) => e.toMap()).toList(),
       'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
     };
@@ -303,6 +315,7 @@ class Devis {
     String? signatureUrl,
     DateTime? dateSignature,
     String? tvaIntra,
+    String? devisParentId,
     List<LigneDevis>? lignes,
     List<LigneChiffrage>? chiffrage,
   }) {
@@ -328,6 +341,7 @@ class Devis {
       signatureUrl: signatureUrl ?? this.signatureUrl,
       dateSignature: dateSignature ?? this.dateSignature,
       tvaIntra: tvaIntra ?? this.tvaIntra,
+      devisParentId: devisParentId ?? this.devisParentId,
       lignes: lignes ?? this.lignes,
       chiffrage: chiffrage ?? this.chiffrage,
     );

@@ -155,9 +155,7 @@ class DevisViewModel extends BaseViewModel
 
   Future<bool> markAsSent(String id) async {
     return await executeOperation(() async {
-      final d = _devis.firstWhere((element) => element.id == id);
-      final updated = d.copyWith(statut: 'envoye');
-      await _repository.updateDevis(updated);
+      await _repository.changeStatut(id, 'envoye');
       await fetchDevis();
     });
   }
@@ -166,15 +164,7 @@ class DevisViewModel extends BaseViewModel
     if (devisId.isEmpty) return false;
     return await executeOperation(() async {
       final url = await _repository.uploadSignature(devisId, bytes);
-
-      final devis = _devis.firstWhere((d) => d.id == devisId);
-      final updated = devis.copyWith(
-        signatureUrl: url,
-        dateSignature: DateTime.now(),
-        statut: 'signe',
-      );
-
-      await _repository.updateDevis(updated);
+      await _repository.markAsSigned(devisId, url);
       await fetchDevis();
     });
   }
@@ -413,15 +403,47 @@ class DevisViewModel extends BaseViewModel
     );
   }
 
-  /// Annule un devis (statut → annulé)
+  /// Annule un devis (statut -> annule)
   Future<bool> annulerDevis(String id) async {
     return await executeOperation(() async {
       final d = _devis.firstWhere((element) => element.id == id);
       if (d.statut == 'signe') {
-        throw Exception("Impossible d'annuler un devis déjà signé");
+        throw Exception("Impossible d'annuler un devis deja signe");
       }
-      final updated = d.copyWith(statut: 'annule');
-      await _repository.updateDevis(updated);
+      if (d.statut == 'annule') {
+        throw Exception("Ce devis est deja annule");
+      }
+      await _repository.changeStatut(id, 'annule');
+      await fetchDevis();
+    });
+  }
+
+  /// Refuse un devis (statut envoye -> refuse)
+  Future<bool> refuserDevis(String id) async {
+    return await executeOperation(() async {
+      final d = _devis.firstWhere((element) => element.id == id);
+      if (d.statut != 'envoye') {
+        throw Exception("Seul un devis envoye peut etre refuse");
+      }
+      await _repository.changeStatut(id, 'refuse');
+      await fetchDevis();
+    });
+  }
+
+  /// Cree un avenant a partir d'un devis signe
+  Future<Devis?> creerAvenant(String devisId) async {
+    Devis? avenant;
+    await executeOperation(() async {
+      avenant = await _repository.createAvenant(devisId);
+      await fetchDevis();
+    });
+    return avenant;
+  }
+
+  /// Expire les devis dont la date de validite est depassee
+  Future<void> checkExpiredDevis() async {
+    await executeOperation(() async {
+      await _repository.expireDevisDepasses();
       await fetchDevis();
     });
   }

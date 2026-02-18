@@ -188,7 +188,7 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
         ),
         const SizedBox(height: 30),
 
-        // VALIDATION BUTTON (Si pas encore validé/signé/envoyé)
+        // VALIDATION BUTTON (Si brouillon)
         if ((d.statut.toLowerCase() == 'brouillon' || d.statut.isEmpty) &&
             !_isLoading)
           SizedBox(
@@ -200,8 +200,31 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
               ),
-              icon: const Icon(Icons.check_circle),
-              label: const Text("FINALISER LE DEVIS",
+              icon: const Icon(Icons.send),
+              label: const Text("FINALISER ET ENVOYER",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        // AVENANT BUTTON (Si signe)
+        if (d.statut == 'signe' && !_isLoading)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final vm = Provider.of<DevisViewModel>(context, listen: false);
+                if (d.id == null) return;
+                final avenant = await vm.creerAvenant(d.id!);
+                if (avenant != null && context.mounted) {
+                  context.go('/app/ajout_devis/${avenant.id}', extra: avenant);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+              ),
+              icon: const Icon(Icons.add_circle),
+              label: const Text("CRÉER UN AVENANT",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),

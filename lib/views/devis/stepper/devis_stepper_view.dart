@@ -88,16 +88,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
       _remiseTaux = d.remiseTaux;
       _signatureUrl = d.signatureUrl;
       _dateSignature = d.dateSignature;
-
-      // Recalc Acompte % if possible (Optional UI enhancement)
-      if (d.totalHt > Decimal.zero) {
-        final net = d.totalHt -
-            ((d.totalHt * d.remiseTaux) / Decimal.fromInt(100)).toDecimal();
-        if (net > Decimal.zero) {
-          _acomptePercentage =
-              CalculationsUtils.calculateTauxFromMontant(net, d.acompteMontant);
-        }
-      }
+      _acomptePercentage = d.acomptePercentage;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -154,6 +145,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
       totalTtc: netAPayer,
       remiseTaux: _remiseTaux,
       acompteMontant: acompteMontant,
+      acomptePercentage: _acomptePercentage,
       conditionsReglement: _conditionsCtrl.text,
       notesPubliques: _notesCtrl.text,
       lignes: _lignes,
@@ -302,6 +294,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
               remiseTaux: _remiseTaux,
               onLignesChanged: (l) => setState(() => _lignes = l),
               onChiffrageChanged: (c) => setState(() => _chiffrage = c),
+              readOnly: _statut == 'signe' || _statut == 'annule',
             ),
             isActive: _currentStep >= 2,
             state: _currentStep > 2 ? StepState.complete : StepState.indexed,

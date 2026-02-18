@@ -33,9 +33,9 @@ class LigneEditor extends StatefulWidget {
       bool estItalique,
       bool estSouligne,
       Decimal avancement,
-      Decimal tauxTva) onChanged;
+      Decimal tauxTva)? onChanged;
 
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final bool readOnly;
   final bool showHandle;
 
@@ -49,8 +49,8 @@ class LigneEditor extends StatefulWidget {
     required this.estGras,
     required this.estItalique,
     this.estSouligne = false,
-    required this.onChanged,
-    required this.onDelete,
+    this.onChanged,
+    this.onDelete,
     this.readOnly = false,
     this.showHandle = false,
     this.isSituation = false,
@@ -131,6 +131,7 @@ class _LigneEditorState extends State<LigneEditor> {
   }
 
   void _notify() {
+    if (widget.onChanged == null) return;
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       final q =
@@ -140,7 +141,7 @@ class _LigneEditorState extends State<LigneEditor> {
       final av = Decimal.tryParse(_avancementCtrl.text.replaceAll(',', '.')) ??
           Decimal.zero;
 
-      widget.onChanged(
+      widget.onChanged!(
         _descCtrl.text,
         q,
         pu,
@@ -238,7 +239,7 @@ class _LigneEditorState extends State<LigneEditor> {
                   Row(
                     children: [
                       InkWell(
-                        onTap: () => widget.onChanged(
+                        onTap: () => widget.onChanged?.call(
                             _descCtrl.text,
                             q,
                             pu,
@@ -255,7 +256,7 @@ class _LigneEditorState extends State<LigneEditor> {
                       ),
                       const SizedBox(width: 8),
                       InkWell(
-                        onTap: () => widget.onChanged(
+                        onTap: () => widget.onChanged?.call(
                             _descCtrl.text,
                             q,
                             pu,

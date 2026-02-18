@@ -88,4 +88,104 @@ class CalculationsUtils {
     final factor = Decimal.parse('1${'0' * decimals}');
     return ((value * factor).round() / factor).toDecimal();
   }
+
+  // ========== VENTILATION URSSAF BIC/BNC ==========
+
+  /// Résultat de ventilation URSSAF par catégorie de CA
+  /// Sépare le CA d'un devis en bases Vente (BIC), Prestation BIC et Prestation BNC
+  /// selon le typeActivite de chaque ligne.
+  ///
+  /// Convention typeActivite :
+  ///   'vente' → BIC Vente (achat/revente, taux micro 12.3%)
+  ///   'prestation_bic' ou 'service_bic' → BIC Prestation (artisan, taux 21.2%)
+  ///   'service' ou 'prestation_bnc' → BNC Prestation (libéral, taux 24.6%)
+  ///
+  /// Pour l'activité mixte artisan : 'vente' pour la fourniture, 'service' (BIC par défaut)
+  /// Pour le mapping réel, on utilise isBncDefault pour piloter le comportement
+  /// par défaut quand typeActivite == 'service'.
+  static VentilationUrssaf ventilerCA({
+    required List<dynamic> lignes,
+    required Decimal remiseTaux,
+    bool isBncDefault = false,
+  }) {
+    Decimal caVente = Decimal.zero;
+    Decimal caPrestaBIC = Decimal.zero;
+    Decimal caPrestaBNC = Decimal.zero;
+
+    for (final ligne in lignes) {
+      // Ignorer les lignes non-chiffrables (titres, sous-titres, textes, saut_page)
+      final type = ligne.type as String;
+      if (['titre', 'sous-titre', 'texte', 'saut_page'].contains(type)) {
+        continue;
+      }
+
+      final montant = ligne.totalLigne as Decimal;
+      final typeActivite = (ligne.typeActivite as String?) ?? 'service';
+
+      switch (typeActivite) {
+        case 'vente':
+        case 'achat_revente':
+          caVente += montant;
+          break;
+        case 'prestation_bic':
+        case 'service_bic':
+          caPrestaBIC += montant;
+          break;
+        case 'prestation_bnc':
+        case 'service_bnc':
+          caPrestaBNC += montant;
+          break;
+        case 'service':
+        default:
+          // Par défaut, 'service' est classé en BIC (artisan) sauf si isBncDefault
+          if (isBncDefault) {
+            caPrestaBNC += montant;
+          } else {
+            caPrestaBIC += montant;
+          }
+          break;
+      }
+    }
+
+    // Appliquer la remise proportionnellement
+    final totalBrut = caVente + caPrestaBIC + caPrestaBNC;
+    if (totalBrut > Decimal.zero && remiseTaux > Decimal.zero) {
+      final coefRemise =
+          Decimal.one - (remiseTaux / Decimal.fromInt(100)).toDecimal();
+
+      caVente = caVente * coefRemise;
+      caPrestaBIC = caPrestaBIC * coefRemise;
+      caPrestaBNC = caPrestaBNC * coefRemise;
+    }
+
+    return VentilationUrssaf(
+      caVente: caVente,
+      caPrestaBIC: caPrestaBIC,
+      caPrestaBNC: caPrestaBNC,
+    );
+  }
+}
+
+/// Résultat de la ventilation d'un CA de devis par catégorie URSSAF.
+class VentilationUrssaf {
+  final Decimal caVente;
+  final Decimal caPrestaBIC;
+  final Decimal caPrestaBNC;
+
+  const VentilationUrssaf({
+    required this.caVente,
+    required this.caPrestaBIC,
+    required this.caPrestaBNC,
+  });
+
+  Decimal get total => caVente + caPrestaBIC + caPrestaBNC;
+
+  /// Indique si la ventilation est mixte (plusieurs catégories)
+  bool get isMixte =>
+      [
+        caVente > Decimal.zero,
+        caPrestaBIC > Decimal.zero,
+        caPrestaBNC > Decimal.zero
+      ].where((b) => b).length >
+      1;
 }

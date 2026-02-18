@@ -18,9 +18,7 @@ import '../views/liste_factures_view.dart';
 import '../views/liste_clients_view.dart';
 import '../views/liste_depenses_view.dart';
 import '../views/settings_root_view.dart';
-import '../views/parametres_view.dart';
 import '../views/bibliotheque_prix_view.dart';
-import '../views/profil_entreprise_view.dart';
 import '../views/devis/stepper/devis_stepper_view.dart'; // ADDED
 import '../views/ajout_facture_view.dart';
 import '../views/facture/stepper/facture_stepper_view.dart'; // ADDED
@@ -29,6 +27,7 @@ import '../views/ajout_depense_view.dart';
 import '../views/global_search_view.dart';
 import '../views/shopping_list_view.dart';
 import '../views/archives_view.dart';
+import '../views/rentabilite_view.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -99,16 +98,20 @@ class AppRouter {
           builder: (_, __) => const ShoppingListView(),
         ),
         GoRoute(
+          path: '/app/rentabilite',
+          builder: (_, __) => const RentabiliteView(),
+        ),
+        GoRoute(
           path: '/app/parametres',
           builder: (_, __) => const SettingsRootView(),
         ),
         GoRoute(
           path: '/app/config_urssaf',
-          builder: (_, __) => const ParametresView(),
+          redirect: (_, __) => '/app/parametres',
         ),
         GoRoute(
           path: '/app/profil',
-          builder: (_, __) => const ProfilEntrepriseView(),
+          redirect: (_, __) => '/app/parametres',
         ),
         GoRoute(
           path: '/app/bibliotheque',

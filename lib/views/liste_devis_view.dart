@@ -208,6 +208,29 @@ class _ListeDevisViewState extends State<ListeDevisView>
                                 const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         StatutBadge(statut: d.statut, isSmall: true),
+                        if (d.chiffrage.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.green.shade300),
+                            ),
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.analytics,
+                                  size: 12, color: Colors.green.shade700),
+                              const SizedBox(width: 3),
+                              Text("Analysé",
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w600)),
+                            ]),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),

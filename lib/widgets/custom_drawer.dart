@@ -92,6 +92,8 @@ class CustomDrawer extends StatelessWidget {
                     '/app/courses'),
                 _buildItem(context, 7, "Bibliothèque", Icons.library_books,
                     '/app/bibliotheque'),
+                _buildItem(context, 8, "Rentabilité", Icons.analytics,
+                    '/app/rentabilite'),
                 const Divider(),
                 _buildItem(context, 9, "Paramètres", Icons.settings,
                     '/app/parametres'),

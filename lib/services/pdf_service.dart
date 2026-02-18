@@ -13,6 +13,7 @@ import '../models/entreprise_model.dart';
 import '../models/paiement_model.dart';
 import '../models/enums/entreprise_enums.dart'; // IMPORT ADDED
 import '../utils/format_utils.dart';
+import 'pdf_themes/pdf_themes.dart';
 
 class PdfGenerationRequest {
   final Map<String, dynamic>? document;
@@ -40,10 +41,15 @@ class PdfGenerationRequest {
 }
 
 class PdfService {
+  // Couleurs par défaut (fallback quand pas de profil)
   static const PdfColor _primaryColor = PdfColor.fromInt(0xFF1E5572);
-  static const PdfColor _accentColor = PdfColor.fromInt(0xFF2A769E);
   static const PdfColor _lightGrey = PdfColor.fromInt(0xFFF8F8F8);
-  static const PdfColor _darkGrey = PdfColor.fromInt(0xFF333333);
+
+  /// Résout le thème PDF à utiliser depuis le profil entreprise
+  static PdfThemeBase _resolveTheme(ProfilEntreprise? entreprise) {
+    final pdfTheme = entreprise?.pdfTheme ?? PdfTheme.moderne;
+    return PdfThemeFactory.resolve(pdfTheme);
+  }
 
   // Preload fonts in main isolate
   static Future<Map<String, Uint8List>> prepareFonts() async {
@@ -232,30 +238,51 @@ class PdfService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        build: (context) => [
-          _buildHeader(
-              entreprise,
-              docType, // Dynamically "DEVIS", "FACTURE", etc.
-              numero,
-              date,
-              logoBytes),
-          pw.SizedBox(height: 30),
-          _buildAddresses(entreprise, client),
-          pw.SizedBox(height: 30),
-          _buildTitle(objet),
-          pw.SizedBox(height: 20),
-          _buildLignesTable(lignes,
-              isSituation: isSituation, showTva: isTvaApplicable),
-          pw.SizedBox(height: 20),
-          _buildTotals(totalHt, remiseTaux, acompte, totalTva, netAPayer,
-              isDevis: isDevis, showTva: isTvaApplicable),
-          pw.SizedBox(height: 30),
-          if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
-          pw.SizedBox(height: 20),
-          _buildFooterSignatures(
-              notes, entreprise, signatureEntBytes, signatureClientBytes),
-        ],
-        footer: (context) => _buildFooterMentions(entreprise, isTvaApplicable),
+        build: (context) {
+          final theme = _resolveTheme(entreprise);
+          return [
+            theme.buildHeader(entreprise?.nomEntreprise, docType, numero, date,
+                logoBytes != null ? pw.MemoryImage(logoBytes) : null),
+            pw.SizedBox(height: 30),
+            theme.buildAddresses(
+              entreprise?.nomEntreprise,
+              entreprise?.nomGerant,
+              entreprise?.adresse,
+              "${entreprise?.codePostal} ${entreprise?.ville}",
+              entreprise?.email,
+              entreprise?.telephone,
+              client?.nomComplet,
+              client?.nomContact,
+              client?.adresse,
+              "${client?.codePostal ?? ""} ${client?.ville ?? ""}",
+            ),
+            pw.SizedBox(height: 30),
+            theme.buildTitle(objet),
+            pw.SizedBox(height: 20),
+            _buildLignesTable(lignes,
+                isSituation: isSituation, showTva: isTvaApplicable),
+            pw.SizedBox(height: 20),
+            _buildTotals(totalHt, remiseTaux, acompte, totalTva, netAPayer,
+                isDevis: isDevis, showTva: isTvaApplicable),
+            pw.SizedBox(height: 30),
+            if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
+            pw.SizedBox(height: 20),
+            _buildFooterSignatures(
+                notes, entreprise, signatureEntBytes, signatureClientBytes),
+          ];
+        },
+        footer: (context) {
+          final theme = _resolveTheme(entreprise);
+          return theme.buildFooterMentions(
+            entreprise?.nomEntreprise,
+            entreprise?.siret,
+            entreprise?.iban,
+            entreprise?.bic,
+            entreprise?.mentionsLegales,
+            isTvaApplicable,
+            numeroTvaIntra: entreprise?.numeroTvaIntra,
+          );
+        },
       ),
     );
 
@@ -263,81 +290,6 @@ class PdfService {
   }
 
   // --- COMPOSANTS PDF ---
-
-  static pw.Widget _buildHeader(ProfilEntreprise? ent, String type, String ref,
-      DateTime date, Uint8List? logo) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        if (logo != null)
-          pw.Image(pw.MemoryImage(logo), width: 80)
-        else
-          pw.Text(ent?.nomEntreprise ?? "ENTREPRISE",
-              style: pw.TextStyle(
-                  fontSize: 20,
-                  fontWeight: pw.FontWeight.bold,
-                  color: _primaryColor)),
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-          pw.Text(type,
-              style:
-                  pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-          pw.Text("N° $ref", style: const pw.TextStyle(fontSize: 14)),
-          pw.Text("Date : ${DateFormat('dd/MM/yyyy').format(date)}"),
-        ])
-      ],
-    );
-  }
-
-  static pw.Widget _buildAddresses(ProfilEntreprise? ent, Client? client) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text("Émetteur",
-              style: const pw.TextStyle(fontSize: 10, color: _accentColor)),
-          pw.Text(ent?.nomEntreprise ?? "",
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-          pw.Text(ent?.nomGerant ?? ""),
-          pw.Text(ent?.adresse ?? ""),
-          pw.Text("${ent?.codePostal} ${ent?.ville}"),
-          pw.Text(ent?.email ?? ""),
-          pw.Text(ent?.telephone ?? ""),
-        ]),
-        pw.Container(
-          width: 200,
-          padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
-              color: _lightGrey, borderRadius: pw.BorderRadius.circular(4)),
-          child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text("Adressé à",
-                    style:
-                        const pw.TextStyle(fontSize: 10, color: _accentColor)),
-                pw.Text(client?.nomComplet ?? "",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                if (client?.nomContact != null)
-                  pw.Text("Attn: ${client!.nomContact}"),
-                pw.Text(client?.adresse ?? ""),
-                pw.Text("${client?.codePostal ?? ""} ${client?.ville ?? ""}"),
-              ]),
-        )
-      ],
-    );
-  }
-
-  static pw.Widget _buildTitle(String objet) {
-    return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-      decoration: const pw.BoxDecoration(
-          border:
-              pw.Border(left: pw.BorderSide(color: _primaryColor, width: 3))),
-      child: pw.Text("Objet : $objet",
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-    );
-  }
 
   static pw.Widget _buildLignesTable(List<dynamic> lignes,
       {bool isSituation = false, bool isBL = false, bool showTva = true}) {
@@ -733,35 +685,5 @@ class PdfService {
       child: pw.Text("Date et Signature",
           style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
     );
-  }
-
-  static pw.Widget _buildFooterMentions(
-      ProfilEntreprise? ent, bool isTvaApplicable) {
-    return pw.Column(children: [
-      pw.Divider(color: _lightGrey),
-      pw.Text(
-        "${ent?.nomEntreprise ?? ''} - SIRET: ${ent?.siret ?? ''}",
-        style: const pw.TextStyle(fontSize: 8, color: _darkGrey),
-      ),
-      if (ent?.iban != null)
-        pw.Text("IBAN: ${ent?.iban} - BIC: ${ent?.bic}",
-            style: const pw.TextStyle(fontSize: 8, color: _darkGrey),
-            textAlign: pw.TextAlign.center),
-      if (ent?.mentionsLegales != null)
-        pw.Text(ent!.mentionsLegales!,
-            style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey),
-            textAlign: pw.TextAlign.center),
-
-      // MENTIONS TVA
-      if (isTvaApplicable && ent?.numeroTvaIntra != null)
-        pw.Text("TVA Intracommunautaire : ${ent!.numeroTvaIntra}",
-            style: const pw.TextStyle(fontSize: 8, color: _darkGrey)),
-
-      if (!isTvaApplicable)
-        pw.Text("TVA non applicable, art. 293 B du CGI",
-            style: const pw.TextStyle(fontSize: 8, color: _darkGrey)),
-      pw.Text("Document généré par Artisan 3.0",
-          style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
-    ]);
   }
 }

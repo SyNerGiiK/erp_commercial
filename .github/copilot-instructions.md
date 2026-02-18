@@ -107,6 +107,66 @@ setUp(() {
 | `lib/services/pdf_service.dart` | Génération PDF isolate-ready |
 | `lib/config/theme.dart` | AppTheme (design tokens, couleurs, spacing) |
 
+## Schéma BDD Supabase (résumé)
+
+13 tables avec RLS activé sur toutes. Montants en `NUMERIC`, dates en `TIMESTAMPTZ`, PK en `UUID`.
+
+| Table | Colonnes clés | Relations |
+|---|---|---|
+| `clients` | nom_complet, type_client, siret, tva_intra, adresse, email | → factures, devis |
+| `factures` | numero_facture, objet, client_id (FK), type_document (`facture`/`avoir`), statut, statut_juridique, total_ht/tva/ttc, remise_taux, est_archive, numero_bon_commande, motif_avoir, taux_penalites_retard | → lignes_facture, paiements |
+| `lignes_facture` | facture_id (FK), description, quantite, prix_unitaire, total_ligne, type_activite, taux_tva, avancement, ordre | |
+| `paiements` | facture_id (FK), montant, date_paiement, type_paiement, is_acompte | |
+| `devis` | numero_devis, client_id (FK), duree_validite, taux_acompte, devis_parent_id (self FK avenants) | → lignes_devis, → factures |
+| `lignes_devis` | devis_id (FK), mêmes champs que lignes_facture | |
+| `entreprises` | nom_entreprise, siret, type_entreprise, regime_fiscal, tva_applicable, pdf_theme, pdf_primary_color, mode_facturation, taux_penalites_retard, escompte_applicable, est_immatricule | 1:1 par user |
+| `depenses` | description, montant, date_depense, categorie, est_deductible | |
+| `articles` | designation, prix_unitaire, unite, type_activite, categorie | |
+| `cotisations` | periode, montant_ca, taux_cotisation, montant_cotisation, est_paye | |
+| `audit_logs` | table_name, record_id, action (`INSERT`/`UPDATE`/`DELETE`/`VALIDATE`/`PAYMENT`/`EMAIL_SENT`/`RELANCE_SENT`), old_data (JSONB), new_data (JSONB) | |
+| `events` | titre, date_debut, date_fin, client_id | |
+| `shopping_items` | nom, quantite, prix, is_checked | |
+
+### Triggers SQL actifs
+
+| Trigger | Table | Rôle |
+|---|---|---|
+| `trg_audit_factures` | factures | Log INSERT/UPDATE/DELETE → audit_logs |
+| `trg_audit_devis` | devis | Log INSERT/UPDATE/DELETE → audit_logs |
+| `trg_audit_paiements` | paiements | Log INSERT/UPDATE/DELETE → audit_logs (résout user_id via facture) |
+| `trg_protect_validated_facture` | factures | **BEFORE UPDATE** — bloque modif de total_ht, total_tva, total_ttc, objet, client_id, remise_taux, conditions_reglement si statut_juridique ≠ brouillon |
+| `trg_*_updated_at` | factures, devis, paiements, clients, depenses | Auto `updated_at = NOW()` |
+
+### Migrations (dossier `migrations/`)
+
+1. `migration_sprint1_legal_compliance.sql` — audit_logs, triggers audit, trigger immutabilité, champs légaux
+2. `migration_sprint5_updated_at.sql` — colonne updated_at + triggers auto-update sur 5 tables
+3. `migration_sprint8_audit_email.sql` — extension CHECK constraint (EMAIL_SENT, RELANCE_SENT)
+4. `migration_sprint9_pdf_custom.sql` — colonnes pdf_primary_color, logo_footer_url
+
+## Services (statiques, sans état)
+
+| Service | Méthodes clés |
+|---|---|
+| `TvaService` | `analyserActivite(caYtd, type)` → StatutTva, `analyser(caService, caCommerce)`, `simulerAvecMontant()`. Seuils : service 36800/39100€, commerce 91900/101000€ |
+| `RelanceService` | `analyserRelances(factures)` → List<RelanceInfo>, `genererTexteRelance()`. 4 niveaux : J+7, J+15, J+30, J+45 |
+| `ArchivageService` | `detecterArchivables(factures)` — soldées + non archivées + > 12 mois |
+| `EmailService` | `envoyerDevis()`, `envoyerFacture()`, `envoyerRelance()` — via url_launcher mailto: |
+| `AuditService` | `logEnvoiEmail()`, `logRelance()` — insert audit_logs, fail-safe |
+| `ExportService` | `exportComptabilite()` (2 CSVs recettes+dépenses), `exportFactures()` |
+| `PdfService` | `generatePdf(PdfGenerationRequest)` — résout thème depuis ProfilEntreprise |
+| `LocalStorageService` | `saveDraft()`, `getDraft()`, `clearDraft()` — SharedPreferences |
+| `PreferencesService` | `getConfigCharges()`, `saveConfigCharges()` — config charges sociales |
+
+## Documentation détaillée
+
+| Document | Contenu |
+|---|---|
+| `documentation/ARCHITECTURE.md` | Architecture complète, arborescence, patterns, diagrammes de flux |
+| `documentation/API_REFERENCE.md` | Signatures exhaustives de toutes les couches (core, models, repos, VMs, services, utils) |
+| `documentation/DATABASE.md` | Schéma BDD complet : colonnes, types, FK, triggers, RLS, migrations |
+| `documentation/CONTRIBUTING.md` | Guide contributeur : conventions, règles, tests, checklist |
+
 ## Build & Run
 
 ```bash

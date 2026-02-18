@@ -5,17 +5,23 @@ import '../../../../widgets/custom_text_field.dart';
 class Step2Details extends StatelessWidget {
   final TextEditingController objetCtrl;
   final TextEditingController? notesCtrl; // Optional
+  final TextEditingController? bonCommandeCtrl;
+  final TextEditingController? motifAvoirCtrl;
   final DateTime dateEmission;
   final DateTime dateEcheance;
   final Function(DateTime emission, DateTime echeance) onDatesChanged;
+  final bool isAvoir;
 
   const Step2Details({
     super.key,
     required this.objetCtrl,
     this.notesCtrl,
+    this.bonCommandeCtrl,
+    this.motifAvoirCtrl,
     required this.dateEmission,
     required this.dateEcheance,
     required this.onDatesChanged,
+    this.isAvoir = false,
   });
 
   Future<void> _pickDate(BuildContext context, bool isEmission) async {
@@ -85,6 +91,25 @@ class Step2Details extends StatelessWidget {
             label: "Notes (publiques)",
             maxLines: 3,
             hint: "Affichées sur le PDF",
+          ),
+        ],
+        if (bonCommandeCtrl != null) ...[
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: bonCommandeCtrl!,
+            label: "N° Bon de Commande",
+            hint: "Référence client (optionnel)",
+          ),
+        ],
+        if (isAvoir && motifAvoirCtrl != null) ...[
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: motifAvoirCtrl!,
+            label: "Motif de l'avoir",
+            hint: "Ex: Erreur de facturation, retour marchandise...",
+            maxLines: 2,
+            validator: (v) =>
+                v?.isEmpty == true ? "Le motif est requis pour un avoir" : null,
           ),
         ],
       ],

@@ -20,7 +20,6 @@ import '../views/liste_depenses_view.dart';
 import '../views/settings_root_view.dart';
 import '../views/bibliotheque_prix_view.dart';
 import '../views/devis/stepper/devis_stepper_view.dart'; // ADDED
-import '../views/ajout_facture_view.dart';
 import '../views/facture/stepper/facture_stepper_view.dart'; // ADDED
 import '../views/ajout_client_view.dart';
 import '../views/ajout_depense_view.dart';

@@ -42,6 +42,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
     required bool isTvaApplicable,
     required String documentType,
     required String docTypeLabel,
+    String? factureSourceNumero,
   }) {
     if (!_isRealTimePreviewEnabled) return;
     if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
@@ -54,6 +55,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
         isTvaApplicable: isTvaApplicable,
         documentType: documentType,
         docTypeLabel: docTypeLabel,
+        factureSourceNumero: factureSourceNumero,
       );
     });
   }
@@ -66,6 +68,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
     required bool isTvaApplicable,
     required String documentType,
     required String docTypeLabel,
+    String? factureSourceNumero,
   }) {
     if (_pdfDebounce?.isActive ?? false) _pdfDebounce!.cancel();
     _generatePdf(
@@ -75,6 +78,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
       isTvaApplicable: isTvaApplicable,
       documentType: documentType,
       docTypeLabel: docTypeLabel,
+      factureSourceNumero: factureSourceNumero,
     );
   }
 
@@ -86,6 +90,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
     required bool isTvaApplicable,
     required String documentType,
     required String docTypeLabel,
+    String? factureSourceNumero,
   }) async {
     if (_isGeneratingPdf) return;
 
@@ -103,6 +108,7 @@ mixin PdfGenerationMixin on ChangeNotifier {
         profil: profil?.toMap(),
         docTypeLabel: docTypeLabel,
         isTvaApplicable: isTvaApplicable,
+        factureSourceNumero: factureSourceNumero,
         fontRegular: _cachedFonts?['regular'],
         fontBold: _cachedFonts?['bold'],
         fontItalic: _cachedFonts?['italic'],

@@ -30,6 +30,15 @@ class FactureViewModel extends BaseViewModel
       Facture facture, Client? client, ProfilEntreprise? profil,
       {required bool isTvaApplicable}) {
     final docTypeLabel = (facture.type == 'avoir') ? 'AVOIR' : 'FACTURE';
+    // Résoudre le numéro de facture source pour les avoirs
+    String? sourceNumero;
+    if (facture.type == 'avoir' && facture.factureSourceId != null) {
+      try {
+        sourceNumero = _factures
+            .firstWhere((f) => f.id == facture.factureSourceId)
+            .numeroFacture;
+      } catch (_) {}
+    }
     triggerPdfUpdate(
       facture,
       client,
@@ -37,6 +46,7 @@ class FactureViewModel extends BaseViewModel
       documentType: 'facture',
       docTypeLabel: docTypeLabel,
       isTvaApplicable: isTvaApplicable,
+      factureSourceNumero: sourceNumero,
     );
   }
 
@@ -44,6 +54,14 @@ class FactureViewModel extends BaseViewModel
       Facture facture, Client? client, ProfilEntreprise? profil,
       {required bool isTvaApplicable}) {
     final docTypeLabel = (facture.type == 'avoir') ? 'AVOIR' : 'FACTURE';
+    String? sourceNumero;
+    if (facture.type == 'avoir' && facture.factureSourceId != null) {
+      try {
+        sourceNumero = _factures
+            .firstWhere((f) => f.id == facture.factureSourceId)
+            .numeroFacture;
+      } catch (_) {}
+    }
     forceRefreshPdf(
       facture,
       client,
@@ -51,6 +69,7 @@ class FactureViewModel extends BaseViewModel
       documentType: 'facture',
       docTypeLabel: docTypeLabel,
       isTvaApplicable: isTvaApplicable,
+      factureSourceNumero: sourceNumero,
     );
   }
 

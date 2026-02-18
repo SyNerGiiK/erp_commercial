@@ -61,8 +61,23 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
 
     if (!mounted) return;
 
+    // Résoudre le numéro de facture source pour les avoirs
+    String? factureSourceNumero;
+    if (f.type == 'avoir' && f.factureSourceId != null) {
+      final factureVM = Provider.of<FactureViewModel>(context, listen: false);
+      try {
+        factureSourceNumero = factureVM.factures
+            .firstWhere((x) => x.id == f.factureSourceId)
+            .numeroFacture;
+      } catch (_) {
+        // Facture source non trouvée en cache — ignoré
+      }
+    }
+
     final bytes = await PdfService.generateDocument(f, client, entVM.profil,
-        docType: "FACTURE", isTvaApplicable: entVM.isTvaApplicable);
+        docType: "FACTURE",
+        isTvaApplicable: entVM.isTvaApplicable,
+        factureSourceNumero: factureSourceNumero);
 
     if (!mounted) return;
 

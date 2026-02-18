@@ -52,6 +52,8 @@ class _FactureStepperViewState extends State<FactureStepperView> {
   late TextEditingController _objetCtrl;
   late TextEditingController _notesCtrl;
   late TextEditingController _conditionsCtrl;
+  late TextEditingController _bonCommandeCtrl;
+  late TextEditingController _motifAvoirCtrl;
 
   Client? _selectedClient;
   DateTime _dateEmission = DateTime.now();
@@ -75,6 +77,8 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     _objetCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
     _conditionsCtrl = TextEditingController();
+    _bonCommandeCtrl = TextEditingController();
+    _motifAvoirCtrl = TextEditingController();
 
     _initData();
   }
@@ -87,6 +91,8 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       _objetCtrl.text = f.objet;
       _notesCtrl.text = f.notesPubliques ?? '';
       _conditionsCtrl.text = f.conditionsReglement;
+      _bonCommandeCtrl.text = f.numeroBonCommande ?? '';
+      _motifAvoirCtrl.text = f.motifAvoir ?? '';
       _dateEmission = f.dateEmission;
       _dateEcheance = f.dateEcheance;
       _lignes = List.from(f.lignes);
@@ -223,6 +229,8 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     _objetCtrl.dispose();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
+    _bonCommandeCtrl.dispose();
+    _motifAvoirCtrl.dispose();
     super.dispose();
   }
 
@@ -265,6 +273,10 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       acompteDejaRegle: _acompteDejaRegle,
       conditionsReglement: _conditionsCtrl.text,
       notesPubliques: _notesCtrl.text,
+      numeroBonCommande:
+          _bonCommandeCtrl.text.isNotEmpty ? _bonCommandeCtrl.text : null,
+      motifAvoir: _motifAvoirCtrl.text.isNotEmpty ? _motifAvoirCtrl.text : null,
+      factureSourceId: widget.sourceFactureId,
       lignes: _lignes,
       chiffrage: _chiffrage,
       paiements: _paiements,
@@ -398,6 +410,10 @@ class _FactureStepperViewState extends State<FactureStepperView> {
             title: const Text('Détails'),
             content: Step2Details(
               objetCtrl: _objetCtrl,
+              notesCtrl: _notesCtrl,
+              bonCommandeCtrl: _bonCommandeCtrl,
+              motifAvoirCtrl: _motifAvoirCtrl,
+              isAvoir: _typeFacture == 'avoir',
               dateEmission: _dateEmission,
               dateEcheance: _dateEcheance,
               onDatesChanged: (em, ech) => setState(() {

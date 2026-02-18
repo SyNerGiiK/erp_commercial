@@ -26,6 +26,7 @@ class PdfGenerationRequest {
   final Uint8List? fontRegular;
   final Uint8List? fontBold;
   final Uint8List? fontItalic;
+  final String? factureSourceNumero;
 
   PdfGenerationRequest({
     required this.document,
@@ -37,6 +38,7 @@ class PdfGenerationRequest {
     this.fontRegular,
     this.fontBold,
     this.fontItalic,
+    this.factureSourceNumero,
   });
 }
 
@@ -130,6 +132,7 @@ class PdfService {
     return await generateDocument(document, client, profil,
         docType: request.docTypeLabel,
         isTvaApplicable: request.isTvaApplicable,
+        factureSourceNumero: request.factureSourceNumero,
         // Pass fonts
         fontRegular: request.fontRegular,
         fontBold: request.fontBold,
@@ -141,6 +144,7 @@ class PdfService {
       dynamic document, Client? client, ProfilEntreprise? entreprise,
       {String docType = "DOCUMENT",
       bool isTvaApplicable = true,
+      String? factureSourceNumero,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
@@ -148,6 +152,7 @@ class PdfService {
     return _generateDocumentInternal(document, client, entreprise,
         docType: docType,
         isTvaApplicable: isTvaApplicable,
+        factureSourceNumero: factureSourceNumero,
         fontRegular: fontRegular,
         fontBold: fontBold,
         fontItalic: fontItalic);
@@ -158,6 +163,7 @@ class PdfService {
       dynamic document, Client? client, ProfilEntreprise? entreprise,
       {String docType = "DOCUMENT",
       bool isTvaApplicable = true,
+      String? factureSourceNumero,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
@@ -279,7 +285,7 @@ class PdfService {
                   document is Facture ? document.numeroBonCommande : null,
               motifAvoir: document is Facture ? document.motifAvoir : null,
               isAvoir: document is Facture && document.type == 'avoir',
-              factureSourceNumero: null, // Resolved by caller if needed
+              factureSourceNumero: factureSourceNumero,
             ),
           ];
         },
@@ -563,6 +569,7 @@ class PdfService {
         .map((p) => [
               DateFormat('dd/MM/yyyy').format(p.datePaiement),
               p.typePaiement.toUpperCase(),
+              p.isAcompte ? 'Acompte' : 'Solde',
               FormatUtils.currency(p.montant),
             ])
         .toList();
@@ -576,7 +583,7 @@ class PdfService {
                     pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
             pw.SizedBox(height: 5),
             pw.TableHelper.fromTextArray(
-              headers: ["Date", "Mode", "Montant"],
+              headers: ["Date", "Mode", "Type", "Montant"],
               data: data,
               headerStyle:
                   pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),

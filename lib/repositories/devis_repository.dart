@@ -103,26 +103,13 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
   @override
   Future<void> finalizeDevis(String id) async {
     try {
-      final current = await client
-          .from('devis')
-          .select('numero_devis')
-          .eq('id', id)
-          .single();
-      final currentNum = current['numero_devis'] as String?;
-
-      final updates = <String, dynamic>{
+      // Le trigger SQL `generate_devis_number` assigne automatiquement
+      // un numéro séquentiel quand le statut passe à 'envoye'.
+      // On ne génère plus de numéro côté Dart (évite les doublons/race conditions).
+      await client.from('devis').update({
         'statut': 'envoye',
-      };
-
-      if (currentNum == null ||
-          currentNum.trim().toLowerCase() == 'brouillon' ||
-          currentNum.isEmpty) {
-        final newNum = await generateNextNumero(DateTime.now().year);
-        updates['numero_devis'] = newNum;
-        updates['date_emission'] = DateTime.now().toIso8601String();
-      }
-
-      await client.from('devis').update(updates).eq('id', id);
+        'date_emission': DateTime.now().toIso8601String(),
+      }).eq('id', id);
     } catch (e) {
       throw handleError(e, 'finalizeDevis');
     }

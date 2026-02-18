@@ -30,6 +30,7 @@ class AuthViewModel extends BaseViewModel {
   Future<String?> _performAuthAction(Future<void> Function() action) async {
     try {
       await action();
+      notifyListeners(); // Déclenche la réévaluation du Router (redirect)
       return null; // Succès (pas d'erreur retournée)
     } on AuthException catch (e) {
       return e.message;

@@ -104,7 +104,7 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                 'CA potentiel',
                 '${vm.caPotentiel.toDouble().toStringAsFixed(0)} €',
                 Icons.euro,
-                AppTheme.success,
+                AppTheme.accent,
               ),
               _buildKpi(
                 'Non facturé',
@@ -138,7 +138,7 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   leading: CircleAvatar(
                     backgroundColor: item.estFacture
-                        ? AppTheme.success.withValues(alpha: 0.1)
+                        ? AppTheme.accent.withValues(alpha: 0.1)
                         : item.estFacturable
                             ? AppTheme.primary.withValues(alpha: 0.1)
                             : Colors.grey.shade100,
@@ -149,7 +149,7 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                           : Icons.timer_outlined,
                       size: 20,
                       color: item.estFacture
-                          ? AppTheme.success
+                          ? AppTheme.accent
                           : item.estFacturable
                               ? AppTheme.primary
                               : Colors.grey,

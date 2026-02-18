@@ -124,7 +124,7 @@ class _FacturesRecurrentesViewState extends State<FacturesRecurrentesView> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: item.estActive
-                        ? AppTheme.success.withValues(alpha: 0.1)
+                        ? AppTheme.accent.withValues(alpha: 0.1)
                         : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -133,7 +133,7 @@ class _FacturesRecurrentesViewState extends State<FacturesRecurrentesView> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: item.estActive ? AppTheme.success : Colors.grey,
+                      color: item.estActive ? AppTheme.accent : Colors.grey,
                     ),
                   ),
                 ),

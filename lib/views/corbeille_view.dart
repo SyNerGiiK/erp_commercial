@@ -44,7 +44,7 @@ class _CorbeilleViewState extends State<CorbeilleView>
         return BaseScreen(
           title: 'Corbeille',
           menuIndex: 12,
-          actions: [
+          headerActions: [
             if (!vm.isEmpty)
               TextButton.icon(
                 onPressed: () => _confirmPurgeAll(context, vm),
@@ -356,7 +356,7 @@ class _CorbeilleViewState extends State<CorbeilleView>
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 13,
-                color: AppTheme.textSecondary,
+                color: AppTheme.textLight,
               ),
             ),
             const SizedBox(width: AppTheme.spacing8),

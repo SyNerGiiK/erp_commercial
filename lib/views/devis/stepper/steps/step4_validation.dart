@@ -17,10 +17,12 @@ import '../../../../widgets/app_card.dart';
 
 class DevisStep4Validation extends StatefulWidget {
   final Devis devis;
+  final void Function(String url, DateTime date)? onSignatureUpdated;
 
   const DevisStep4Validation({
     super.key,
     required this.devis,
+    this.onSignatureUpdated,
   });
 
   @override
@@ -54,6 +56,16 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
     setState(() => _isLoading = false);
 
     if (success) {
+      // Récupérer le devis mis à jour depuis le VM pour obtenir l'URL de signature
+      final updatedDevis =
+          vm.devis.where((d) => d.id == widget.devis.id).firstOrNull;
+      if (updatedDevis?.signatureUrl != null) {
+        widget.onSignatureUpdated?.call(
+          updatedDevis!.signatureUrl!,
+          updatedDevis.dateSignature ?? DateTime.now(),
+        );
+      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Signature enregistrée !")));
     } else {

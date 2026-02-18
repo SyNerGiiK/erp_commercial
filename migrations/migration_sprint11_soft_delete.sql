@@ -52,5 +52,106 @@ BEGIN
 END;
 $$;
 
--- 5. RLS : les politiques existantes filtrent par user_id, pas besoin de modifier
+-- 5. Mise à jour des triggers pour autoriser le soft-delete ET les transitions de statut
+-- Les triggers prevent_*_modification() bloquaient TOUT update si statut != brouillon
+-- Nouveau comportement : seules les colonnes financières/structurelles sont protégées
+-- Les changements de statut, signature, archivage, soft-delete sont autorisés
+
+CREATE OR REPLACE FUNCTION prevent_facture_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Autoriser le soft-delete et la restauration depuis la corbeille
+  IF TG_OP = 'UPDATE' AND (OLD.deleted_at IS DISTINCT FROM NEW.deleted_at) THEN
+    RETURN NEW;
+  END IF;
+
+  -- Pour les DELETE réels, bloquer si pas brouillon
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.statut != 'brouillon' OR OLD.statut_juridique != 'brouillon' THEN
+      RAISE EXCEPTION 'Impossible de supprimer une facture validée (statut: %, statut_juridique: %)', OLD.statut, OLD.statut_juridique;
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  -- Pour les UPDATE : autoriser les transitions de statut et métadonnées
+  -- mais bloquer les modifications de contenu financier sur facture non-brouillon
+  IF OLD.statut_juridique != 'brouillon' THEN
+    IF (OLD.total_ht IS DISTINCT FROM NEW.total_ht)
+       OR (OLD.total_tva IS DISTINCT FROM NEW.total_tva)
+       OR (OLD.total_ttc IS DISTINCT FROM NEW.total_ttc)
+       OR (OLD.objet IS DISTINCT FROM NEW.objet)
+       OR (OLD.client_id IS DISTINCT FROM NEW.client_id)
+       OR (OLD.remise_taux IS DISTINCT FROM NEW.remise_taux)
+       OR (OLD.conditions_reglement IS DISTINCT FROM NEW.conditions_reglement)
+    THEN
+      RAISE EXCEPTION 'Modification interdite : facture validée (statut_juridique = %). Créez un avoir.', OLD.statut_juridique;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION protect_validated_facture()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Autoriser le soft-delete et la restauration depuis la corbeille
+  IF (OLD.deleted_at IS DISTINCT FROM NEW.deleted_at) THEN
+    RETURN NEW;
+  END IF;
+
+  -- Autoriser les changements de statut (paiement, envoi) mais pas de contenu
+  IF OLD.statut_juridique != 'brouillon' THEN
+    IF (OLD.total_ht IS DISTINCT FROM NEW.total_ht)
+       OR (OLD.total_tva IS DISTINCT FROM NEW.total_tva)
+       OR (OLD.total_ttc IS DISTINCT FROM NEW.total_ttc)
+       OR (OLD.objet IS DISTINCT FROM NEW.objet)
+       OR (OLD.client_id IS DISTINCT FROM NEW.client_id)
+       OR (OLD.remise_taux IS DISTINCT FROM NEW.remise_taux)
+       OR (OLD.conditions_reglement IS DISTINCT FROM NEW.conditions_reglement)
+    THEN
+      RAISE EXCEPTION 'Modification interdite : facture validée (statut_juridique = %). Créez un avoir.',
+        OLD.statut_juridique;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION prevent_devis_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Autoriser le soft-delete et la restauration depuis la corbeille
+  IF TG_OP = 'UPDATE' AND (OLD.deleted_at IS DISTINCT FROM NEW.deleted_at) THEN
+    RETURN NEW;
+  END IF;
+
+  -- Pour les DELETE réels, bloquer si pas brouillon
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.statut NOT IN ('brouillon', 'expire') THEN
+      RAISE EXCEPTION 'Impossible de supprimer un devis validé (statut: %)', OLD.statut;
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  -- Pour les UPDATE : autoriser les transitions de statut et métadonnées
+  -- mais bloquer les modifications de contenu financier sur devis non-brouillon
+  IF OLD.statut != 'brouillon' THEN
+    IF (OLD.total_ht IS DISTINCT FROM NEW.total_ht)
+       OR (OLD.total_tva IS DISTINCT FROM NEW.total_tva)
+       OR (OLD.total_ttc IS DISTINCT FROM NEW.total_ttc)
+       OR (OLD.objet IS DISTINCT FROM NEW.objet)
+       OR (OLD.client_id IS DISTINCT FROM NEW.client_id)
+       OR (OLD.remise_taux IS DISTINCT FROM NEW.remise_taux)
+       OR (OLD.conditions_reglement IS DISTINCT FROM NEW.conditions_reglement)
+    THEN
+      RAISE EXCEPTION 'Modification interdite : devis non-brouillon (statut = %). Créez un avenant.', OLD.statut;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 6. RLS : les politiques existantes filtrent par user_id, pas besoin de modifier
 -- Le filtrage deleted_at est fait côté application (requêtes Supabase)

@@ -114,7 +114,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
   void _showTransformationDialog(Devis d) async {
     final result = await showDialog<TransformationResultWrapper>(
       context: context,
-      builder: (ctx) => TransformationDialog(totalTTC: d.totalTtc),
+      builder: (ctx) => TransformationDialog(
+        totalTTC: d.totalTtc,
+        acomptePercentage: d.acomptePercentage,
+      ),
     );
 
     if (result == null || !mounted) return;
@@ -243,6 +246,29 @@ class _ListeDevisViewState extends State<ListeDevisView>
                                 const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         StatutBadge(statut: d.statut, isSmall: true),
+                        if (d.isAvenant) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.purple.shade300),
+                            ),
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.edit_note,
+                                  size: 12, color: Colors.purple.shade700),
+                              const SizedBox(width: 3),
+                              Text("Avenant",
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.purple.shade700,
+                                      fontWeight: FontWeight.w600)),
+                            ]),
+                          ),
+                        ],
                         if (d.chiffrage.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Container(

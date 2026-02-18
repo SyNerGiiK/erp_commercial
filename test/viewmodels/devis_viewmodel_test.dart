@@ -568,6 +568,280 @@ void main() {
       });
     });
 
+    group('getConversionRate', () {
+      test('devrait retourner 0 si aucun devis', () async {
+        // ARRANGE
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => <Devis>[]);
+
+        // ACT
+        final rate = await viewModel.getConversionRate();
+
+        // ASSERT
+        expect(rate, Decimal.zero);
+      });
+
+      test('devrait calculer le taux de conversion (signés/total non annulés)',
+          () async {
+        // ARRANGE - 4 devis: 2 signés, 1 envoyé, 1 annulé
+        final testDevis = <Devis>[
+          Devis(
+            id: 'd1',
+            userId: 'user-1',
+            numeroDevis: 'DEV-001',
+            objet: 'Signé 1',
+            clientId: 'c1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('1000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'signe',
+          ),
+          Devis(
+            id: 'd2',
+            userId: 'user-1',
+            numeroDevis: 'DEV-002',
+            objet: 'Signé 2',
+            clientId: 'c2',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('2000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'signe',
+          ),
+          Devis(
+            id: 'd3',
+            userId: 'user-1',
+            numeroDevis: 'DEV-003',
+            objet: 'Envoyé',
+            clientId: 'c3',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('3000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'envoye',
+          ),
+          Devis(
+            id: 'd4',
+            userId: 'user-1',
+            numeroDevis: 'DEV-004',
+            objet: 'Annulé',
+            clientId: 'c4',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('4000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'annule',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        // ACT
+        final rate = await viewModel.getConversionRate();
+
+        // ASSERT - 2 signés / 3 non-annulés = 66.66...%
+        // Arrondi: (2/3)*100 ≈ 66.666...
+        expect(rate.toDouble(), closeTo(66.67, 0.1));
+      });
+
+      test('devrait retourner 100% si tous signés', () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'd1',
+            userId: 'user-1',
+            numeroDevis: 'DEV-001',
+            objet: 'Signé',
+            clientId: 'c1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('1000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'signe',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        // ACT
+        final rate = await viewModel.getConversionRate();
+
+        // ASSERT
+        expect(rate, Decimal.fromInt(100));
+      });
+
+      test('devrait retourner 0% si tous les non-annulés ne sont pas signés',
+          () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'd1',
+            userId: 'user-1',
+            numeroDevis: 'DEV-001',
+            objet: 'Brouillon',
+            clientId: 'c1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('1000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'brouillon',
+          ),
+          Devis(
+            id: 'd2',
+            userId: 'user-1',
+            numeroDevis: 'DEV-002',
+            objet: 'Envoyé',
+            clientId: 'c2',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('2000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'envoye',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        // ACT
+        final rate = await viewModel.getConversionRate();
+
+        // ASSERT
+        expect(rate, Decimal.zero);
+      });
+    });
+
+    group('creerAvenant', () {
+      test('devrait créer un avenant et rafraîchir la liste', () async {
+        // ARRANGE
+        final avenant = Devis(
+          id: 'avenant-1',
+          userId: 'user-1',
+          numeroDevis: 'DEV-2024-001-A1',
+          objet: 'Avenant Devis Test',
+          clientId: 'client-1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('5000'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.zero,
+          statut: 'brouillon',
+          devisParentId: 'devis-parent',
+        );
+
+        when(() => mockRepository.createAvenant('devis-parent'))
+            .thenAnswer((_) async => avenant);
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => [avenant]);
+
+        // ACT
+        final result = await viewModel.creerAvenant('devis-parent');
+
+        // ASSERT
+        expect(result, isNotNull);
+        expect(result!.id, 'avenant-1');
+        expect(result.isAvenant, true);
+        expect(result.devisParentId, 'devis-parent');
+        verify(() => mockRepository.createAvenant('devis-parent')).called(1);
+        verify(() => mockRepository.getDevis(archives: false)).called(1);
+      });
+
+      test('devrait retourner null en cas d\'erreur', () async {
+        // ARRANGE
+        when(() => mockRepository.createAvenant(any()))
+            .thenThrow(Exception('Erreur création avenant'));
+
+        // ACT
+        final result = await viewModel.creerAvenant('devis-inexistant');
+
+        // ASSERT
+        expect(result, isNull);
+      });
+    });
+
+    group('refuserDevis', () {
+      test('devrait refuser un devis envoyé', () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'devis-envoye',
+            userId: 'user-1',
+            numeroDevis: 'DEV-2024-040',
+            objet: 'À refuser',
+            clientId: 'client-1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('5000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'envoye',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        when(() => mockRepository.changeStatut(any(), any()))
+            .thenAnswer((_) async {});
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => [
+                  testDevis[0].copyWith(statut: 'refuse'),
+                ]);
+
+        // ACT
+        final result = await viewModel.refuserDevis('devis-envoye');
+
+        // ASSERT
+        expect(result, true);
+        verify(() => mockRepository.changeStatut('devis-envoye', 'refuse'))
+            .called(1);
+      });
+
+      test('devrait échouer si devis non envoyé', () async {
+        // ARRANGE
+        final testDevis = <Devis>[
+          Devis(
+            id: 'devis-brouillon',
+            userId: 'user-1',
+            numeroDevis: 'DEV-2024-050',
+            objet: 'Pas envoyé',
+            clientId: 'client-1',
+            dateEmission: DateTime.now(),
+            dateValidite: DateTime.now().add(const Duration(days: 30)),
+            totalHt: Decimal.parse('5000'),
+            remiseTaux: Decimal.zero,
+            acompteMontant: Decimal.zero,
+            statut: 'brouillon',
+          ),
+        ];
+
+        when(() => mockRepository.getDevis(archives: false))
+            .thenAnswer((_) async => testDevis);
+        await viewModel.fetchDevis();
+
+        // ACT
+        final result = await viewModel.refuserDevis('devis-brouillon');
+
+        // ASSERT
+        expect(result, false);
+        verifyNever(() => mockRepository.changeStatut(any(), any()));
+      });
+    });
+
     group('isLoading state', () {
       test('devrait être false initialement et après un fetch réussi',
           () async {

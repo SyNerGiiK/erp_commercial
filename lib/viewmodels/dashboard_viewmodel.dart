@@ -115,6 +115,17 @@ class DashboardViewModel extends BaseViewModel {
   bool get showArchivageSuggestion =>
       _facturesArchivables.isNotEmpty && !_archivageDismissed;
 
+  // Statistiques Devis (pipeline & conversion)
+  Decimal _tauxConversion = Decimal.zero;
+  int _devisEnCours = 0;
+  Decimal _montantPipeline = Decimal.zero;
+  int _totalDevisYear = 0;
+
+  Decimal get tauxConversion => _tauxConversion;
+  int get devisEnCours => _devisEnCours;
+  Decimal get montantPipeline => _montantPipeline;
+  int get totalDevisYear => _totalDevisYear;
+
   void dismissArchivageSuggestion() {
     _archivageDismissed = true;
     notifyListeners();
@@ -161,6 +172,7 @@ class DashboardViewModel extends BaseViewModel {
         _repository.getRecentActivity(), // 6
         _repository
             .getAllFacturesYear(now.year), // 7: Pour le graphe annuel complet
+        _repository.getAllDevisYear(now.year), // 8: Statistiques devis
       ]);
 
       final factures = results[0] as List<Facture>;
@@ -171,6 +183,7 @@ class DashboardViewModel extends BaseViewModel {
       final depensesPrev = results[5] as List<Depense>;
       _recentActivity = results[6] as List<dynamic>;
       final allFacturesYear = results[7] as List<Facture>;
+      final allDevisYear = results[8] as List<Devis>;
 
       // --- CALCULS ---
       _calculateKPI(factures, depenses, dates, isCurrent: true);
@@ -197,6 +210,9 @@ class DashboardViewModel extends BaseViewModel {
       _facturesArchivables =
           ArchivageService.detecterArchivables(allFacturesYear);
       _archivageDismissed = false;
+
+      // Statistiques Devis — taux de conversion & pipeline
+      _computeDevisStats(allDevisYear);
     });
   }
 
@@ -327,6 +343,40 @@ class DashboardViewModel extends BaseViewModel {
       final cat = d.categorie;
       _expenseBreakdown[cat] =
           (_expenseBreakdown[cat] ?? 0.0) + d.montant.toDouble();
+    }
+  }
+
+  void _computeDevisStats(List<Devis> devis) {
+    _totalDevisYear = 0;
+    _devisEnCours = 0;
+    _montantPipeline = Decimal.zero;
+    _tauxConversion = Decimal.zero;
+
+    if (devis.isEmpty) return;
+
+    int nonAnnules = 0;
+    int signes = 0;
+
+    for (var d in devis) {
+      _totalDevisYear++;
+
+      if (d.statut != 'annule') {
+        nonAnnules++;
+        if (d.statut == 'signe') {
+          signes++;
+        }
+        // Pipeline = devis en cours (brouillon, envoyé, ou expiré mais pas annulé/signé)
+        if (d.statut == 'brouillon' || d.statut == 'envoye') {
+          _devisEnCours++;
+          _montantPipeline += d.totalHt;
+        }
+      }
+    }
+
+    if (nonAnnules > 0) {
+      _tauxConversion = (Decimal.fromInt(signes) / Decimal.fromInt(nonAnnules))
+              .toDecimal(scaleOnInfinitePrecision: 10) *
+          Decimal.fromInt(100);
     }
   }
 

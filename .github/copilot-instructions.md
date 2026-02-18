@@ -80,7 +80,7 @@ Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 14 modèles d
 
 ## Tests
 
-**527 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
+**550 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
 
 - **Mocking** : `mocktail` — mocks dans `test/mocks/`
 - **Pattern** : mock l'interface repository, injecte dans le VM via constructeur
@@ -171,7 +171,7 @@ setUp(() {
 
 ```bash
 flutter pub get
-flutter test                    # 527 tests, doit être 100% vert
+flutter test                    # 550 tests, doit être 100% vert
 flutter build windows           # Build Windows (prod)
 flutter run -d chrome           # Dev web
 flutter clean                   # Si fichiers éphémères corrompus

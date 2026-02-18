@@ -13,6 +13,7 @@ abstract class IDashboardRepository {
   Future<UrssafConfig> getUrssafConfig();
   Future<ProfilEntreprise?> getProfilEntreprise();
   Future<List<dynamic>> getRecentActivity();
+  Future<List<Devis>> getAllDevisYear(int year);
 }
 
 class DashboardRepository extends BaseRepository
@@ -25,6 +26,7 @@ class DashboardRepository extends BaseRepository
           .select('*, paiements(*), lignes_factures(*)')
           .eq('user_id', userId)
           .neq('statut', 'brouillon')
+          .isFilter('deleted_at', null)
           .gte('date_emission', start.toIso8601String())
           .lte('date_emission', end.toIso8601String());
 
@@ -49,6 +51,7 @@ class DashboardRepository extends BaseRepository
           .from('depenses')
           .select()
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .gte('date', start.toIso8601String())
           .lte('date', end.toIso8601String());
 
@@ -99,6 +102,7 @@ class DashboardRepository extends BaseRepository
           .from('factures')
           .select('*, paiements(*)')
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .order('date_emission', ascending: false)
           .limit(5);
 
@@ -106,6 +110,7 @@ class DashboardRepository extends BaseRepository
           .from('devis')
           .select()
           .eq('user_id', userId)
+          .isFilter('deleted_at', null)
           .order('date_emission', ascending: false)
           .limit(5);
 
@@ -125,6 +130,26 @@ class DashboardRepository extends BaseRepository
       return all.take(5).toList();
     } catch (e) {
       developer.log("⚠️ Erreur Recent Activity", error: e);
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Devis>> getAllDevisYear(int year) async {
+    try {
+      final start = DateTime(year, 1, 1);
+      final end = DateTime(year, 12, 31, 23, 59, 59);
+      final response = await client
+          .from('devis')
+          .select()
+          .eq('user_id', userId)
+          .isFilter('deleted_at', null)
+          .gte('date_emission', start.toIso8601String())
+          .lte('date_emission', end.toIso8601String());
+
+      return (response as List).map((e) => Devis.fromMap(e)).toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur getAllDevisYear", error: e);
       return [];
     }
   }

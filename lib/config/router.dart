@@ -29,6 +29,7 @@ import '../views/archives_view.dart';
 import '../views/rentabilite_view.dart';
 import '../views/onboarding_view.dart';
 import '../views/relances_view.dart';
+import '../views/corbeille_view.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -129,6 +130,10 @@ class AppRouter {
         GoRoute(
           path: '/app/relances',
           builder: (_, __) => const RelancesView(),
+        ),
+        GoRoute(
+          path: '/app/corbeille',
+          builder: (_, __) => const CorbeilleView(),
         ),
         GoRoute(
           path: '/app/search',

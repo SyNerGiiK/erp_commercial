@@ -167,6 +167,75 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
 
                   const SizedBox(height: AppTheme.spacing32),
 
+                  // --- DEVIS PIPELINE & CONVERSION ---
+                  if (vm.totalDevisYear > 0)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(bottom: AppTheme.spacing32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionHeader(
+                            title: 'Pipeline Devis',
+                            icon: Icons.description_outlined,
+                          ),
+                          const SizedBox(height: AppTheme.spacing8),
+                          LayoutBuilder(builder: (context, constraints) {
+                            final isWide = constraints.maxWidth > 600;
+                            return Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              children: [
+                                SizedBox(
+                                  width: isWide
+                                      ? (constraints.maxWidth - 32) / 3
+                                      : constraints.maxWidth,
+                                  child: _buildDevisStatCard(
+                                    icon: Icons.trending_up_rounded,
+                                    title: 'Taux de conversion',
+                                    value:
+                                        '${vm.tauxConversion.toStringAsFixed(1)}%',
+                                    subtitle:
+                                        '${vm.totalDevisYear} devis cette année',
+                                    color: vm.tauxConversion.toDouble() >= 50
+                                        ? const Color(0xFF43E97B)
+                                        : vm.tauxConversion.toDouble() >= 25
+                                            ? Colors.orange
+                                            : Colors.red.shade400,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: isWide
+                                      ? (constraints.maxWidth - 32) / 3
+                                      : constraints.maxWidth,
+                                  child: _buildDevisStatCard(
+                                    icon: Icons.hourglass_top_rounded,
+                                    title: 'Devis en cours',
+                                    value: '${vm.devisEnCours}',
+                                    subtitle: 'brouillons & envoyés',
+                                    color: const Color(0xFF6B8EFF),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: isWide
+                                      ? (constraints.maxWidth - 32) / 3
+                                      : constraints.maxWidth,
+                                  child: _buildDevisStatCard(
+                                    icon: Icons.account_balance_wallet_outlined,
+                                    title: 'Montant pipeline',
+                                    value:
+                                        '${vm.montantPipeline.toStringAsFixed(2)} €',
+                                    subtitle: 'CA potentiel en attente',
+                                    color: const Color(0xFFA8BFFF),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+
                   // --- FACTURES EN RETARD ---
                   if (vm.relances.isNotEmpty)
                     Padding(
@@ -407,6 +476,67 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
             color: isSelected ? Colors.white : AppTheme.textLight,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDevisStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -168,6 +168,11 @@ class Facture {
   /// Motif de l'avoir (obligatoire pour type == 'avoir')
   final String? motifAvoir;
 
+  // Sprint 14-20 : Multi-devises & notes privées
+  final String devise;
+  final Decimal? tauxChange;
+  final String? notesPrivees;
+
   Decimal get netAPayer => totalTtc - acompteDejaRegle - totalPaiements;
   Decimal get totalPaiements =>
       paiements.fold(Decimal.zero, (prev, element) => prev + element.montant);
@@ -206,6 +211,9 @@ class Facture {
     this.chiffrage = const [],
     this.numeroBonCommande,
     this.motifAvoir,
+    this.devise = 'EUR',
+    this.tauxChange,
+    this.notesPrivees,
   })  : totalTva = totalTva ?? Decimal.zero,
         totalTtc = totalTtc ?? totalHt; // Fallback pour compatibilité
 
@@ -259,6 +267,11 @@ class Facture {
           [],
       numeroBonCommande: map['numero_bon_commande'],
       motifAvoir: map['motif_avoir'],
+      devise: map['devise'] ?? 'EUR',
+      tauxChange: map['taux_change'] != null
+          ? Decimal.parse(map['taux_change'].toString())
+          : null,
+      notesPrivees: map['notes_privees'],
     );
   }
 
@@ -296,6 +309,9 @@ class Facture {
       'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
       if (numeroBonCommande != null) 'numero_bon_commande': numeroBonCommande,
       if (motifAvoir != null) 'motif_avoir': motifAvoir,
+      'devise': devise,
+      if (tauxChange != null) 'taux_change': tauxChange.toString(),
+      if (notesPrivees != null) 'notes_privees': notesPrivees,
     };
   }
 
@@ -332,6 +348,9 @@ class Facture {
     List<LigneChiffrage>? chiffrage,
     String? numeroBonCommande,
     String? motifAvoir,
+    String? devise,
+    Decimal? tauxChange,
+    String? notesPrivees,
   }) {
     return Facture(
       id: id ?? this.id,
@@ -366,6 +385,9 @@ class Facture {
       chiffrage: chiffrage ?? this.chiffrage,
       numeroBonCommande: numeroBonCommande ?? this.numeroBonCommande,
       motifAvoir: motifAvoir ?? this.motifAvoir,
+      devise: devise ?? this.devise,
+      tauxChange: tauxChange ?? this.tauxChange,
+      notesPrivees: notesPrivees ?? this.notesPrivees,
     );
   }
 }

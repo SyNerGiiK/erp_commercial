@@ -14,6 +14,9 @@ import 'package:erp_commercial/repositories/auth_repository.dart';
 import 'package:erp_commercial/repositories/global_search_repository.dart';
 import 'package:erp_commercial/repositories/shopping_repository.dart';
 import 'package:erp_commercial/repositories/planning_repository.dart';
+import 'package:erp_commercial/repositories/facture_recurrente_repository.dart';
+import 'package:erp_commercial/repositories/temps_repository.dart';
+import 'package:erp_commercial/repositories/rappel_repository.dart';
 
 // Mock pour ClientRepository
 class MockClientRepository extends Mock implements IClientRepository {}
@@ -51,5 +54,15 @@ class MockShoppingRepository extends Mock implements IShoppingRepository {}
 
 // Mock pour PlanningRepository
 class MockPlanningRepository extends Mock implements IPlanningRepository {}
+
+// Mock pour FactureRecurrenteRepository
+class MockFactureRecurrenteRepository extends Mock
+    implements IFactureRecurrenteRepository {}
+
+// Mock pour TempsRepository
+class MockTempsRepository extends Mock implements ITempsRepository {}
+
+// Mock pour RappelRepository
+class MockRappelRepository extends Mock implements IRappelRepository {}
 
 // Ajouter d'autres mocks de repositories ici selon les besoins

@@ -143,6 +143,11 @@ class Devis {
   // Avenant : reference au devis parent
   final String? devisParentId;
 
+  // Sprint 14-20 : Multi-devises & notes privées
+  final String devise;
+  final Decimal? tauxChange;
+  final String? notesPrivees;
+
   final List<LigneDevis> lignes;
   final List<LigneChiffrage> chiffrage;
 
@@ -220,6 +225,9 @@ class Devis {
     this.dateSignature,
     this.tvaIntra,
     this.devisParentId,
+    this.devise = 'EUR',
+    this.tauxChange,
+    this.notesPrivees,
     this.lignes = const [],
     this.chiffrage = const [],
   })  : totalTva = totalTva ?? Decimal.zero,
@@ -253,6 +261,11 @@ class Devis {
       notesPubliques: map['notes_publiques'],
       tvaIntra: map['tva_intra'],
       devisParentId: map['devis_parent_id'],
+      devise: map['devise'] ?? 'EUR',
+      tauxChange: map['taux_change'] != null
+          ? Decimal.parse(map['taux_change'].toString())
+          : null,
+      notesPrivees: map['notes_privees'],
       lignes: (map['lignes_devis'] as List<dynamic>?)
               ?.map((e) => LigneDevis.fromMap(e))
               .toList() ??
@@ -288,6 +301,9 @@ class Devis {
       'date_signature': dateSignature?.toIso8601String(),
       'tva_intra': tvaIntra,
       if (devisParentId != null) 'devis_parent_id': devisParentId,
+      'devise': devise,
+      if (tauxChange != null) 'taux_change': tauxChange.toString(),
+      if (notesPrivees != null) 'notes_privees': notesPrivees,
       'lignes_devis': lignes.map((e) => e.toMap()).toList(),
       'lignes_chiffrages': chiffrage.map((e) => e.toMap()).toList(),
     };
@@ -316,6 +332,9 @@ class Devis {
     DateTime? dateSignature,
     String? tvaIntra,
     String? devisParentId,
+    String? devise,
+    Decimal? tauxChange,
+    String? notesPrivees,
     List<LigneDevis>? lignes,
     List<LigneChiffrage>? chiffrage,
   }) {
@@ -342,6 +361,9 @@ class Devis {
       dateSignature: dateSignature ?? this.dateSignature,
       tvaIntra: tvaIntra ?? this.tvaIntra,
       devisParentId: devisParentId ?? this.devisParentId,
+      devise: devise ?? this.devise,
+      tauxChange: tauxChange ?? this.tauxChange,
+      notesPrivees: notesPrivees ?? this.notesPrivees,
       lignes: lignes ?? this.lignes,
       chiffrage: chiffrage ?? this.chiffrage,
     );

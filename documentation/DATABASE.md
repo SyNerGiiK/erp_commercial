@@ -32,19 +32,27 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   clients    │────<│   factures   │────<│  paiements   │
 └──────────────┘     └──────────────┘     └──────────────┘
-                           │ 1:N
-                     ┌─────┴──────┐
-                     │lignes_facture│
-                     └────────────┘
-
-┌──────────────┐     ┌──────────────┐
-│   clients    │────<│    devis     │
-└──────────────┘     └──────────────┘
-                           │ 1:N
-                     ┌─────┴──────┐
-                     │ lignes_devis │
-                     └────────────┘
-
+       │                    │ 1:N
+       │              ┌─────┴──────┐
+       │              │lignes_facture│
+       │              └────────────┘
+       │
+       ├────<┌──────────────┐
+       │     │    devis     │
+       │     └──────────────┘
+       │          │ 1:N
+       │    ┌─────┴──────┐
+       │    │ lignes_devis │
+       │    └────────────┘
+       │
+       ├────<┌────────────────────┐     ┌────────────────────────┐
+       │     │factures_recurrentes│──<│lignes_facture_recurrente│
+       │     └────────────────────┘     └────────────────────────┘
+       │
+       ├────<┌───────────────┐
+       │     │temps_activites│
+       │     └───────────────┘
+       │
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  entreprises │     │  audit_logs  │     │   depenses   │
 └──────────────┘     └──────────────┘     └──────────────┘
@@ -52,6 +60,10 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   articles   │     │  cotisations │     │    events    │
 └──────────────┘     └──────────────┘     └──────────────┘
+
+┌──────────────┐
+│   rappels    │
+└──────────────┘
 ```
 
 ---
@@ -73,6 +85,10 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 | `audit_logs` | Piste d'audit (loi anti-fraude) | ✅ | — | ❌ |
 | `events` | Planning / calendrier | ✅ | ❌ | ❌ |
 | `shopping_items` | Liste courses / matériaux | ✅ | ❌ | ❌ |
+| `factures_recurrentes` | Factures récurrentes | ✅ | ❌ | ✅ |
+| `lignes_facture_recurrente` | Lignes facture récurrente | ✅ | ❌ | ❌ |
+| `temps_activites` | Suivi du temps | ✅ | ❌ | ✅ |
+| `rappels` | Rappels & échéances | ✅ | ❌ | ✅ |
 
 ---
 
@@ -134,6 +150,9 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 | `taux_penalites_retard` | `NUMERIC(5,2)` | NOT NULL | `11.62` | Taux pénalités retard |
 | `escompte_applicable` | `BOOLEAN` | NOT NULL | `false` | Escompte applicable |
 | `mentions_legales` | `TEXT` | NULL | — | Mentions légales complètes |
+| `devise` | `TEXT` | NOT NULL | `'EUR'` | Devise (EUR, USD, GBP, CHF) |
+| `taux_change` | `NUMERIC` | NOT NULL | `1.0` | Taux de change vs EUR |
+| `notes_privees` | `TEXT` | NULL | — | Notes internes (non imprimées) |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Date de création |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière mise à jour |
 
@@ -184,6 +203,9 @@ Structure très similaire à `factures`, avec colonnes spécifiques :
 | `taux_acompte` | `NUMERIC` | Taux d'acompte demandé |
 | `devis_parent_id` | `UUID` | FK → devis.id (avenants) |
 | `version_avenant` | `INTEGER` | N° version avenant |
+| `devise` | `TEXT` | Devise (EUR, USD, GBP, CHF) — défaut EUR |
+| `taux_change` | `NUMERIC` | Taux de change vs EUR — défaut 1.0 |
+| `notes_privees` | `TEXT` | Notes internes (non imprimées) |
 
 **Statuts :** `brouillon`, `envoye`, `accepte`, `refuse`, `expire`, `facture`, `avenant`
 

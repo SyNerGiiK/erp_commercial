@@ -141,6 +141,9 @@
 | `tauxPenalitesRetard` | `double` | `taux_penalites_retard` | Taux pénalités de retard |
 | `escompteApplicable` | `bool` | `escompte_applicable` | Escompte applicable |
 | `mentionsLegales` | `String?` | `mentions_legales` | Mentions légales complètes |
+| `devise` | `String` | `devise` | Devise (EUR, USD, GBP, CHF) — défaut EUR |
+| `tauxChange` | `double` | `taux_change` | Taux de change vs EUR — défaut 1.0 |
+| `notesPrivees` | `String?` | `notes_privees` | Notes internes (non imprimées) |
 | `lignes` | `List<LigneFacture>` | — (join) | Lignes de la facture |
 | `paiements` | `List<Paiement>` | — (join) | Paiements associés |
 
@@ -189,6 +192,9 @@ Structure très similaire à Facture, avec en plus :
 | `devisParentId` | `String?` | Devis parent (avenants) |
 | `versionAvenant` | `int` | N° de version avenant |
 | `configCharges` | `ConfigCharges?` | Configuration charges sociales (local) |
+| `devise` | `String` | Devise (EUR, USD, GBP, CHF) — défaut EUR |
+| `tauxChange` | `double` | Taux de change vs EUR — défaut 1.0 |
+| `notesPrivees` | `String?` | Notes internes (non imprimées) |
 
 **Statuts :** `brouillon`, `envoye`, `accepte`, `refuse`, `expire`, `facture`, `avenant`
 
@@ -290,6 +296,102 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `montantCotisation` | `Decimal` | Montant calculé |
 | `datePaiement` | `DateTime?` | Date de règlement |
 | `estPaye` | `bool` | Cotisation réglée |
+
+### FactureRecurrente
+
+**Fichier :** `lib/models/facture_recurrente_model.dart` — Table : `factures_recurrentes`
+
+| Champ | Type Dart | Colonne DB | Description |
+|---|---|---|---|
+| `id` | `String?` | `id` (UUID) | Identifiant |
+| `userId` | `String?` | `user_id` | Propriétaire (RLS) |
+| `clientId` | `String` | `client_id` (FK) | Client associé |
+| `objet` | `String` | `objet` | Objet de la facture |
+| `frequence` | `FrequenceRecurrence` | `frequence` | Hebdomadaire, mensuel, trimestriel, annuel |
+| `prochaineEmission` | `DateTime` | `prochaine_emission` | Date prochaine génération |
+| `estActive` | `bool` | `est_active` | Toggle actif/inactif |
+| `nbFacturesGenerees` | `int` | `nb_factures_generees` | Compteur factures générées |
+| `totalHt` | `Decimal` | `total_ht` | Total HT |
+| `totalTva` | `Decimal` | `total_tva` | Total TVA |
+| `totalTtc` | `Decimal` | `total_ttc` | Total TTC |
+| `devise` | `String` | `devise` | Devise (défaut EUR) |
+| `remiseTaux` | `Decimal` | `remise_taux` | Taux de remise |
+| `conditionsReglement` | `String` | `conditions_reglement` | Conditions |
+| `lignes` | `List<LigneFactureRecurrente>` | — (join) | Lignes |
+
+**Méthodes :** `fromMap(Map)`, `toMap()`, `copyWith(...)`
+
+### LigneFactureRecurrente
+
+**Table :** `lignes_facture_recurrente`
+
+| Champ | Type Dart | Colonne DB | Description |
+|---|---|---|---|
+| `id` | `String?` | `id` (UUID) | Identifiant |
+| `factureRecurrenteId` | `String?` | `facture_recurrente_id` (FK) | Facture récurrente parente |
+| `description` | `String` | `description` | Description |
+| `quantite` | `Decimal` | `quantite` | Quantité |
+| `prixUnitaire` | `Decimal` | `prix_unitaire` | Prix unitaire HT |
+| `totalLigne` | `Decimal` | `total_ligne` | Total HT de la ligne |
+| `typeActivite` | `String` | `type_activite` | Service ou commerce |
+| `tauxTva` | `Decimal` | `taux_tva` | Taux TVA applicable |
+
+### TempsActivite
+
+**Fichier :** `lib/models/temps_activite_model.dart` — Table : `temps_activites`
+
+| Champ | Type Dart | Colonne DB | Description |
+|---|---|---|---|
+| `id` | `String?` | `id` (UUID) | Identifiant |
+| `userId` | `String?` | `user_id` | Propriétaire (RLS) |
+| `clientId` | `String?` | `client_id` (FK) | Client associé |
+| `projet` | `String` | `projet` | Nom du projet |
+| `description` | `String?` | `description` | Description activité |
+| `dateActivite` | `DateTime` | `date_activite` | Date de l'activité |
+| `dureeMinutes` | `int` | `duree_minutes` | Durée en minutes |
+| `tauxHoraire` | `Decimal` | `taux_horaire` | Taux horaire HT |
+| `montant` | `Decimal` | — (calculé) | duréeMinutes / 60 × tauxHoraire |
+| `estFacturable` | `bool` | `est_facturable` | Facturable au client |
+| `estFacture` | `bool` | `est_facture` | Déjà facturé |
+| `factureId` | `String?` | `facture_id` (FK) | Facture liée |
+
+**Getters calculés :**
+
+| Getter | Type | Description |
+|---|---|---|
+| `dureeFormatee` | `String` | Format "Xh Ymin" |
+| `montant` | `Decimal` | Montant = durée × taux horaire |
+
+**Méthodes :** `fromMap(Map)`, `toMap()`, `copyWith(...)`
+
+### Rappel
+
+**Fichier :** `lib/models/rappel_model.dart` — Table : `rappels`
+
+| Champ | Type Dart | Colonne DB | Description |
+|---|---|---|---|
+| `id` | `String?` | `id` (UUID) | Identifiant |
+| `userId` | `String?` | `user_id` | Propriétaire (RLS) |
+| `titre` | `String` | `titre` | Titre du rappel |
+| `description` | `String?` | `description` | Description détaillée |
+| `typeRappel` | `TypeRappel` | `type_rappel` | urssaf, cfe, impots, tva, echeanceFacture, echeanceDevis, autre |
+| `dateEcheance` | `DateTime` | `date_echeance` | Date d'échéance |
+| `estComplete` | `bool` | `est_complete` | Complété |
+| `priorite` | `PrioriteRappel` | `priorite` | basse, normale, haute, urgente |
+| `estRecurrent` | `bool` | `est_recurrent` | Récurrent |
+| `frequenceRecurrence` | `String?` | `frequence_recurrence` | Fréquence si récurrent |
+| `entiteLieeId` | `String?` | `entite_liee_id` | Entité liée (facture, devis) |
+| `entiteLieeType` | `String?` | `entite_liee_type` | Type entité liée |
+
+**Getters calculés :**
+
+| Getter | Type | Description |
+|---|---|---|
+| `joursRestants` | `int` | Jours avant l'échéance |
+| `estEnRetard` | `bool` | Date dépassée et non complété |
+| `estProche` | `bool` | Échéance dans les 7 jours |
+
+**Méthodes :** `fromMap(Map)`, `toMap()`, `copyWith(...)`
 
 ---
 
@@ -417,6 +519,45 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `PlanningRepository` | `IPlanningRepository` | CRUD événements calendrier |
 | `ShoppingRepository` | `IShoppingRepository` | CRUD items liste courses |
 
+### IFactureRecurrenteRepository
+
+**Fichier :** `lib/repositories/facture_recurrente_repository.dart`
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `getFacturesRecurrentes()` | `Future<List<FactureRecurrente>>` | Toutes les factures récurrentes avec lignes |
+| `createFactureRecurrente(FactureRecurrente, List<LigneFactureRecurrente>)` | `Future<FactureRecurrente>` | Crée une facture récurrente + lignes |
+| `updateFactureRecurrente(FactureRecurrente, List<LigneFactureRecurrente>)` | `Future<void>` | Met à jour |
+| `deleteFactureRecurrente(String id)` | `Future<void>` | Supprime |
+| `toggleActive(String id, bool estActive)` | `Future<void>` | Active/désactive |
+| `incrementCompteur(String id)` | `Future<void>` | Incrémente le compteur de génération |
+
+### ITempsRepository
+
+**Fichier :** `lib/repositories/temps_repository.dart`
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `getTempsActivites()` | `Future<List<TempsActivite>>` | Toutes les entrées de temps |
+| `createTempsActivite(TempsActivite)` | `Future<TempsActivite>` | Crée une entrée |
+| `updateTempsActivite(TempsActivite)` | `Future<void>` | Met à jour |
+| `deleteTempsActivite(String id)` | `Future<void>` | Supprime |
+| `getByPeriode(DateTime debut, DateTime fin)` | `Future<List<TempsActivite>>` | Filtre par période |
+| `marquerFacture(String id, String factureId)` | `Future<void>` | Lie à une facture |
+
+### IRappelRepository
+
+**Fichier :** `lib/repositories/rappel_repository.dart`
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `getRappels()` | `Future<List<Rappel>>` | Tous les rappels |
+| `createRappel(Rappel)` | `Future<Rappel>` | Crée un rappel |
+| `updateRappel(Rappel)` | `Future<void>` | Met à jour |
+| `deleteRappel(String id)` | `Future<void>` | Supprime |
+| `completerRappel(String id)` | `Future<void>` | Marque comme complété |
+| `createMany(List<Rappel>)` | `Future<void>` | Crée plusieurs rappels (génération batch) |
+
 ---
 
 ## ViewModels
@@ -539,6 +680,10 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `GlobalSearchViewModel` | `search(String query)`, `results`, `isSearching` |
 | `PlanningViewModel` | `loadEvents()`, `createEvent()`, `updateEvent()`, `deleteEvent()` |
 | `ShoppingViewModel` | `loadItems()`, `addItem()`, `toggleItem()`, `deleteItem()` |
+| `CorbeilleViewModel` | `loadAll()`, `restoreFacture()`, `restoreDevis()`, `restoreClient()`, `restoreDepense()`, `supprimerDefinitivement()` |
+| `FactureRecurrenteViewModel` | `loadRecurrentes()`, `createRecurrente()`, `updateRecurrente()`, `deleteRecurrente()`, `toggleActive()`, `genererFacture()` |
+| `TempsViewModel` | `loadTemps()`, `createTemps()`, `updateTemps()`, `deleteTemps()`, `getTotalHeures()`, `getMontantTotal()`, `filterByPeriode()` |
+| `RappelViewModel` | `loadRappels()`, `createRappel()`, `updateRappel()`, `deleteRappel()`, `completerRappel()`, `genererRappelsFiscaux()` |
 
 ---
 
@@ -685,6 +830,25 @@ class PdfGenerationRequest {
 | `getConfigCharges` | `static Future<ConfigCharges> getConfigCharges()` | Récupère la config charges sociales |
 | `saveConfigCharges` | `static Future<void> saveConfigCharges(ConfigCharges config)` | Sauvegarde la config |
 | `resetConfigCharges` | `static Future<void> resetConfigCharges()` | Réinitialise aux valeurs par défaut |
+
+### EcheanceService
+
+**Fichier :** `lib/services/echeance_service.dart`
+
+| Méthode | Signature | Description |
+|---|---|---|
+| `genererTousRappels` | `static List<Rappel> genererTousRappels({int annee, bool urssafTrimestriel, bool tvaApplicable, List<Facture>?, List<Devis>?})` | Génère tous les rappels fiscaux et commerciaux pour une année |
+
+**Rappels générés :**
+
+| Type | Fréquence | Description |
+|---|---|---|
+| URSSAF | Mensuel ou trimestriel | Déclarations selon config entreprise |
+| CFE | Annuel (15 décembre) | Cotisation foncière des entreprises |
+| Impôts | Mensuel ou trimestriel | Versement libératoire |
+| TVA | Mensuel (si applicable) | Déclaration TVA |
+| Factures échues | Automatique | Rappels pour factures impayées |
+| Devis expirants | Automatique | Alertes devis proches expiration |
 
 ---
 

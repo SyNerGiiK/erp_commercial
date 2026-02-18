@@ -30,6 +30,9 @@ import '../views/rentabilite_view.dart';
 import '../views/onboarding_view.dart';
 import '../views/relances_view.dart';
 import '../views/corbeille_view.dart';
+import '../views/factures_recurrentes_view.dart';
+import '../views/suivi_temps_view.dart';
+import '../views/rappels_echeances_view.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -138,6 +141,18 @@ class AppRouter {
         GoRoute(
           path: '/app/search',
           builder: (_, __) => const GlobalSearchView(),
+        ),
+        GoRoute(
+          path: '/app/recurrentes',
+          builder: (_, __) => const FacturesRecurrentesView(),
+        ),
+        GoRoute(
+          path: '/app/temps',
+          builder: (_, __) => const SuiviTempsView(),
+        ),
+        GoRoute(
+          path: '/app/rappels',
+          builder: (_, __) => const RappelsEcheancesView(),
         ),
 
         // --- ROUTES DYNAMIQUES (CRUD) ---

@@ -68,6 +68,8 @@ class CustomDrawer extends StatelessWidget {
                     '/app/archives'),
                 _buildItem(context, 11, "Relances",
                     Icons.notification_important_rounded, '/app/relances'),
+                _buildItem(context, 13, "Récurrentes", Icons.repeat_rounded,
+                    '/app/recurrentes'),
 
                 const SizedBox(height: 8),
 
@@ -86,6 +88,10 @@ class CustomDrawer extends StatelessWidget {
                 _buildSectionLabel("OUTILS"),
                 _buildItem(context, 7, "Bibliothèque Prix",
                     Icons.menu_book_rounded, '/app/bibliotheque'),
+                _buildItem(context, 14, "Suivi du temps", Icons.timer_rounded,
+                    '/app/temps'),
+                _buildItem(context, 15, "Rappels", Icons.alarm_rounded,
+                    '/app/rappels'),
 
                 const SizedBox(height: 8),
 

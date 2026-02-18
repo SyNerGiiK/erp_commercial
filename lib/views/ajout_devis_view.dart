@@ -85,6 +85,13 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   Decimal _acomptePercentage = Decimal.fromInt(30); // Défaut : 30%
   String _statut = 'brouillon';
 
+  // Workflow : mode lecture seule
+  bool get _isFullyLocked =>
+      _statut == 'signe' ||
+      _statut == 'refuse' ||
+      _statut == 'expire' ||
+      _statut == 'annule';
+
   // Signature
   String? _signatureUrl;
   DateTime? _dateSignature;
@@ -380,6 +387,12 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
   }
 
   Future<void> _sauvegarder() async {
+    if (_isFullyLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text("Ce devis est verrouillé et ne peut pas être modifié.")));
+      return;
+    }
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Veuillez remplir les champs obligatoires")));
@@ -429,16 +442,17 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Finaliser le devis ?"),
+        title: const Text("Finaliser et envoyer le devis ?"),
         content: const Text(
-            "Un numéro définitif sera attribué. Le devis ne sera plus modifiable."),
+            "Un numéro définitif sera attribué et le devis sera marqué comme envoyé. "
+            "Le contenu restera modifiable mais le devis constituera un engagement."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text("Non")),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text("Oui")),
+              child: const Text("Oui, envoyer")),
         ],
       ),
     );
@@ -1001,7 +1015,7 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     maxLines: 3,
                   ),
                   const SizedBox(height: 20),
-                  if (widget.id != null) ...[
+                  if (widget.id != null && _statut == 'envoye') ...[
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1025,12 +1039,55 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                       ],
                     ),
                   ],
+                  if (widget.id != null && _statut == 'signe') ...[
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Signature Client :"),
+                        Tooltip(
+                          message:
+                              "Signé le ${DateFormat('dd/MM/yyyy HH:mm').format(_dateSignature ?? DateTime.now())}",
+                          child: const Chip(
+                              label: Text("Signé"),
+                              avatar: Icon(Icons.check_circle,
+                                  color: Colors.green)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
 
             const SizedBox(height: 50),
-            if (widget.id != null)
+            // Bandeau avenant
+            if (widget.devisAModifier?.isAvenant == true)
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.link, color: Colors.amber.shade700),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Ceci est un avenant",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade900),
+                    ),
+                  ],
+                ),
+              ),
+            // Bouton Finaliser (brouillon uniquement)
+            if (widget.id != null && _statut == 'brouillon')
               Center(
                 child: ElevatedButton.icon(
                   onPressed: _finaliser,
@@ -1040,8 +1097,84 @@ class _AjoutDevisViewState extends State<AjoutDevisView>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 15),
                   ),
-                  icon: const Icon(Icons.check),
-                  label: const Text("FINALISER LE DEVIS (Définitif)"),
+                  icon: const Icon(Icons.send),
+                  label: const Text("FINALISER ET ENVOYER"),
+                ),
+              ),
+            // Verrouillage signe : bouton avenant
+            if (widget.id != null && _statut == 'signe')
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade300),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock, color: Colors.green.shade700),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Devis signé - Verrouillé",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final vm =
+                            Provider.of<DevisViewModel>(context, listen: false);
+                        final avenant = await vm.creerAvenant(widget.id!);
+                        if (avenant != null && mounted) {
+                          context.go('/app/ajout_devis/${avenant.id}',
+                              extra: avenant);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 15),
+                      ),
+                      icon: const Icon(Icons.add_circle),
+                      label: const Text("CRÉER UN AVENANT"),
+                    ),
+                  ],
+                ),
+              ),
+            // Statuts terminaux : message
+            if (_statut == 'refuse' ||
+                _statut == 'expire' ||
+                _statut == 'annule')
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade400),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Devis ${_statut == 'refuse' ? 'refusé' : _statut == 'expire' ? 'expiré' : 'annulé'} - Lecture seule",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 50),

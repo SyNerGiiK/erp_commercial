@@ -13,6 +13,9 @@ abstract class IDevisRepository {
   Future<void> markAsSigned(String id, String? signatureUrl);
   Future<String> uploadSignature(String devisId, Uint8List bytes);
   Future<String> generateNextNumero(int annee);
+  Future<void> changeStatut(String id, String newStatut);
+  Future<int> expireDevisDepasses();
+  Future<Devis> createAvenant(String devisParentId);
 }
 
 class DevisRepository extends DocumentRepository implements IDevisRepository {
@@ -108,7 +111,7 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
       final currentNum = current['numero_devis'] as String?;
 
       final updates = <String, dynamic>{
-        'statut': 'en_attente',
+        'statut': 'envoye',
       };
 
       if (currentNum == null ||
@@ -154,6 +157,71 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
         return map;
       }).toList();
       await client.from('lignes_chiffrages').insert(chiffrageData);
+    }
+  }
+
+  @override
+  Future<void> changeStatut(String id, String newStatut) async {
+    try {
+      await client.from('devis').update({'statut': newStatut}).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'changeStatut');
+    }
+  }
+
+  @override
+  Future<int> expireDevisDepasses() async {
+    try {
+      final result = await client.rpc('expire_devis_depasses');
+      return (result as int?) ?? 0;
+    } catch (e) {
+      throw handleError(e, 'expireDevisDepasses');
+    }
+  }
+
+  @override
+  Future<Devis> createAvenant(String devisParentId) async {
+    try {
+      // Recuperer le devis parent avec ses lignes
+      final response = await client
+          .from('devis')
+          .select('*, lignes_devis(*), lignes_chiffrages(*)')
+          .eq('id', devisParentId)
+          .single();
+      final parent = Devis.fromMap(response);
+
+      // Creer l'avenant comme nouveau brouillon
+      final avenantData = prepareForInsert(parent.toMap());
+      avenantData.remove('lignes_devis');
+      avenantData.remove('lignes_chiffrages');
+      avenantData['statut'] = 'brouillon';
+      avenantData['numero_devis'] = '';
+      avenantData['devis_parent_id'] = devisParentId;
+      avenantData['objet'] = 'Avenant - ${parent.objet}';
+      avenantData['date_emission'] = DateTime.now().toIso8601String();
+      avenantData['date_validite'] =
+          DateTime.now().add(const Duration(days: 30)).toIso8601String();
+      avenantData.remove('signature_url');
+      avenantData.remove('date_signature');
+      avenantData['est_transforme'] = false;
+      avenantData['est_archive'] = false;
+
+      final insertResponse =
+          await client.from('devis').insert(avenantData).select().single();
+      final newId = insertResponse['id'] as String;
+
+      // Copier les lignes et chiffrage
+      await _saveChildren(newId, parent);
+
+      return parent.copyWith(
+        id: newId,
+        devisParentId: devisParentId,
+        statut: 'brouillon',
+        numeroDevis: '',
+        objet: 'Avenant - ${parent.objet}',
+      );
+    } catch (e) {
+      throw handleError(e, 'createAvenant');
     }
   }
 }

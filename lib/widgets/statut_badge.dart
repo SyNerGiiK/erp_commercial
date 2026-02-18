@@ -29,9 +29,12 @@ class StatutBadge extends StatelessWidget {
       color = AppTheme.accent;
       label = "Payée";
       icon = Icons.check_circle;
-    } else if (s == 'validee' || s == 'envoyee') {
+    } else if (s == 'envoye' ||
+        s == 'envoyee' ||
+        s == 'validee' ||
+        s == 'en_attente') {
       color = Colors.blue;
-      label = "Envoyée";
+      label = "Envoyé";
       icon = Icons.send;
     } else if (s == 'signe' || s == 'transforme') {
       color = Colors.green.shade700;
@@ -41,9 +44,13 @@ class StatutBadge extends StatelessWidget {
       color = AppTheme.error;
       label = "Refusé";
       icon = Icons.block;
-    } else if (s == 'annulee') {
+    } else if (s == 'expire') {
+      color = Colors.orange;
+      label = "Expiré";
+      icon = Icons.timer_off;
+    } else if (s == 'annule' || s == 'annulee') {
       color = Colors.black45;
-      label = "Annulée";
+      label = "Annulé";
       icon = Icons.cancel;
     } else {
       color = Colors.blueGrey;

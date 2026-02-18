@@ -333,12 +333,10 @@ class FactureViewModel extends BaseViewModel
       final isPaid = reste <= Decimal.parse('0.01');
 
       if (isPaid && facture.statut != 'payee') {
-        final updated = facture.copyWith(statut: 'payee');
-        await _repository.updateFacture(updated);
+        await _repository.updateStatus(facture.id!, 'payee');
         await fetchFactures();
       } else if (!isPaid && facture.statut == 'payee') {
-        final updated = facture.copyWith(statut: 'validee');
-        await _repository.updateFacture(updated);
+        await _repository.updateStatus(facture.id!, 'validee');
         await fetchFactures();
       }
     } catch (e) {

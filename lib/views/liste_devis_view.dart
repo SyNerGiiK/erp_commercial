@@ -33,10 +33,12 @@ class _ListeDevisViewState extends State<ListeDevisView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this); // 5 Tabs
+    _tabController = TabController(length: 6, vsync: this); // 6 Tabs
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final contextRef = context;
       Future.wait([
+        Provider.of<DevisViewModel>(contextRef, listen: false)
+            .checkExpiredDevis(),
         Provider.of<DevisViewModel>(contextRef, listen: false).fetchDevis(),
         Provider.of<ClientViewModel>(contextRef, listen: false)
             .fetchClients(), // Important pour le PDF
@@ -124,15 +126,13 @@ class _ListeDevisViewState extends State<ListeDevisView>
     final clientVM = Provider.of<ClientViewModel>(context);
 
     // Filtrage
-    final brouillons = vm.devis
-        .where((d) =>
-            d.statut.toLowerCase() == 'brouillon' ||
-            d.numeroDevis == 'Brouillon') // Fallback
-        .toList();
-    final valides =
-        vm.devis.where((d) => d.statut.toLowerCase() == 'en_attente').toList();
+    final brouillons = vm.devis.where((d) => d.statut == 'brouillon').toList();
     final envoyes = vm.devis.where((d) => d.statut == 'envoye').toList();
     final signes = vm.devis.where((d) => d.statut == 'signe').toList();
+    final refusesExpires = vm.devis
+        .where((d) => d.statut == 'refuse' || d.statut == 'expire')
+        .toList();
+    final annules = vm.devis.where((d) => d.statut == 'annule').toList();
 
     return BaseScreen(
       menuIndex: 1,
@@ -147,9 +147,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
         tabs: const [
           Tab(text: "Tous"),
           Tab(text: "Brouillons"),
-          Tab(text: "Validés"),
           Tab(text: "Envoyés"),
           Tab(text: "Signés"),
+          Tab(text: "Refusés / Expirés"),
+          Tab(text: "Annulés"),
         ],
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white70,
@@ -160,9 +161,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
         children: [
           _buildList(vm.devis, clientVM),
           _buildList(brouillons, clientVM),
-          _buildList(valides, clientVM),
           _buildList(envoyes, clientVM),
           _buildList(signes, clientVM),
+          _buildList(refusesExpires, clientVM),
+          _buildList(annules, clientVM),
         ],
       ),
     );
@@ -186,7 +188,9 @@ class _ListeDevisViewState extends State<ListeDevisView>
         Color statusColor = Colors.grey;
         if (d.statut == 'signe') statusColor = Colors.green;
         if (d.statut == 'envoye') statusColor = Colors.blue;
-        if (d.statut == 'en_attente') statusColor = Colors.orange;
+        if (d.statut == 'refuse') statusColor = Colors.red;
+        if (d.statut == 'expire') statusColor = Colors.orange;
+        if (d.statut == 'annule') statusColor = Colors.black45;
 
         return AppCard(
           onTap: () => context.go('/app/ajout_devis/${d.id}', extra: d),
@@ -257,15 +261,69 @@ class _ListeDevisViewState extends State<ListeDevisView>
                   if (val == 'bl') _genererPDF(d, docType: "BON DE LIVRAISON");
                   if (val == 'bc') _genererPDF(d, docType: "BON DE COMMANDE");
                   if (val == 'facture') _showTransformationDialog(d);
-                  if (val == 'sent') {
-                    final success = await Provider.of<DevisViewModel>(context,
-                            listen: false)
-                        .markAsSent(d.id!);
+                  if (val == 'refuser') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text("Refuser ce devis ?"),
+                        content: const Text(
+                            "Le devis sera marqué comme refusé par le client."),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text("Non")),
+                          ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text("Oui, refuser")),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && context.mounted) {
+                      await Provider.of<DevisViewModel>(context, listen: false)
+                          .refuserDevis(d.id!);
+                    }
+                  }
+                  if (val == 'annuler') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text("Annuler ce devis ?"),
+                        content:
+                            const Text("Le devis sera définitivement annulé."),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text("Non")),
+                          ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text("Oui, annuler")),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && context.mounted) {
+                      await Provider.of<DevisViewModel>(context, listen: false)
+                          .annulerDevis(d.id!);
+                    }
+                  }
+                  if (val == 'avenant') {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(success
-                              ? "Devis marqué comme envoyé"
-                              : "Erreur lors de la mise à jour")));
+                      final vm =
+                          Provider.of<DevisViewModel>(context, listen: false);
+                      final avenant = await vm.creerAvenant(d.id!);
+                      if (avenant != null && context.mounted) {
+                        context.go('/app/ajout_devis/${avenant.id}',
+                            extra: avenant);
+                      }
+                    }
+                  }
+                  if (val == 'duplicate') {
+                    if (context.mounted) {
+                      final vm =
+                          Provider.of<DevisViewModel>(context, listen: false);
+                      final dup = vm.duplicateDevis(d);
+                      context.go('/app/ajout_devis', extra: dup);
                     }
                   }
                   if (val == 'archive') {
@@ -282,26 +340,54 @@ class _ListeDevisViewState extends State<ListeDevisView>
                   }
                 },
                 itemBuilder: (ctx) => [
-                  if (d.statut == 'en_attente')
-                    const PopupMenuItem(
-                        value: 'sent', child: Text("Marquer comme envoyé")),
+                  // PDF toujours disponible
                   const PopupMenuItem(value: 'pdf', child: Text("Voir PDF")),
-                  if (d.statut == 'signe') ...[
+
+                  // Brouillon : dupliquer, supprimer
+                  if (d.statut == 'brouillon') ...[
                     const PopupMenuItem(
-                        value: 'bl', child: Text("Bon de Livraison")),
-                    const PopupMenuItem(
-                        value: 'bc', child: Text("Bon de Commande")),
-                  ],
-                  if (d.statut == 'signe' || d.statut == 'envoye')
-                    const PopupMenuItem(
-                        value: 'facture', child: Text("Créer Facture")),
-                  const PopupMenuItem(
-                      value: 'archive', child: Text("Archiver")),
-                  if (d.statut == 'brouillon')
+                        value: 'duplicate', child: Text("Dupliquer")),
                     const PopupMenuItem(
                         value: 'delete',
                         child: Text("Supprimer",
                             style: TextStyle(color: Colors.red))),
+                  ],
+
+                  // Envoyé : refuser, annuler, créer facture
+                  if (d.statut == 'envoye') ...[
+                    const PopupMenuItem(
+                        value: 'refuser', child: Text("Marquer Refusé")),
+                    const PopupMenuItem(
+                        value: 'annuler',
+                        child: Text("Annuler",
+                            style: TextStyle(color: Colors.red))),
+                    const PopupMenuItem(
+                        value: 'facture', child: Text("Créer Facture")),
+                  ],
+
+                  // Signé : BL, BC, facture, avenant
+                  if (d.statut == 'signe') ...[
+                    const PopupMenuItem(
+                        value: 'facture', child: Text("Créer Facture")),
+                    const PopupMenuItem(
+                        value: 'bl', child: Text("Bon de Livraison")),
+                    const PopupMenuItem(
+                        value: 'bc', child: Text("Bon de Commande")),
+                    const PopupMenuItem(
+                        value: 'avenant', child: Text("Créer un Avenant")),
+                  ],
+
+                  // Refusé / Expiré : annuler
+                  if (d.statut == 'refuse' || d.statut == 'expire')
+                    const PopupMenuItem(
+                        value: 'annuler',
+                        child: Text("Annuler",
+                            style: TextStyle(color: Colors.red))),
+
+                  // Archiver (tous sauf brouillon)
+                  if (d.statut != 'brouillon')
+                    const PopupMenuItem(
+                        value: 'archive', child: Text("Archiver")),
                 ],
               )
             ],

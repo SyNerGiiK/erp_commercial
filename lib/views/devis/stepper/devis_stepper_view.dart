@@ -308,7 +308,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
               remiseTaux: _remiseTaux,
               onLignesChanged: (l) => setState(() => _lignes = l),
               onChiffrageChanged: (c) => setState(() => _chiffrage = c),
-              readOnly: _statut == 'signe' || _statut == 'annule',
+              readOnly: _statut == 'signe' ||
+                  _statut == 'annule' ||
+                  _statut == 'refuse' ||
+                  _statut == 'expire',
             ),
             isActive: _currentStep >= 2,
             state: _currentStep > 2 ? StepState.complete : StepState.indexed,

@@ -521,7 +521,8 @@ void main() {
             .thenAnswer((_) async => testDevis);
         await viewModel.fetchDevis();
 
-        when(() => mockRepository.updateDevis(any())).thenAnswer((_) async {});
+        when(() => mockRepository.changeStatut(any(), any()))
+            .thenAnswer((_) async {});
         when(() => mockRepository.getDevis(archives: false))
             .thenAnswer((_) async => [
                   testDevis[0].copyWith(statut: 'annule'),
@@ -532,7 +533,8 @@ void main() {
 
         // ASSERT
         expect(result, true);
-        verify(() => mockRepository.updateDevis(any())).called(1);
+        verify(() => mockRepository.changeStatut('devis-to-cancel', 'annule'))
+            .called(1);
       });
 
       test('devrait retourner false si devis signé', () async {
@@ -562,7 +564,7 @@ void main() {
 
         // ASSERT
         expect(result, false);
-        verifyNever(() => mockRepository.updateDevis(any()));
+        verifyNever(() => mockRepository.changeStatut(any(), any()));
       });
     });
 

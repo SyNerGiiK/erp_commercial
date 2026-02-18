@@ -198,26 +198,29 @@ $nomEntreprise''';
     required String subject,
     required String body,
   }) async {
-    final uri = Uri(
-      scheme: 'mailto',
-      path: to,
-      query: _encodeQueryParameters({
-        'subject': subject,
-        'body': body,
-      }),
-    );
+    // Construire le mailto: manuellement pour éviter les problèmes d'encodage
+    final queryParams = _encodeQueryParameters({
+      'subject': subject,
+      'body': body,
+    });
+    final uri = Uri.parse('mailto:$to?$queryParams');
 
     try {
-      final canOpen = await canLaunchUrl(uri);
-      if (!canOpen) {
-        return EmailResult.error(
-            "Impossible d'ouvrir le client email. Vérifiez qu'un client mail est configuré.");
-      }
-      await launchUrl(uri);
+      // Sur Flutter Web, canLaunchUrl retourne souvent false pour mailto:
+      // On tente directement le lancement avec mode externe
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       return EmailResult.ok();
     } catch (e) {
-      return EmailResult.error(
-          "Erreur lors de l'ouverture du client email: $e");
+      // Fallback : tenter sans mode spécifique
+      try {
+        await launchUrl(uri);
+        return EmailResult.ok();
+      } catch (e2) {
+        return EmailResult.error("Impossible d'ouvrir le client email: $e2");
+      }
     }
   }
 

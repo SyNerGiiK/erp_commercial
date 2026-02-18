@@ -4,6 +4,8 @@
 
 L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF, calculs Decimal). Suite aux **Sprints 1-13**, toutes les non-conformités sont corrigées : mentions obligatoires PDF, immutabilité des factures validées, piste d'audit, numérotation par trigger SQL, soft-delete avec corbeille, exploitation acompte_percentage, statistiques devis sur dashboard. La gestion TVA (TvaService, alertes steppers, widget dashboard) est opérationnelle. L'UX est modernisée : drawer sectionné, profil entreprise complet, onboarding, validation Luhn SIRET, archivage automatique.
 
+Suite à l'**analyse concurrentielle Abby**, les **Sprints 14-20** ajoutent les fonctionnalités manquantes pour rivaliser avec la concurrence : factures récurrentes (heb/mens/trim/annuel), suivi du temps d'activité avec CA potentiel, rappels & échéances fiscales automatiques (URSSAF, CFE, Impôts, TVA), et multi-devises sur factures/devis.
+
 **Légende :** ✅ = Fait | ⚠️ = Partiel | ❌ = À faire
 
 ---
@@ -17,7 +19,7 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 
 ---
 
-### État du diagnostic (mise à jour 18/02/2026 — post Sprint 10)
+### État du diagnostic (mise à jour 18/02/2026 — post Sprint 20)
 
 #### CRITIQUE — Corrigé ✅
 
@@ -74,6 +76,7 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - ✅ Triggers BEFORE DELETE déjà existants (`prevent_devis_modification`, `prevent_facture_modification`) — bloquent DELETE si non brouillon
 - ✅ `updated_at` déployé sur factures, devis, paiements, clients, depenses + triggers auto-update
 - ✅ Soft-delete (`deleted_at`) déployé sur factures, devis, clients, depenses + vue Corbeille + auto-purge 30j
+- ✅ **Sprint 14-20** : 3 nouvelles tables (`factures_recurrentes`, `lignes_facture_recurrente`, `temps_activites`, `rappels`), ALTER TABLE `factures`/`devis` (+`devise`, `taux_change`, `notes_privees`), RLS, triggers audit/updated_at, indexes
 
 #### Tests (mise à jour 18/02/2026 — post Sprint 10)
 
@@ -96,6 +99,8 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - **547/547** tests passent (0 échec)
 - Sprint 13 : 4 tests ajoutés (DashboardViewModel devis stats : zéro, conversion 50%, pipeline, exclusion annulés)
 - **550/550** tests passent (0 échec) — ✅ zéro régression
+- Sprint 14-20 : 86 tests ajoutés (FactureRecurrenteVM 10, TempsVM 10, RappelVM 14, EcheanceService 11, nouveaux modèles 24, multi-devises 17)
+- **636/636** tests passent (0 échec) — ✅ zéro régression
 
 ---
 
@@ -205,7 +210,29 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 | 13.2 | **DashboardViewModel** : champs `tauxConversion`, `devisEnCours`, `montantPipeline`, `totalDevisYear` + méthode `_computeDevisStats()` | `lib/viewmodels/dashboard_viewmodel.dart` | ✅ |
 | 13.3 | **Dashboard UI** : section « Pipeline Devis » avec 3 cartes (Taux de conversion, Devis en cours, Montant pipeline) — couleur conditionnelle selon seuils | `lib/views/tableau_de_bord_view.dart` | ✅ |
 | 13.4 | **Tests** : 4 tests (zéro devis, conversion 50%, pipeline brouillon+envoyé, exclusion annulés) — 550/550 total | `test/viewmodels/dashboard_viewmodel_test.dart` | ✅ |
+#### Sprint 14-20 — Fonctionnalités concurrentielles (Analyse Abby) ✅ TERMINÉ
 
+| # | Tâche | Fichiers | Statut |
+|---|---|---|---|
+| 14.1 | **Factures récurrentes** : modèle `FactureRecurrente` + `LigneFactureRecurrente`, enum `FrequenceRecurrence` (hebdomadaire/mensuelle/trimestrielle/annuelle), cycle de génération automatique | `lib/models/facture_recurrente_model.dart` | ✅ |
+| 14.2 | **Repository factures récurrentes** : interface `IFactureRecurrenteRepository` + impl avec gestion des lignes imbriquées (insert/delete), `getActives()`, `getAGenerer()`, `toggleActive()`, `incrementerGeneration()` | `lib/repositories/facture_recurrente_repository.dart` | ✅ |
+| 14.3 | **ViewModel factures récurrentes** : CRUD complet, getters `actives`/`inactives`/`aGenerer`/`totalGeneres`, méthode statique `calculerProchaineDate()` | `lib/viewmodels/facture_recurrente_viewmodel.dart` | ✅ |
+| 14.4 | **Vue factures récurrentes** : liste avec toggle actif/inactif, badge fréquence, état vide, suppression avec confirmation | `lib/views/factures_recurrentes_view.dart` | ✅ |
+| 15.1 | **Suivi du temps** : modèle `TempsActivite` avec `montant` (Decimal, division safe), `dureeFormatee` (format Xh00) | `lib/models/temps_activite_model.dart` | ✅ |
+| 15.2 | **Repository temps** : interface `ITempsRepository` + impl, `getNonFactures()`, `getByClient()`, `getByProjet()`, `marquerFacture()` | `lib/repositories/temps_repository.dart` | ✅ |
+| 15.3 | **ViewModel temps** : `nonFactures`/`totalMinutesMois`/`totalHeuresMoisFormate`/`caPotentiel`/`parClient`/`parProjet`, CRUD, `marquerFacture()` | `lib/viewmodels/temps_viewmodel.dart` | ✅ |
+| 15.4 | **Vue suivi temps** : barre KPI (total heures, CA potentiel, non-facturé), dialogue ajout avec dropdown client, liste par date | `lib/views/suivi_temps_view.dart` | ✅ |
+| 16.1 | **Rappels & échéances** : modèle `Rappel` avec `TypeRappel` (7 types : urssaf, cfe, impots, tva, echeanceFacture, finDevis, custom), `PrioriteRappel`, getters `joursRestants`/`estEnRetard`/`estProche` | `lib/models/rappel_model.dart` | ✅ |
+| 16.2 | **Repository rappels** : interface `IRappelRepository` + impl, `getActifs()`, `getByType()`, `completer()`/`decompleter()` | `lib/repositories/rappel_repository.dart` | ✅ |
+| 16.3 | **ViewModel rappels** : `actifs`/`enRetard`/`proches`/`completes`/`nbUrgents`/`parType`, générateurs statiques URSSAF/CFE/Impôts | `lib/viewmodels/rappel_viewmodel.dart` | ✅ |
+| 16.4 | **Vue rappels** : onglets (À venir / Tous / Complétés), génération auto rappels fiscaux, code couleur urgence, dialogue ajout | `lib/views/rappels_echeances_view.dart` | ✅ |
+| 17.1 | **EcheanceService** : génération automatique des rappels fiscaux (URSSAF mensuel/trimestriel, CFE 15 déc, Impôts 8 juin, TVA trimestrielle), rappels factures échues, rappels devis expirants | `lib/services/echeance_service.dart` | ✅ |
+| 18.1 | **Multi-devises** : champs `devise` (défaut EUR), `tauxChange` (Decimal?), `notesPrivees` (String?) ajoutés sur `Facture` et `Devis` | `lib/models/facture_model.dart`, `lib/models/devis_model.dart` | ✅ |
+| 19.1 | **Intégration DI** : 3 nouveaux providers (FactureRecurrenteVM, TempsVM, RappelVM) — 18 providers total | `lib/config/dependency_injection.dart` | ✅ |
+| 19.2 | **Intégration Router** : 3 nouvelles routes `/app/recurrentes`, `/app/temps`, `/app/rappels` | `lib/config/router.dart` | ✅ |
+| 19.3 | **Intégration Drawer** : 3 entrées menu (Récurrentes dans DOCUMENTS, Suivi du temps + Rappels dans OUTILS) | `lib/widgets/custom_drawer.dart` | ✅ |
+| 19.4 | **Migration SQL** : 3 tables + ALTER TABLE + RLS + triggers + indexes | `migrations/migration_sprint14_20_features.sql` | ✅ |
+| 20.1 | **Tests** : 86 tests ajoutés (6 fichiers) — 636/636 total | `test/viewmodels/facture_recurrente_viewmodel_test.dart`, `test/viewmodels/temps_viewmodel_test.dart`, `test/viewmodels/rappel_viewmodel_test.dart`, `test/services/echeance_service_test.dart`, `test/models/nouveaux_models_test.dart`, `test/models/multi_devises_test.dart` | ✅ |
 ---
 
 ### Décisions architecturales (mises à jour)
@@ -223,6 +250,11 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - ✅ **Onboarding première connexion** : assistant 4 étapes, détection auto profil vide
 - ✅ **Validation Luhn SIRET** : algorithme standard + cas La Poste
 - ✅ **Nettoyage Flutter 3.32+** : migration RadioGroup, activeTrackColor, initialValue, async safety — zéro dette technique lint
+- ✅ **Factures récurrentes** : modèle + repo + VM + vue, 4 fréquences, toggle actif/inactif, génération programmée
+- ✅ **Suivi du temps** : modèle + repo + VM + vue, CA potentiel, groupement client/projet, marquage facturé
+- ✅ **Rappels & échéances fiscales** : modèle + repo + VM + vue + EcheanceService, 7 types, génération auto URSSAF/CFE/Impôts/TVA
+- ✅ **Multi-devises** : champs devise/tauxChange/notesPrivees sur Facture et Devis, rétrocompatible EUR
+- ✅ **Email V1 via mailto:** en attendant SMTP V2 (hors scope actuel)
 
 ### Remarques utilisateur (conservées)
 
@@ -230,3 +262,5 @@ L'application Artisan 3.0 possède une base solide (modèles, repositories, PDF,
 - Refonte design global de l'application : couleurs douces, typo modernes, interface épurée, dashboard amélioré
 - Personnalisation PDF complète : couleurs, logo header/footer, décorations
 - Objectif : concurrencer Abby et les applications professionnelles du marché
+- **Analyse concurrentielle Abby** réalisée : 10 gaps identifiés (P1-P10), Sprints 14-20 couvrent P2 (récurrence), P6 (time tracking), P5 (relances avancées), P7 (multi-devises)
+- Reste à explorer (V2+) : P1 (SMTP email), P3 (Stripe/paiements en ligne), P4 (Open Banking), P8 (e-signature), P9 (gestion stocks), P10 (débours)

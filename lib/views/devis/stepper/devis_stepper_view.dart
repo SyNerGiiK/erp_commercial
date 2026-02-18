@@ -13,6 +13,8 @@ import '../../../config/supabase_config.dart';
 import '../../../widgets/split_editor_scaffold.dart';
 import '../../../utils/calculations_utils.dart';
 import '../../../utils/format_utils.dart';
+import '../../../services/email_service.dart';
+import '../../../services/audit_service.dart';
 
 // Steps
 import 'steps/step1_client.dart';
@@ -179,15 +181,15 @@ class _DevisStepperViewState extends State<DevisStepperView> {
     }
   }
 
-  Future<void> _sauvegarder() async {
-    if (_formKey.currentState?.validate() == false) return;
+  /// Sauvegarde le devis et retourne l'ID (existant ou nouveau)
+  Future<String?> _sauvegarderEtRetournerId() async {
+    if (_formKey.currentState?.validate() == false) return null;
     if (_selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Veuillez sélectionner un client")));
-      return;
+      return null;
     }
 
-    setState(() => _isLoading = true);
     final vm = Provider.of<DevisViewModel>(context, listen: false);
     final devisToSave = _buildDevisFromState();
 
@@ -198,10 +200,30 @@ class _DevisStepperViewState extends State<DevisStepperView> {
       success = await vm.updateDevis(devisToSave);
     }
 
+    if (!success) return null;
+
+    // Récupérer l'ID du devis sauvegardé (nouveau ou existant)
+    if (widget.id != null) return widget.id;
+
+    // Pour un nouveau devis, trouver l'ID dans la liste rafraîchie
+    final saved = vm.devis
+        .where((d) =>
+            d.objet == devisToSave.objet &&
+            d.clientId == devisToSave.clientId &&
+            d.statut == 'brouillon')
+        .toList();
+    if (saved.isNotEmpty) return saved.last.id;
+    return null;
+  }
+
+  Future<void> _sauvegarder() async {
+    setState(() => _isLoading = true);
+    final id = await _sauvegarderEtRetournerId();
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (success) {
+    if (id != null) {
+      final vm = Provider.of<DevisViewModel>(context, listen: false);
       await vm.clearDevisDraft(widget.id);
       if (mounted) {
         context.go('/app/devis');
@@ -213,6 +235,65 @@ class _DevisStepperViewState extends State<DevisStepperView> {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Erreur lors de l'enregistrement")));
       }
+    }
+  }
+
+  Future<void> _finaliserEtEnvoyer() async {
+    setState(() => _isLoading = true);
+
+    // 1. Sauvegarder d'abord si pas encore enregistré
+    final devisId = await _sauvegarderEtRetournerId();
+    if (!mounted) return;
+
+    if (devisId == null) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'enregistrement")));
+      return;
+    }
+
+    // 2. Finaliser (statut → envoye + numéro définitif)
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
+    final success = await vm.markAsSent(devisId);
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de la finalisation")));
+      return;
+    }
+
+    // 3. Ouvrir le client email
+    final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
+    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
+    final updatedDevis = vm.devis.where((d) => d.id == devisId).firstOrNull;
+
+    if (updatedDevis != null && _selectedClient != null) {
+      final emailResult = await EmailService.envoyerDevis(
+        devis: updatedDevis,
+        client: _selectedClient!,
+        profil: entVM.profil,
+      );
+
+      if (emailResult.success && updatedDevis.id != null) {
+        AuditService.logEnvoiEmail(
+          tableName: 'devis',
+          recordId: updatedDevis.id!,
+          destinataire: _selectedClient!.email,
+          numeroDocument: updatedDevis.numeroDevis,
+        );
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    await vm.clearDevisDraft(widget.id);
+    if (mounted) {
+      context.go('/app/devis');
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Devis finalisé et envoyé !")));
     }
   }
 
@@ -327,6 +408,7 @@ class _DevisStepperViewState extends State<DevisStepperView> {
                   _statut = 'signe';
                 });
               },
+              onFinalise: _finaliserEtEnvoyer,
             ),
             isActive: _currentStep >= 3,
             state: _currentStep == 3 ? StepState.complete : StepState.indexed,

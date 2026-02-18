@@ -18,11 +18,13 @@ import '../../../../widgets/app_card.dart';
 class DevisStep4Validation extends StatefulWidget {
   final Devis devis;
   final void Function(String url, DateTime date)? onSignatureUpdated;
+  final Future<void> Function()? onFinalise;
 
   const DevisStep4Validation({
     super.key,
     required this.devis,
     this.onSignatureUpdated,
+    this.onFinalise,
   });
 
   @override
@@ -80,7 +82,7 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
       builder: (ctx) => AlertDialog(
         title: const Text("Finaliser le devis ?"),
         content: const Text(
-            "Un numéro définitif sera attribué. Le devis ne sera plus modifiable."),
+            "Un numéro définitif sera attribué et le client email s'ouvrira pour l'envoi."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -95,25 +97,12 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
     if (confirm != true) return;
     if (!mounted) return;
 
-    setState(() => _isLoading = true);
-    final vm = Provider.of<DevisViewModel>(context, listen: false);
-
-    final success = await vm.finaliserDevis(widget.devis);
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (success) {
-      if (mounted) {
-        context.go('/app/devis');
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Devis validé !")));
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Erreur validation")));
-      }
+    // Déléguer au stepper parent qui gère : sauvegarde + finalisation + email
+    if (widget.onFinalise != null) {
+      setState(() => _isLoading = true);
+      await widget.onFinalise!();
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 

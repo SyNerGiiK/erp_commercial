@@ -4,19 +4,19 @@
 -- ============================================================
 
 -- ========================================
--- 1. NOUVEAUX CHAMPS ProfilEntreprise
+-- 1. NOUVEAUX CHAMPS entreprises (ProfilEntreprise côté Dart)
 -- ========================================
 
 -- Taux de pénalités de retard (défaut: taux directeur BCE + 10 ≈ 11.62% en 2025)
-ALTER TABLE profil_entreprise
+ALTER TABLE entreprises
   ADD COLUMN IF NOT EXISTS taux_penalites_retard NUMERIC(5,2) DEFAULT 11.62;
 
 -- Escompte applicable en cas de paiement anticipé
-ALTER TABLE profil_entreprise
+ALTER TABLE entreprises
   ADD COLUMN IF NOT EXISTS escompte_applicable BOOLEAN DEFAULT false;
 
 -- Est immatriculé au RCS/RM (si false → mention "Dispensé d'immatriculation" sur PDF)
-ALTER TABLE profil_entreprise
+ALTER TABLE entreprises
   ADD COLUMN IF NOT EXISTS est_immatricule BOOLEAN DEFAULT false;
 
 
@@ -125,22 +125,43 @@ CREATE TRIGGER trg_audit_devis
 
 -- ========================================
 -- 6. TRIGGER D'AUDIT SUR PAIEMENTS
+--    Note: paiements n'a pas de user_id, on le récupère via factures
 -- ========================================
 
 CREATE OR REPLACE FUNCTION audit_paiement_changes()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_user_id UUID;
+  v_facture_id UUID;
+  v_record_id UUID;
 BEGIN
+  IF TG_OP = 'DELETE' THEN
+    v_facture_id := OLD.facture_id;
+    v_record_id := OLD.id;
+  ELSE
+    v_facture_id := NEW.facture_id;
+    v_record_id := NEW.id;
+  END IF;
+
+  -- Récupérer le user_id depuis la facture parente
+  SELECT user_id INTO v_user_id FROM factures WHERE id = v_facture_id;
+
+  IF v_user_id IS NULL THEN
+    -- Fallback: utiliser l'utilisateur authentifié
+    v_user_id := auth.uid();
+  END IF;
+
   IF TG_OP = 'INSERT' THEN
     INSERT INTO audit_logs (user_id, table_name, record_id, action, new_data)
-    VALUES (NEW.user_id, 'paiements', NEW.id, 'INSERT', to_jsonb(NEW));
+    VALUES (v_user_id, 'paiements', v_record_id, 'INSERT', to_jsonb(NEW));
     RETURN NEW;
   ELSIF TG_OP = 'UPDATE' THEN
     INSERT INTO audit_logs (user_id, table_name, record_id, action, old_data, new_data)
-    VALUES (NEW.user_id, 'paiements', NEW.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW));
+    VALUES (v_user_id, 'paiements', v_record_id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW));
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
     INSERT INTO audit_logs (user_id, table_name, record_id, action, old_data)
-    VALUES (OLD.user_id, 'paiements', OLD.id, 'DELETE', to_jsonb(OLD));
+    VALUES (v_user_id, 'paiements', v_record_id, 'DELETE', to_jsonb(OLD));
     RETURN OLD;
   END IF;
   RETURN NULL;

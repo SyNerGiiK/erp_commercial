@@ -155,7 +155,7 @@ class DevisViewModel extends BaseViewModel
 
   Future<bool> markAsSent(String id) async {
     return await executeOperation(() async {
-      await _repository.changeStatut(id, 'envoye');
+      await _repository.finalizeDevis(id);
       await fetchDevis();
     });
   }

@@ -320,6 +320,13 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             title: const Text('Validation'),
             content: DevisStep4Validation(
               devis: draftData,
+              onSignatureUpdated: (url, date) {
+                setState(() {
+                  _signatureUrl = url;
+                  _dateSignature = date;
+                  _statut = 'signe';
+                });
+              },
             ),
             isActive: _currentStep >= 3,
             state: _currentStep == 3 ? StepState.complete : StepState.indexed,

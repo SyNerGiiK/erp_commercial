@@ -8,15 +8,13 @@ class ModernePdfTheme extends PdfThemeBase {
   String get name => 'moderne';
 
   @override
-  PdfColor get primaryColor => const PdfColor.fromInt(0xFF1E5572);
+  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF1E5572);
   @override
   PdfColor get accentColor => const PdfColor.fromInt(0xFF2A769E);
   @override
   PdfColor get lightGrey => const PdfColor.fromInt(0xFFF8F8F8);
   @override
   PdfColor get darkGrey => const PdfColor.fromInt(0xFF333333);
-  @override
-  PdfColor get tableHeaderBg => primaryColor;
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
@@ -116,9 +114,14 @@ class ModernePdfTheme extends PdfThemeBase {
   @override
   pw.Widget buildFooterMentions(String? nomEntreprise, String? siret,
       String? iban, String? bic, String? mentions, bool isTvaApplicable,
-      {String? numeroTvaIntra}) {
+      {String? numeroTvaIntra, pw.MemoryImage? logoFooter}) {
     return pw.Column(children: [
       pw.Divider(color: lightGrey),
+      if (logoFooter != null)
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 5),
+          child: pw.Image(logoFooter, width: 60, height: 30),
+        ),
       pw.Text(
         "${nomEntreprise ?? ''} - SIRET: ${siret ?? ''}",
         style: const pw.TextStyle(

@@ -8,15 +8,13 @@ class MinimalistePdfTheme extends PdfThemeBase {
   String get name => 'minimaliste';
 
   @override
-  PdfColor get primaryColor => const PdfColor.fromInt(0xFF555555);
+  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF555555);
   @override
   PdfColor get accentColor => const PdfColor.fromInt(0xFF888888);
   @override
   PdfColor get lightGrey => const PdfColor.fromInt(0xFFFAFAFA);
   @override
   PdfColor get darkGrey => const PdfColor.fromInt(0xFF444444);
-  @override
-  PdfColor get tableHeaderBg => const PdfColor.fromInt(0xFF555555);
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
@@ -124,9 +122,14 @@ class MinimalistePdfTheme extends PdfThemeBase {
   @override
   pw.Widget buildFooterMentions(String? nomEntreprise, String? siret,
       String? iban, String? bic, String? mentions, bool isTvaApplicable,
-      {String? numeroTvaIntra}) {
+      {String? numeroTvaIntra, pw.MemoryImage? logoFooter}) {
     return pw.Column(children: [
       pw.Divider(color: primaryColor, thickness: 0.3),
+      if (logoFooter != null)
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 3),
+          child: pw.Image(logoFooter, width: 50, height: 25),
+        ),
       pw.Row(mainAxisAlignment: pw.MainAxisAlignment.center, children: [
         pw.Text(
           [

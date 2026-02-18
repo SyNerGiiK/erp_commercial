@@ -1,5 +1,4 @@
-﻿import 'dart:convert';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +6,7 @@ import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
 import '../config/theme.dart';
 
+/// Drawer moderne Artisan 3.0 — sections regroupées logiquement.
 class CustomDrawer extends StatelessWidget {
   final int selectedIndex;
   final bool isPermanent;
@@ -18,9 +18,7 @@ class CustomDrawer extends StatelessWidget {
   });
 
   void _navigate(BuildContext context, String routeName) {
-    if (!isPermanent) {
-      Navigator.pop(context);
-    }
+    if (!isPermanent) Navigator.pop(context);
     context.go(routeName);
   }
 
@@ -30,94 +28,185 @@ class CustomDrawer extends StatelessWidget {
     final profil = entrepriseVM.profil;
 
     ImageProvider? avatarImage;
-    // CORRECTION : Simplification pour éviter l'erreur 'unnecessary_non_null_assertion'
     final logoUrl = profil?.logoUrl;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       avatarImage = NetworkImage(logoUrl);
-    } else {
-      avatarImage = null;
     }
 
     return Drawer(
       backgroundColor: Colors.white,
-      elevation: isPermanent ? 0 : 16,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-            topRight: Radius.circular(0), bottomRight: Radius.circular(0)),
-      ),
+      elevation: isPermanent ? 0 : 8,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       child: Column(
         children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.primaryGradient,
-            ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              backgroundImage: avatarImage,
-              child: avatarImage == null
-                  ? Text(
-                      (profil?.nomEntreprise.isNotEmpty ?? false)
-                          ? profil!.nomEntreprise[0].toUpperCase()
-                          : "A",
-                      style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary),
-                    )
-                  : null,
-            ),
-            accountName: Text(
-              profil?.nomEntreprise ?? "Mon Entreprise",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            accountEmail: Text(profil?.email ?? "Configurez votre profil"),
-          ),
+          // ── HEADER PROFIL ──
+          _buildHeader(context, profil, avatarImage),
+
+          // ── NAVIGATION ──
           Expanded(
             child: ListView(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _buildItem(context, 0, "Tableau de Bord", Icons.dashboard,
-                    '/app/home'),
-                const Divider(),
-                _buildItem(
-                    context, 1, "Devis", Icons.description, '/app/devis'),
-                _buildItem(context, 2, "Factures", Icons.euro, '/app/factures'),
-                _buildItem(context, 3, "Clients", Icons.people, '/app/clients'),
-                _buildItem(context, 4, "Planning", Icons.calendar_month,
+                // Activité
+                _buildSectionLabel("ACTIVITÉ"),
+                _buildItem(context, 0, "Tableau de Bord",
+                    Icons.dashboard_rounded, '/app/home'),
+                _buildItem(context, 4, "Planning", Icons.calendar_month_rounded,
                     '/app/planning'),
-                const Divider(),
-                _buildItem(context, 5, "Dépenses", Icons.receipt_long,
-                    '/app/depenses'),
-                _buildItem(context, 6, "Liste de Courses", Icons.shopping_cart,
-                    '/app/courses'),
-                _buildItem(context, 7, "Bibliothèque", Icons.library_books,
-                    '/app/bibliotheque'),
-                _buildItem(context, 8, "Rentabilité", Icons.analytics,
+                _buildItem(context, 8, "Rentabilité", Icons.insights_rounded,
                     '/app/rentabilite'),
-                const Divider(),
-                _buildItem(context, 9, "Paramètres", Icons.settings,
+
+                const SizedBox(height: 8),
+
+                // Documents
+                _buildSectionLabel("DOCUMENTS"),
+                _buildItem(context, 1, "Devis", Icons.request_quote_rounded,
+                    '/app/devis'),
+                _buildItem(context, 2, "Factures", Icons.receipt_rounded,
+                    '/app/factures'),
+                _buildItem(context, 10, "Archives", Icons.inventory_2_rounded,
+                    '/app/archives'),
+                _buildItem(context, 11, "Relances",
+                    Icons.notification_important_rounded, '/app/relances'),
+
+                const SizedBox(height: 8),
+
+                // Gestion
+                _buildSectionLabel("GESTION"),
+                _buildItem(context, 3, "Clients", Icons.people_alt_rounded,
+                    '/app/clients'),
+                _buildItem(context, 5, "Dépenses",
+                    Icons.account_balance_wallet_rounded, '/app/depenses'),
+                _buildItem(context, 6, "Liste de Courses",
+                    Icons.shopping_cart_rounded, '/app/courses'),
+
+                const SizedBox(height: 8),
+
+                // Outils
+                _buildSectionLabel("OUTILS"),
+                _buildItem(context, 7, "Bibliothèque Prix",
+                    Icons.menu_book_rounded, '/app/bibliotheque'),
+
+                const SizedBox(height: 8),
+
+                // Paramètres
+                _buildSectionLabel("PARAMÈTRES"),
+                _buildItem(context, 9, "Configuration", Icons.tune_rounded,
                     '/app/parametres'),
-                _buildItem(
-                    context, 10, "Archives", Icons.archive, '/app/archives'),
               ],
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppTheme.error),
-            title: const Text(
-              "Se déconnecter",
-              style:
-                  TextStyle(color: AppTheme.error, fontWeight: FontWeight.bold),
-            ),
-            onTap: () {
-              Provider.of<AuthViewModel>(context, listen: false).signOut();
-            },
-          ),
-          const SizedBox(height: 20),
+
+          // ── FOOTER ──
+          const Divider(height: 1),
+          _buildLogoutTile(context),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
         ],
       ),
     );
   }
+
+  // ── HEADER ──
+
+  Widget _buildHeader(
+      BuildContext context, dynamic profil, ImageProvider? avatarImage) {
+    final hasName = profil?.nomEntreprise.isNotEmpty ?? false;
+    final initials = hasName ? profil!.nomEntreprise[0].toUpperCase() : "A";
+    final name = profil?.nomEntreprise ?? "Mon Entreprise";
+    final subtitle = profil?.email ?? "Configurez votre profil";
+
+    return InkWell(
+      onTap: () => _navigate(context, '/app/parametres'),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 24,
+          left: 20,
+          right: 16,
+          bottom: 20,
+        ),
+        decoration: const BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              backgroundImage: avatarImage,
+              child: avatarImage == null
+                  ? Text(
+                      initials,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 14),
+
+            // Nom + Email
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Chevron
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white.withValues(alpha: 0.6),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── SECTION LABEL ──
+
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, top: 8, bottom: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey.shade500,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  // ── NAV ITEM ──
 
   Widget _buildItem(
     BuildContext context,
@@ -128,25 +217,30 @@ class CustomDrawer extends StatelessWidget {
   ) {
     final isSelected = selectedIndex == index;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
       decoration: BoxDecoration(
         color: isSelected
-            ? AppTheme.primary.withValues(alpha: 0.1)
+            ? AppTheme.primary.withValues(alpha: 0.08)
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -1),
         leading: Icon(
           icon,
-          color: isSelected ? AppTheme.primary : Colors.grey[700],
+          size: 22,
+          color: isSelected ? AppTheme.primary : Colors.grey.shade600,
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: isSelected ? AppTheme.primary : const Color(0xFF2C3E50),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+            color: isSelected ? AppTheme.primary : AppTheme.textDark,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         onTap: () {
           if (isSelected) {
             if (!isPermanent) Navigator.pop(context);
@@ -155,6 +249,27 @@ class CustomDrawer extends StatelessWidget {
           }
         },
       ),
+    );
+  }
+
+  // ── LOGOUT ──
+
+  Widget _buildLogoutTile(BuildContext context) {
+    return ListTile(
+      dense: true,
+      leading:
+          const Icon(Icons.logout_rounded, color: AppTheme.error, size: 22),
+      title: const Text(
+        "Se déconnecter",
+        style: TextStyle(
+          color: AppTheme.error,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+      ),
+      onTap: () {
+        Provider.of<AuthViewModel>(context, listen: false).signOut();
+      },
     );
   }
 }

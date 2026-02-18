@@ -87,17 +87,36 @@ void main() {
       expect(ValidationUtils.validateSiret(''), isNull);
     });
 
-    test('devrait accepter un SIRET de 14 chiffres', () {
-      expect(ValidationUtils.validateSiret('12345678901234'), isNull);
+    test('devrait accepter un SIRET de 14 chiffres valide Luhn', () {
+      // 44306184100047 passe l'algorithme de Luhn
+      expect(ValidationUtils.validateSiret('44306184100047'), isNull);
+      expect(ValidationUtils.validateSiret('32105077000015'), isNull);
     });
 
-    test('devrait accepter un SIRET avec espaces', () {
-      expect(ValidationUtils.validateSiret('123 456 789 01234'), isNull);
+    test('devrait accepter un SIRET avec espaces valide Luhn', () {
+      expect(ValidationUtils.validateSiret('443 061 841 00047'), isNull);
     });
 
-    test('devrait rejeter un SIRET invalide', () {
+    test('devrait rejeter un SIRET au format invalide', () {
       expect(ValidationUtils.validateSiret('1234'), isNotNull);
       expect(ValidationUtils.validateSiret('abcdefghijklmn'), isNotNull);
+    });
+
+    test('devrait rejeter un SIRET de 14 chiffres ne passant pas Luhn', () {
+      // 12345678901234 a 14 chiffres mais échoue Luhn
+      expect(ValidationUtils.validateSiret('12345678901234'), isNotNull);
+      expect(ValidationUtils.validateSiret('11111111111111'), isNotNull);
+    });
+
+    test('devrait accepter un SIRET La Poste (SIREN 356000000)', () {
+      // La Poste : somme des chiffres divisible par 5
+      // 35600000049837 → somme = 45 → 45 % 5 = 0
+      expect(ValidationUtils.validateSiret('35600000049837'), isNull);
+    });
+
+    test('devrait rejeter un SIRET La Poste invalide', () {
+      // 35600000012345 → somme = 29 → 29 % 5 = 4
+      expect(ValidationUtils.validateSiret('35600000012345'), isNotNull);
     });
   });
 

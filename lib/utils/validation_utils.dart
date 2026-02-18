@@ -34,14 +34,49 @@ class ValidationUtils {
     return validatePhone(value);
   }
 
-  /// Valide un SIRET (14 chiffres)
+  /// Valide un SIRET (14 chiffres + algorithme de Luhn).
+  ///
+  /// Le SIRET standard est validé par l'algorithme de Luhn sur 14 chiffres.
+  /// Cas particulier : les établissements de La Poste (SIREN 356 000 000)
+  /// ne respectent pas Luhn → on vérifie que la somme des chiffres = 0 mod 5.
   static String? validateSiret(String? value) {
     if (value == null || value.trim().isEmpty) return null; // Optionnel
     final digits = value.replaceAll(RegExp(r'\s'), '');
     if (!RegExp(r'^\d{14}$').hasMatch(digits)) {
       return "Le SIRET doit contenir 14 chiffres";
     }
+
+    // Cas La Poste : SIREN 356000000
+    if (digits.startsWith('356000000')) {
+      final digitSum =
+          digits.codeUnits.fold<int>(0, (sum, c) => sum + (c - 48));
+      if (digitSum % 5 != 0) {
+        return "SIRET La Poste invalide";
+      }
+      return null;
+    }
+
+    // Algorithme de Luhn sur 14 chiffres
+    if (!_luhnCheck(digits)) {
+      return "SIRET invalide (vérification Luhn échouée)";
+    }
     return null;
+  }
+
+  /// Algorithme de Luhn : retourne true si la chaîne de chiffres est valide.
+  static bool _luhnCheck(String digits) {
+    int sum = 0;
+    // On parcourt de droite à gauche ; les positions paires (0-indexed
+    // depuis la droite) restent telles quelles, les impaires sont doublées.
+    for (int i = 0; i < digits.length; i++) {
+      int digit = digits.codeUnitAt(digits.length - 1 - i) - 48;
+      if (i.isOdd) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+    }
+    return sum % 10 == 0;
   }
 
   /// Valide un numéro de TVA intracommunautaire

@@ -50,7 +50,10 @@ class PdfService {
   /// Résout le thème PDF à utiliser depuis le profil entreprise
   static PdfThemeBase _resolveTheme(ProfilEntreprise? entreprise) {
     final pdfTheme = entreprise?.pdfTheme ?? PdfTheme.moderne;
-    return PdfThemeFactory.resolve(pdfTheme);
+    final theme = PdfThemeFactory.resolve(pdfTheme);
+    // Appliquer la couleur primaire personnalisée si définie
+    theme.setCustomPrimaryColor(entreprise?.pdfPrimaryColor);
+    return theme;
   }
 
   // Preload fonts in main isolate
@@ -637,7 +640,7 @@ class PdfService {
     bool isAvoir = false,
     String? factureSourceNumero, // Numéro de la facture d'origine (pour avoir)
   }) {
-    final _legalStyle =
+    final legalStyle =
         pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic);
 
     return pw.Row(
@@ -712,7 +715,7 @@ class PdfService {
                           false))
                     pw.Text(
                       "TVA non applicable, art. 293 B du CGI.",
-                      style: _legalStyle,
+                      style: legalStyle,
                     ),
 
                   // Dispense d'immatriculation : SEULEMENT si non immatriculé
@@ -721,19 +724,19 @@ class PdfService {
                       !(ent.mentionsLegales?.contains("Dispensé") ?? false))
                     pw.Text(
                       "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).",
-                      style: _legalStyle,
+                      style: legalStyle,
                     ),
 
                   // Pénalités de retard (obligatoire CGI art. 289 / Code Commerce L441-10)
                   pw.Text(
                     "En cas de retard de paiement, une pénalité de ${ent.tauxPenalitesRetard.toStringAsFixed(2)}% par an sera appliquée (3 fois le taux d'intérêt légal minimum).",
-                    style: _legalStyle,
+                    style: legalStyle,
                   ),
 
                   // Indemnité forfaitaire de recouvrement (obligatoire depuis 01/01/2013)
                   pw.Text(
                     "Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40,00 €.",
-                    style: _legalStyle,
+                    style: legalStyle,
                   ),
 
                   // Escompte
@@ -741,7 +744,7 @@ class PdfService {
                     ent.escompteApplicable
                         ? "Escompte pour paiement anticipé : selon conditions convenues."
                         : "Pas d'escompte pour paiement anticipé.",
-                    style: _legalStyle,
+                    style: legalStyle,
                   ),
                 ],
               ]),

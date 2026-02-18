@@ -1,7 +1,7 @@
 # ERP Artisan — Instructions Copilot
 
 **Langue:** Toujours répondre en **FRANÇAIS**.  
-Flutter Web SaaS de gestion commerciale (devis, factures, avoirs, relances, URSSAF) pour micro-entrepreneurs. Backend Supabase (PostgreSQL + RLS).
+Flutter Web SaaS de gestion commerciale (devis, factures, avoirs, relances, URSSAF, factures récurrentes, suivi du temps, rappels/échéances) pour micro-entrepreneurs. Backend Supabase (PostgreSQL + RLS).
 
 ## Architecture MVVM
 
@@ -68,10 +68,13 @@ ScaffoldMessenger.of(context)...
 
 ## Modèles
 
-Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 14 modèles dont :
-- `Facture` + `LigneFacture` : cycle brouillon → validée → envoyée → payée, avoirs en montants positifs
-- `Devis` + `LigneDevis` : stepper 4 étapes (`lib/views/devis/stepper/`)
+Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 17 modèles dont :
+- `Facture` + `LigneFacture` : cycle brouillon → validée → envoyée → payée, avoirs en montants positifs, champs `devise`/`tauxChange`/`notesPrivees`
+- `Devis` + `LigneDevis` : stepper 4 étapes (`lib/views/devis/stepper/`), champs `devise`/`tauxChange`/`notesPrivees`
 - `ProfilEntreprise` : identité, TVA, mentions légales, thème PDF (`PdfTheme` enum), couleur custom
+- `FactureRecurrente` + `LigneFactureRecurrente` : `FrequenceRecurrence` enum (heb/mens/trim/annuel), `prochaineEmission`, `estActive`, `nbFacturesGenerees`
+- `TempsActivite` : suivi du temps, `montant` (Decimal safe), `dureeFormatee`, `estFacturable`/`estFacture`
+- `Rappel` : `TypeRappel` (7 types), `PrioriteRappel`, getters `joursRestants`/`estEnRetard`/`estProche`
 
 ## PDF — Strategy Pattern
 
@@ -80,7 +83,7 @@ Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 14 modèles d
 
 ## Tests
 
-**550 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
+**636 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
 
 - **Mocking** : `mocktail` — mocks dans `test/mocks/`
 - **Pattern** : mock l'interface repository, injecte dans le VM via constructeur
@@ -99,17 +102,18 @@ setUp(() {
 
 | Fichier | Rôle |
 |---|---|
-| `lib/config/dependency_injection.dart` | 14 Providers enregistrés |
-| `lib/config/router.dart` | ~22 routes + auth guard |
+| `lib/config/dependency_injection.dart` | 18 Providers enregistrés |
+| `lib/config/router.dart` | ~25 routes + auth guard |
 | `lib/core/base_viewmodel.dart` | Loading réentrant + executeOperation |
 | `lib/core/base_repository.dart` | prepareForInsert/Update + handleError |
 | `lib/utils/calculations_utils.dart` | Calculs financiers 100% Decimal |
 | `lib/services/pdf_service.dart` | Génération PDF isolate-ready |
+| `lib/services/echeance_service.dart` | Génération auto rappels fiscaux (URSSAF, CFE, Impôts, TVA) |
 | `lib/config/theme.dart` | AppTheme (design tokens, couleurs, spacing) |
 
 ## Schéma BDD Supabase (résumé)
 
-13 tables avec RLS activé sur toutes. Montants en `NUMERIC`, dates en `TIMESTAMPTZ`, PK en `UUID`.
+17 tables avec RLS activé sur toutes. Montants en `NUMERIC`, dates en `TIMESTAMPTZ`, PK en `UUID`.
 
 | Table | Colonnes clés | Relations |
 |---|---|---|
@@ -126,6 +130,10 @@ setUp(() {
 | `audit_logs` | table_name, record_id, action (`INSERT`/`UPDATE`/`DELETE`/`VALIDATE`/`PAYMENT`/`EMAIL_SENT`/`RELANCE_SENT`), old_data (JSONB), new_data (JSONB) | |
 | `events` | titre, date_debut, date_fin, client_id | |
 | `shopping_items` | nom, quantite, prix, is_checked | |
+| `factures_recurrentes` | client_id (FK), objet, frequence, prochaine_emission, total_ht/tva/ttc, est_active, nb_factures_generees, devise, remise_taux | → lignes_facture_recurrente |
+| `lignes_facture_recurrente` | facture_recurrente_id (FK), description, quantite, prix_unitaire, total_ligne, type_activite, taux_tva | |
+| `temps_activites` | client_id, projet, description, date_activite, duree_minutes, taux_horaire, est_facturable, est_facture, facture_id | |
+| `rappels` | titre, type_rappel, date_echeance, est_complete, priorite, est_recurrent, frequence_recurrence, entite_liee_id/type | |
 
 ### Triggers SQL actifs
 
@@ -135,7 +143,7 @@ setUp(() {
 | `trg_audit_devis` | devis | Log INSERT/UPDATE/DELETE → audit_logs |
 | `trg_audit_paiements` | paiements | Log INSERT/UPDATE/DELETE → audit_logs (résout user_id via facture) |
 | `trg_protect_validated_facture` | factures | **BEFORE UPDATE** — bloque modif de total_ht, total_tva, total_ttc, objet, client_id, remise_taux, conditions_reglement si statut_juridique ≠ brouillon |
-| `trg_*_updated_at` | factures, devis, paiements, clients, depenses | Auto `updated_at = NOW()` |
+| `trg_*_updated_at` | factures, devis, paiements, clients, depenses, factures_recurrentes, temps_activites, rappels | Auto `updated_at = NOW()` |
 
 ### Migrations (dossier `migrations/`)
 
@@ -143,6 +151,7 @@ setUp(() {
 2. `migration_sprint5_updated_at.sql` — colonne updated_at + triggers auto-update sur 5 tables
 3. `migration_sprint8_audit_email.sql` — extension CHECK constraint (EMAIL_SENT, RELANCE_SENT)
 4. `migration_sprint9_pdf_custom.sql` — colonnes pdf_primary_color, logo_footer_url
+5. `migration_sprint14_20_features.sql` — 3 tables (factures_recurrentes, temps_activites, rappels) + ALTER factures/devis (devise, taux_change, notes_privees)
 
 ## Services (statiques, sans état)
 
@@ -157,6 +166,7 @@ setUp(() {
 | `PdfService` | `generatePdf(PdfGenerationRequest)` — résout thème depuis ProfilEntreprise |
 | `LocalStorageService` | `saveDraft()`, `getDraft()`, `clearDraft()` — SharedPreferences |
 | `PreferencesService` | `getConfigCharges()`, `saveConfigCharges()` — config charges sociales |
+| `EcheanceService` | `genererTousRappels(annee, urssafTrimestriel, tvaApplicable, factures?, devis?)` — rappels fiscaux automatiques (URSSAF mensuel/trimestriel, CFE, Impôts, TVA) + rappels factures échues + devis expirants |
 
 ## Documentation détaillée
 
@@ -171,7 +181,7 @@ setUp(() {
 
 ```bash
 flutter pub get
-flutter test                    # 550 tests, doit être 100% vert
+flutter test                    # 636 tests, doit être 100% vert
 flutter build windows           # Build Windows (prod)
 flutter run -d chrome           # Dev web
 flutter clean                   # Si fichiers éphémères corrompus

@@ -137,10 +137,6 @@ class ModernePdfTheme extends PdfThemeBase {
         pw.Text("TVA Intracommunautaire : $numeroTvaIntra",
             style: const pw.TextStyle(
                 fontSize: 8, color: PdfColor.fromInt(0xFF333333))),
-      if (!isTvaApplicable)
-        pw.Text("TVA non applicable, art. 293 B du CGI",
-            style: const pw.TextStyle(
-                fontSize: 8, color: PdfColor.fromInt(0xFF333333))),
       pw.Text("Document généré par Artisan 3.0",
           style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
     ]);

@@ -159,7 +159,6 @@ class _LigneEditorState extends State<LigneEditor> {
   @override
   Widget build(BuildContext context) {
     if (widget.type == 'titre') return _buildTitreEditor();
-    if (widget.type == 'titre') return _buildTitreEditor();
     if (widget.type == 'sous-titre') {
       return _buildSousTitreEditor(); // Module 1: Sous-titre
     }

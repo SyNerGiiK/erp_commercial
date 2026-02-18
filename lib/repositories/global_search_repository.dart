@@ -64,14 +64,14 @@ class GlobalSearchRepository extends BaseRepository
           .from('depenses')
           .select()
           .eq('user_id', userId)
-          .or('description.ilike.$sanitizedQuery,categorie.ilike.$sanitizedQuery,fournisseur.ilike.$sanitizedQuery')
+          .or('titre.ilike.$sanitizedQuery,categorie.ilike.$sanitizedQuery,fournisseur.ilike.$sanitizedQuery')
           .limit(10);
 
       final articleFuture = client
           .from('articles')
           .select()
           .eq('user_id', userId)
-          .or('designation.ilike.$sanitizedQuery,categorie.ilike.$sanitizedQuery,reference.ilike.$sanitizedQuery')
+          .or('designation.ilike.$sanitizedQuery,type_activite.ilike.$sanitizedQuery')
           .limit(10);
 
       final results = await Future.wait([

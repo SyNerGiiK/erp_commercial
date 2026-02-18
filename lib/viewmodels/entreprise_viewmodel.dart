@@ -67,13 +67,24 @@ class EntrepriseViewModel extends BaseViewModel {
     });
   }
 
-  /// Suggère les mentions légales obligatoires selon le type d'entreprise
-  String getLegalMentionsSuggestion(TypeEntreprise type) {
-    if (type.isMicroEntrepreneur) {
-      return "TVA non applicable, art. 293 B du CGI.\n"
-          "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).";
+  /// Suggère les mentions légales obligatoires selon le profil entreprise
+  /// Les mentions dynamiques (pénalités, escompte, dispense) sont gérées
+  /// directement dans le PDF via les champs du ProfilEntreprise.
+  /// Cette méthode génère uniquement la mention libre pour le champ mentionsLegales.
+  String getLegalMentionsSuggestion(TypeEntreprise type,
+      {bool estImmatricule = false, bool tvaApplicable = false}) {
+    final mentions = <String>[];
+
+    if (type.isMicroEntrepreneur && !tvaApplicable) {
+      mentions.add("TVA non applicable, art. 293 B du CGI.");
     }
-    return "";
+
+    if (type.isMicroEntrepreneur && !estImmatricule) {
+      mentions.add(
+          "Dispensé d'immatriculation au registre du commerce et des sociétés (RCS) et au répertoire des métiers (RM).");
+    }
+
+    return mentions.join("\n");
   }
 
   /// Indique si la TVA est applicable pour cette entreprise

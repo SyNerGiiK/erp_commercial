@@ -13,6 +13,9 @@ abstract class IFactureRepository {
   Future<void> updateArchiveStatus(String id, bool isArchived);
   Future<String> generateNextNumero(int annee);
 
+  /// Finalise une facture brouillon → validée (numéro attribué par trigger SQL)
+  Future<void> finaliserFacture(String id);
+
   // GESTION DES PAIEMENTS
   Future<void> addPaiement(Paiement paiement);
   Future<void> deletePaiement(String id);
@@ -81,6 +84,19 @@ class FactureRepository extends DocumentRepository
   Future<void> updateFacture(Facture facture) async {
     if (facture.id == null) return;
     try {
+      // 🛡️ Vérifier l'immutabilité en base : seuls les brouillons sont modifiables
+      final existing = await client
+          .from('factures')
+          .select('statut_juridique')
+          .eq('id', facture.id!)
+          .single();
+      final currentStatut = existing['statut_juridique'] ?? 'brouillon';
+      if (currentStatut != 'brouillon') {
+        throw Exception(
+            'Facture verrouillée (statut juridique: $currentStatut). '
+            'Modification interdite après validation.');
+      }
+
       final data = prepareForUpdate(facture.toMap());
       data.remove('numero_facture');
       data.remove('lignes_factures');
@@ -138,6 +154,23 @@ class FactureRepository extends DocumentRepository
           .update({'est_archive': isArchived}).eq('id', id);
     } catch (e) {
       throw handleError(e, 'updateArchiveStatus');
+    }
+  }
+
+  @override
+  Future<void> finaliserFacture(String id) async {
+    try {
+      // Le trigger SQL generate_facture_number() détecte le changement
+      // statut_juridique → 'validee' et attribue le numéro séquentiel.
+      // On envoie numero_facture vide pour signaler au trigger de le remplir.
+      await client.from('factures').update({
+        'statut': 'validee',
+        'statut_juridique': 'validee',
+        'numero_facture': '', // Le trigger le remplacera
+        'date_validation': DateTime.now().toIso8601String(),
+      }).eq('id', id);
+    } catch (e) {
+      throw handleError(e, 'finaliserFacture');
     }
   }
 

@@ -118,3 +118,53 @@ extension CaisseRetraiteExtension on CaisseRetraite {
     }
   }
 }
+
+// === PDF THEME ===
+enum PdfTheme { moderne, classique, minimaliste }
+
+extension PdfThemeExtension on PdfTheme {
+  String get label {
+    switch (this) {
+      case PdfTheme.moderne:
+        return "Moderne";
+      case PdfTheme.classique:
+        return "Classique";
+      case PdfTheme.minimaliste:
+        return "Minimaliste";
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case PdfTheme.moderne:
+        return "Couleurs de l'entreprise, en-têtes graphiques";
+      case PdfTheme.classique:
+        return "Formel, police Serif, encadrés fins, Noir & Blanc";
+      case PdfTheme.minimaliste:
+        return "Épuré, sans bordures, alignements stricts";
+    }
+  }
+}
+
+// === MODE FACTURATION ===
+enum ModeFacturation { global, detaille }
+
+extension ModeFacturationExtension on ModeFacturation {
+  String get label {
+    switch (this) {
+      case ModeFacturation.global:
+        return "Global";
+      case ModeFacturation.detaille:
+        return "Détaillé";
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case ModeFacturation.global:
+        return "Vente + Service groupés dans le même devis";
+      case ModeFacturation.detaille:
+        return "Séparation fine par type d'activité";
+    }
+  }
+}

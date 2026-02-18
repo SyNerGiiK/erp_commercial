@@ -132,6 +132,7 @@ class Devis {
   final Decimal totalTtc;
   final Decimal remiseTaux;
   final Decimal acompteMontant;
+  final Decimal acomptePercentage;
 
   final String conditionsReglement;
   final String? notesPubliques;
@@ -203,6 +204,7 @@ class Devis {
     Decimal? totalTtc,
     required this.remiseTaux,
     required this.acompteMontant,
+    Decimal? acomptePercentage,
     this.conditionsReglement = '',
     this.notesPubliques,
     this.signatureUrl,
@@ -211,6 +213,7 @@ class Devis {
     this.lignes = const [],
     this.chiffrage = const [],
   })  : totalTva = totalTva ?? Decimal.zero,
+        acomptePercentage = acomptePercentage ?? Decimal.fromInt(30),
         totalTtc = totalTtc ?? totalHt; // Fallback
 
   factory Devis.fromMap(Map<String, dynamic> map) {
@@ -234,6 +237,8 @@ class Devis {
       totalTtc: Decimal.parse((map['total_ttc'] ?? 0).toString()),
       remiseTaux: Decimal.parse((map['remise_taux'] ?? 0).toString()),
       acompteMontant: Decimal.parse((map['acompte_montant'] ?? 0).toString()),
+      acomptePercentage:
+          Decimal.parse((map['acompte_percentage'] ?? 30).toString()),
       conditionsReglement: map['conditions_reglement'] ?? '',
       notesPubliques: map['notes_publiques'],
       tvaIntra: map['tva_intra'],
@@ -265,6 +270,7 @@ class Devis {
       'total_ttc': totalTtc.toString(),
       'remise_taux': remiseTaux.toString(),
       'acompte_montant': acompteMontant.toString(),
+      'acompte_percentage': acomptePercentage.toString(),
       'conditions_reglement': conditionsReglement,
       'notes_publiques': notesPubliques,
       'signature_url': signatureUrl,
@@ -291,6 +297,7 @@ class Devis {
     Decimal? totalTtc,
     Decimal? remiseTaux,
     Decimal? acompteMontant,
+    Decimal? acomptePercentage,
     String? conditionsReglement,
     String? notesPubliques,
     String? signatureUrl,
@@ -315,6 +322,7 @@ class Devis {
       totalTtc: totalTtc ?? this.totalTtc,
       remiseTaux: remiseTaux ?? this.remiseTaux,
       acompteMontant: acompteMontant ?? this.acompteMontant,
+      acomptePercentage: acomptePercentage ?? this.acomptePercentage,
       conditionsReglement: conditionsReglement ?? this.conditionsReglement,
       notesPubliques: notesPubliques ?? this.notesPubliques,
       signatureUrl: signatureUrl ?? this.signatureUrl,

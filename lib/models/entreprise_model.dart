@@ -35,6 +35,15 @@ class ProfilEntreprise {
   final bool tvaApplicable;
   final String? numeroTvaIntra;
 
+  /// Thème PDF sélectionné
+  final PdfTheme pdfTheme;
+
+  /// Mode de facturation (global vs détaillé)
+  final ModeFacturation modeFacturation;
+
+  /// Mode discret (masquer le résumé financier dans l'éditeur)
+  final bool modeDiscret;
+
   ProfilEntreprise({
     this.id,
     this.userId,
@@ -57,6 +66,9 @@ class ProfilEntreprise {
     this.caisseRetraite = CaisseRetraite.ssi,
     this.tvaApplicable = false,
     this.numeroTvaIntra,
+    this.pdfTheme = PdfTheme.moderne,
+    this.modeFacturation = ModeFacturation.global,
+    this.modeDiscret = false,
   });
 
   factory ProfilEntreprise.fromMap(Map<String, dynamic> map) {
@@ -82,6 +94,9 @@ class ProfilEntreprise {
       regimeFiscal: _parseRegimeFiscal(map['regime_fiscal']),
       caisseRetraite: _parseCaisseRetraite(map['caisse_retraite']),
       tvaApplicable: map['tva_applicable'] ?? false,
+      pdfTheme: _parsePdfTheme(map['pdf_theme']),
+      modeFacturation: _parseModeFacturation(map['mode_facturation']),
+      modeDiscret: map['mode_discret'] ?? false,
     );
   }
 
@@ -118,6 +133,30 @@ class ProfilEntreprise {
     }
   }
 
+  static PdfTheme _parsePdfTheme(dynamic value) {
+    if (value == null) return PdfTheme.moderne;
+    try {
+      return PdfTheme.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => PdfTheme.moderne,
+      );
+    } catch (_) {
+      return PdfTheme.moderne;
+    }
+  }
+
+  static ModeFacturation _parseModeFacturation(dynamic value) {
+    if (value == null) return ModeFacturation.global;
+    try {
+      return ModeFacturation.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => ModeFacturation.global,
+      );
+    } catch (_) {
+      return ModeFacturation.global;
+    }
+  }
+
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
@@ -140,6 +179,9 @@ class ProfilEntreprise {
       'regime_fiscal': regimeFiscal?.name,
       'caisse_retraite': caisseRetraite.name,
       'tva_applicable': tvaApplicable,
+      'pdf_theme': pdfTheme.name,
+      'mode_facturation': modeFacturation.name,
+      'mode_discret': modeDiscret,
     };
   }
 
@@ -163,6 +205,9 @@ class ProfilEntreprise {
     TypeEntreprise? typeEntreprise,
     RegimeFiscal? regimeFiscal,
     CaisseRetraite? caisseRetraite,
+    PdfTheme? pdfTheme,
+    ModeFacturation? modeFacturation,
+    bool? modeDiscret,
   }) {
     return ProfilEntreprise(
       id: id ?? this.id,
@@ -184,6 +229,9 @@ class ProfilEntreprise {
       typeEntreprise: typeEntreprise ?? this.typeEntreprise,
       regimeFiscal: regimeFiscal ?? this.regimeFiscal,
       caisseRetraite: caisseRetraite ?? this.caisseRetraite,
+      pdfTheme: pdfTheme ?? this.pdfTheme,
+      modeFacturation: modeFacturation ?? this.modeFacturation,
+      modeDiscret: modeDiscret ?? this.modeDiscret,
     );
   }
 }

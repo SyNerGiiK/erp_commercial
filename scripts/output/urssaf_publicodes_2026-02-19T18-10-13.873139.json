@@ -1,0 +1,2360 @@
+{
+  "metadata": {
+    "generatedAt": "2026-02-19T18:10:13.870639",
+    "apiEndpoint": "https://mon-entreprise.urssaf.fr/api/v1/evaluate",
+    "erpVersion": "ERP Artisan 2026",
+    "description": "Extraction exhaustive des taux et seuils URSSAF Publicodes pour Micro-Entrepreneur"
+  },
+  "scenarios": {
+    "scenario_1_sans_versement_liberatoire": {
+      "description": "Artisan Mixte (Prestation BIC 50k€ + Vente 30k€) — Sans VL",
+      "situation": {
+        "entreprise . catégorie juridique": "'EI'",
+        "entreprise . catégorie juridique . EI . auto-entrepreneur": "oui",
+        "entreprise . activité": "'artisanale'",
+        "entreprise . activité . nature": "'artisanale'",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires": "80000.0 €/an",
+        "entreprise . chiffre d'affaires . vente restauration hébergement": "30000.0 €/an",
+        "entreprise . chiffre d'affaires . service BIC": "50000.0 €/an",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire": "non",
+        "dirigeant . exonérations . ACRE": "non",
+        "établissement . commune": "'75056'"
+      },
+      "expressions": [
+        "dirigeant . auto-entrepreneur . cotisations et contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC Cipav . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . autres contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . CFP",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . commerce",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux service",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux vente",
+        "dirigeant . auto-entrepreneur . impôt",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . montant",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . plafond",
+        "dirigeant . auto-entrepreneur . impôt . revenu imposable",
+        "dirigeant . auto-entrepreneur . revenu net",
+        "dirigeant . auto-entrepreneur . revenu net . après impôt",
+        "entreprise . TVA . franchise de TVA",
+        "entreprise . chiffre d'affaires . seuil micro",
+        "entreprise . chiffre d'affaires . seuil micro . total",
+        "entreprise . chiffre d'affaires . seuil micro . libérale",
+        "entreprise . chiffre d'affaires . seuil micro . dépassé",
+        "dirigeant . auto-entrepreneur . Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux service BIC",
+        "dirigeant . auto-entrepreneur . Acre . taux service BNC",
+        "dirigeant . auto-entrepreneur . Acre . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . Acre . taux CIPAV",
+        "dirigeant . auto-entrepreneur . éligible à l'ACRE",
+        "dirigeant . auto-entrepreneur . DROM . taux service BIC",
+        "dirigeant . auto-entrepreneur . DROM . taux service BNC",
+        "dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires",
+        "entreprise . chiffre d'affaires",
+        "entreprise . chiffre d'affaires . vente restauration hébergement",
+        "entreprise . chiffre d'affaires . service BIC",
+        "entreprise . chiffre d'affaires . service BNC",
+        "protection sociale . retraite . base . cotisée . revenu auto-entrepreneur",
+        "protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur",
+        "entreprise . imposition . régime . micro-entreprise",
+        "entreprise . imposition . régime . micro-entreprise . revenu abattu",
+        "entreprise . imposition . régime . micro-entreprise . alerte seuil dépassés"
+      ],
+      "response": {
+        "evaluate": [
+          {
+            "nodeValue": 1237,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 22,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 1191,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 12.3,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 21.2,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 88.74150000000002,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 383.66350000000006,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 174.3925,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 27.8145,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 208.38800000000003,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 30.954,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 133.826,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 60.83,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 9.702,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 20,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 26,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 18,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 26,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 18,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 0.48,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 9,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 3,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 3
+            }
+          },
+          {
+            "nodeValue": 0.22,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 9,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 3,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 3
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 73
+            }
+          },
+          {
+            "nodeValue": 65156,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 22,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 61881,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 4084,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6,
+              "impôt . méthode de calcul": 1377,
+              "impôt . foyer fiscal . revenu imposable . autres revenus imposables": 47,
+              "impôt . foyer fiscal . situation de famille": 137,
+              "impôt . foyer fiscal . enfants à charge": 243
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {
+              "entreprise . TVA": 1
+            }
+          },
+          {
+            "missingVariables": {
+              "entreprise . chiffre d'affaires . seuil micro": 1
+            }
+          },
+          {
+            "nodeValue": 188700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 77700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "entreprise . date de création": 2
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": 80000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 80000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 30000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 50000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 33700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 45
+            }
+          },
+          {
+            "nodeValue": 2822.67,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 73
+            }
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          }
+        ],
+        "warnings": [
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . total\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . libérale\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . dépassé\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . base . cotisée . revenu auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          }
+        ]
+      }
+    },
+    "scenario_2_avec_versement_liberatoire": {
+      "description": "Artisan Mixte (Prestation BIC 50k€ + Vente 30k€) — Avec VL",
+      "situation": {
+        "entreprise . catégorie juridique": "'EI'",
+        "entreprise . catégorie juridique . EI . auto-entrepreneur": "oui",
+        "entreprise . activité": "'artisanale'",
+        "entreprise . activité . nature": "'artisanale'",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires": "80000.0 €/an",
+        "entreprise . chiffre d'affaires . vente restauration hébergement": "30000.0 €/an",
+        "entreprise . chiffre d'affaires . service BIC": "50000.0 €/an",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire": "oui",
+        "dirigeant . exonérations . ACRE": "non",
+        "établissement . commune": "'75056'"
+      },
+      "expressions": [
+        "dirigeant . auto-entrepreneur . cotisations et contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC Cipav . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . autres contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . CFP",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . commerce",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux service",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux vente",
+        "dirigeant . auto-entrepreneur . impôt",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . montant",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . plafond",
+        "dirigeant . auto-entrepreneur . impôt . revenu imposable",
+        "dirigeant . auto-entrepreneur . revenu net",
+        "dirigeant . auto-entrepreneur . revenu net . après impôt",
+        "entreprise . TVA . franchise de TVA",
+        "entreprise . chiffre d'affaires . seuil micro",
+        "entreprise . chiffre d'affaires . seuil micro . total",
+        "entreprise . chiffre d'affaires . seuil micro . libérale",
+        "entreprise . chiffre d'affaires . seuil micro . dépassé",
+        "dirigeant . auto-entrepreneur . Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux service BIC",
+        "dirigeant . auto-entrepreneur . Acre . taux service BNC",
+        "dirigeant . auto-entrepreneur . Acre . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . Acre . taux CIPAV",
+        "dirigeant . auto-entrepreneur . éligible à l'ACRE",
+        "dirigeant . auto-entrepreneur . DROM . taux service BIC",
+        "dirigeant . auto-entrepreneur . DROM . taux service BNC",
+        "dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires",
+        "entreprise . chiffre d'affaires",
+        "entreprise . chiffre d'affaires . vente restauration hébergement",
+        "entreprise . chiffre d'affaires . service BIC",
+        "entreprise . chiffre d'affaires . service BNC",
+        "protection sociale . retraite . base . cotisée . revenu auto-entrepreneur",
+        "protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur",
+        "entreprise . imposition . régime . micro-entreprise",
+        "entreprise . imposition . régime . micro-entreprise . revenu abattu",
+        "entreprise . imposition . régime . micro-entreprise . alerte seuil dépassés"
+      ],
+      "response": {
+        "evaluate": [
+          {
+            "nodeValue": 1237,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 22,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 1191,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 12.3,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 21.2,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 88.74150000000002,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 383.66350000000006,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 174.3925,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 27.8145,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 208.38800000000003,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 30.954,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 133.826,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 60.83,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 9.702,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": 20,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 26,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 18,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 26,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 18,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 0.48,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 9,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 3,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 3
+            }
+          },
+          {
+            "nodeValue": 0.22,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 9,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 3,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 3
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 1150,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 29315,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "impôt . méthode de calcul": 2
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 65156,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 22,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": 64006,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 108,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 33,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Moselle": 6,
+              "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux Alsace": 6
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {
+              "entreprise . TVA": 1
+            }
+          },
+          {
+            "missingVariables": {
+              "entreprise . chiffre d'affaires . seuil micro": 1
+            }
+          },
+          {
+            "nodeValue": 188700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 77700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "entreprise . date de création": 2
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": 80000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 80000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 30000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 50000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 33700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 45
+            }
+          },
+          {
+            "nodeValue": 2822.67,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 73
+            }
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activités . revenus mixtes": 11
+            }
+          }
+        ],
+        "warnings": [
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"date\"\n⚠️  Erreur lors de la conversion d'unité explicite\nℹ️  \n[ EngineError ]\n✖️  Impossible de convertir l'unité '€/part.an' en '€/an'"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . total\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . libérale\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . dépassé\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . base . cotisée . revenu auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          }
+        ]
+      }
+    },
+    "scenario_3_liberal_bnc": {
+      "description": "Libéral BNC (50k€) — Vérification taux 24.6%",
+      "situation": {
+        "entreprise . catégorie juridique": "'EI'",
+        "entreprise . catégorie juridique . EI . auto-entrepreneur": "oui",
+        "entreprise . activité": "'libérale'",
+        "entreprise . activité . nature": "'libérale'",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires": "50000 €/an",
+        "entreprise . chiffre d'affaires . service BNC": "50000 €/an",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire": "non",
+        "dirigeant . exonérations . ACRE": "non",
+        "établissement . commune": "'75056'"
+      },
+      "expressions": [
+        "dirigeant . auto-entrepreneur . cotisations et contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BNC Cipav . taux",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . service BIC . répartition . autres contributions",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . maladie-maternité",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite de base",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . retraite complémentaire",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . cotisations . vente restauration hébergement . répartition . invalidité-décès",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . CFP",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . commerce",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux service",
+        "dirigeant . auto-entrepreneur . cotisations et contributions . TFC . métiers . taux vente",
+        "dirigeant . auto-entrepreneur . impôt",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . montant",
+        "dirigeant . auto-entrepreneur . impôt . versement libératoire . plafond",
+        "dirigeant . auto-entrepreneur . impôt . revenu imposable",
+        "dirigeant . auto-entrepreneur . revenu net",
+        "dirigeant . auto-entrepreneur . revenu net . après impôt",
+        "entreprise . TVA . franchise de TVA",
+        "entreprise . chiffre d'affaires . seuil micro",
+        "entreprise . chiffre d'affaires . seuil micro . total",
+        "entreprise . chiffre d'affaires . seuil micro . libérale",
+        "entreprise . chiffre d'affaires . seuil micro . dépassé",
+        "dirigeant . auto-entrepreneur . Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux Acre",
+        "dirigeant . auto-entrepreneur . Acre . taux service BIC",
+        "dirigeant . auto-entrepreneur . Acre . taux service BNC",
+        "dirigeant . auto-entrepreneur . Acre . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . Acre . taux CIPAV",
+        "dirigeant . auto-entrepreneur . éligible à l'ACRE",
+        "dirigeant . auto-entrepreneur . DROM . taux service BIC",
+        "dirigeant . auto-entrepreneur . DROM . taux service BNC",
+        "dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement",
+        "dirigeant . auto-entrepreneur . chiffre d'affaires",
+        "entreprise . chiffre d'affaires",
+        "entreprise . chiffre d'affaires . vente restauration hébergement",
+        "entreprise . chiffre d'affaires . service BIC",
+        "entreprise . chiffre d'affaires . service BNC",
+        "protection sociale . retraite . base . cotisée . revenu auto-entrepreneur",
+        "protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur",
+        "entreprise . imposition . régime . micro-entreprise",
+        "entreprise . imposition . régime . micro-entreprise . revenu abattu",
+        "entreprise . imposition . régime . micro-entreprise . alerte seuil dépassés"
+      ],
+      "response": {
+        "evaluate": [
+          {
+            "nodeValue": 1075.3333333333333,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 80,
+              "entreprise . activité . nature . libérale . réglementée": 65,
+              "entreprise . activités . revenus mixtes": 44
+            }
+          },
+          {
+            "nodeValue": 1067,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 50,
+              "entreprise . activité . nature . libérale . réglementée": 35,
+              "entreprise . activités . revenus mixtes": 22
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 25.6,
+            "unit": {
+              "numerators": [
+                "%"
+              ],
+              "denominators": []
+            },
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 5
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 7,
+              "entreprise . activité . nature . libérale . réglementée": 2
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 30,
+              "établissement . commune . département . outre-mer": 14,
+              "entreprise . date de création": 20,
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 8.333333333333332,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 30,
+              "entreprise . date de création": 30,
+              "entreprise . activités . revenus mixtes": 22
+            }
+          },
+          {
+            "nodeValue": 0,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "mois"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33000.00000000012,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 189,
+              "entreprise . date de création": 189,
+              "entreprise . activités . revenus mixtes": 139
+            }
+          },
+          {
+            "nodeValue": 37096,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 80,
+              "entreprise . activité . nature . libérale . réglementée": 65,
+              "entreprise . activités . revenus mixtes": 44
+            }
+          },
+          {
+            "nodeValue": 34031,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 10522,
+              "entreprise . activité . nature . libérale . réglementée": 10507,
+              "entreprise . activités . revenus mixtes": 7736,
+              "impôt . méthode de calcul": 1377,
+              "impôt . foyer fiscal . revenu imposable . autres revenus imposables": 47,
+              "impôt . foyer fiscal . situation de famille": 137,
+              "impôt . foyer fiscal . enfants à charge": 243
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {
+              "entreprise . TVA": 1
+            }
+          },
+          {
+            "missingVariables": {
+              "entreprise . chiffre d'affaires . seuil micro": 1
+            }
+          },
+          {
+            "nodeValue": 188700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 77700,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 14,
+              "établissement . commune . département . outre-mer": 6,
+              "entreprise . date de création": 3
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "entreprise . date de création": 2
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": null,
+            "missingVariables": {
+              "établissement . commune . département": 12,
+              "établissement . commune . département . outre-mer": 4
+            }
+          },
+          {
+            "nodeValue": 50000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 50000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": null,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": null,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          },
+          {
+            "nodeValue": 50000,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33000.00000000012,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 121,
+              "entreprise . date de création": 121,
+              "entreprise . activités . revenus mixtes": 89
+            }
+          },
+          {
+            "nodeValue": 2688.84,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "établissement . commune . département": 90,
+              "établissement . commune . département . outre-mer": 42,
+              "entreprise . date de création": 50,
+              "entreprise . activité . nature . libérale . réglementée": 35,
+              "entreprise . activités . revenus mixtes": 22
+            }
+          },
+          {
+            "nodeValue": true,
+            "missingVariables": {}
+          },
+          {
+            "nodeValue": 33000.00000000012,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 189,
+              "entreprise . date de création": 189,
+              "entreprise . activités . revenus mixtes": 139
+            }
+          },
+          {
+            "nodeValue": false,
+            "unit": {
+              "numerators": [
+                "€"
+              ],
+              "denominators": [
+                "an"
+              ]
+            },
+            "missingVariables": {
+              "entreprise . activité . nature . libérale . réglementée": 15,
+              "entreprise . date de création": 15,
+              "entreprise . activités . revenus mixtes": 11
+            }
+          }
+        ],
+        "warnings": [
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . catégorie juridique . remplacements . profession libérale reglementée . entreprise activité nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité . nature\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . activité\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux CIPAV\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . total\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . libérale\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"entreprise . chiffre d'affaires . seuil micro . dépassé\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BIC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux service BNC\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"dirigeant . auto-entrepreneur . DROM . taux vente restauration hébergement\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . base . cotisée . revenu auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          },
+          {
+            "message": "\n[ Avertissement ]\n➡️  Dans la règle \"protection sociale . retraite . complémentaire . RCI . revenu cotisé auto-entrepreneur\"\n⚠️  Cette règle est tagguée comme experimentale. \n\nCela veut dire qu'elle peut être modifiée, renommée, ou supprimée sans qu'il n'y ait de changement de version majeure dans l'API.\n"
+          }
+        ]
+      }
+    }
+  },
+  "internal_reference_values": {
+    "taux_micro_social": {
+      "vente_marchandises": "12.3%",
+      "prestation_BIC": "21.2%",
+      "prestation_BNC": "24.6%"
+    },
+    "versement_liberatoire": {
+      "vente": "1.0%",
+      "BIC": "1.7%",
+      "BNC": "2.2%"
+    },
+    "cfp": {
+      "artisan": "0.3%",
+      "commercant": "0.1%",
+      "liberal": "0.2%"
+    },
+    "plafonds_ca": {
+      "vente": "188700",
+      "service": "77700"
+    },
+    "seuils_tva": {
+      "base_vente": "91900",
+      "majore_vente": "101000",
+      "base_service": "36800",
+      "majore_service": "39100"
+    }
+  }
+}

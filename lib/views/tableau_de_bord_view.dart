@@ -19,6 +19,7 @@ import '../widgets/dashboard/expense_pie_chart.dart';
 import '../widgets/dashboard/suivi_seuil_tva_card.dart';
 import '../widgets/dashboard/factures_retard_card.dart';
 import '../widgets/dashboard/archivage_suggestion_card.dart';
+import '../widgets/dashboard/vl_vs_ir_card.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 
@@ -304,7 +305,12 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                   CotisationDetailCard(
                                     breakdown: vm.cotisationBreakdown,
                                     total: vm.totalCotisations,
+                                    repartition: vm.cotisationRepartition,
                                   ),
+                                if (vm.vlVsIrSimulation != null) ...[
+                                  const SizedBox(height: AppTheme.spacing24),
+                                  VlVsIrCard(simulation: vm.vlVsIrSimulation!),
+                                ],
                               ],
                             ),
                           ),
@@ -365,7 +371,12 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             CotisationDetailCard(
                               breakdown: vm.cotisationBreakdown,
                               total: vm.totalCotisations,
+                              repartition: vm.cotisationRepartition,
                             ),
+                          if (vm.vlVsIrSimulation != null) ...[
+                            const SizedBox(height: AppTheme.spacing24),
+                            VlVsIrCard(simulation: vm.vlVsIrSimulation!),
+                          ],
                           const SizedBox(height: AppTheme.spacing24),
                           if (vm.urssafConfig != null &&
                               vm.profilEntreprise != null)

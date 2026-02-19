@@ -266,6 +266,12 @@ class DevisViewModel extends BaseViewModel
       // 5. Total = somme des (qté × PU × avancement%) par ligne
       // 6. Le montant déjà réglé (acomptes + situations précédentes) est déduit
 
+      // Montant à déduire = max(acompte théorique du devis, paiements réels)
+      final montantADeduire =
+          (dejaRegle != null && dejaRegle > d.acompteMontant)
+              ? dejaRegle
+              : d.acompteMontant;
+
       final newLignes = d.lignes.map((l) {
         // Les lignes de vente (fournitures) sont à 0% car déjà couvertes par l'acompte
         // Les lignes de service sont à 0% par défaut — l'utilisateur ajustera dans l'éditeur
@@ -277,7 +283,8 @@ class DevisViewModel extends BaseViewModel
             prixUnitaire: l.prixUnitaire, // Prix du marché conservé
             totalLigne: Decimal.zero, // Sera calculé par l'avancement dans l'UI
             unite: l.unite,
-            typeActivite: l.typeActivite, // Conserver service/vente pour distinguer
+            typeActivite:
+                l.typeActivite, // Conserver service/vente pour distinguer
             type: l.type,
             estGras: l.estGras,
             estItalique: l.estItalique,
@@ -287,10 +294,10 @@ class DevisViewModel extends BaseViewModel
       }).toList();
 
       return base.copyWith(
-          lignes: newLignes,
-          totalHt: Decimal.zero,
-          objet: "Situation - ${d.objet}",
-          acompteDejaRegle: dejaRegle ?? Decimal.zero,
+        lignes: newLignes,
+        totalHt: Decimal.zero,
+        objet: "Situation - ${d.objet}",
+        acompteDejaRegle: montantADeduire,
       );
     }
 

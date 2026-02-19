@@ -278,8 +278,7 @@ class PdfService {
                 totalMarche: isSituation
                     ? lignes.where((l) => l.type == 'article').fold<Decimal>(
                         Decimal.zero,
-                        (Decimal sum, l) =>
-                            sum + (l.quantite * l.prixUnitaire))
+                        (Decimal sum, l) => sum + (l.quantite * l.prixUnitaire))
                     : null),
             pw.SizedBox(height: 30),
             if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
@@ -534,7 +533,7 @@ class PdfService {
             if (totalMarche > Decimal.zero)
               _buildTotalRow("Avancement", null,
                   label2:
-                      "${((totalHt * Decimal.fromInt(100)) / totalMarche).toDecimal().toDouble().toStringAsFixed(1)}%"),
+                      "${((totalHt * Decimal.fromInt(100)) / totalMarche).toDecimal(scaleOnInfinitePrecision: 10).toDouble().toStringAsFixed(1)}%"),
             pw.Divider(),
           ],
           if (showTva)

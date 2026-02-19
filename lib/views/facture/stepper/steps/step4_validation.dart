@@ -255,7 +255,7 @@ class _Step4ValidationState extends State<Step4Validation> {
     final marche = _totalMarche(f);
     if (marche == Decimal.zero) return "0.0";
     return ((f.totalHt * Decimal.fromInt(100)) / marche)
-        .toDecimal()
+        .toDecimal(scaleOnInfinitePrecision: 10)
         .toDouble()
         .toStringAsFixed(1);
   }

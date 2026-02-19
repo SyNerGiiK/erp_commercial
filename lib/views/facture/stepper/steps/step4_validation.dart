@@ -137,8 +137,19 @@ class _Step4ValidationState extends State<Step4Validation> {
         AppCard(
           child: Column(
             children: [
+              // Contexte marché pour factures d'avancement
+              if (f.type == 'situation') ...[
+                _buildRow(
+                    "Total Marché HT", FormatUtils.currency(_totalMarche(f)),
+                    color: Colors.grey),
+                _buildRow("Avancement global", "${_avancementGlobal(f)}%",
+                    color: Colors.blue),
+                const Divider(),
+              ],
               if (isTvaApplicable) ...[
-                _buildRow("Total HT", FormatUtils.currency(f.totalHt)),
+                _buildRow(
+                    f.type == 'situation' ? "Travaux réalisés HT" : "Total HT",
+                    FormatUtils.currency(f.totalHt)),
                 if (f.totalTva > Decimal.zero)
                   _buildRow("Total TVA", FormatUtils.currency(f.totalTva)),
                 const Divider(),
@@ -228,6 +239,25 @@ class _Step4ValidationState extends State<Step4Validation> {
         if (_isLoading) const Center(child: CircularProgressIndicator()),
       ],
     );
+  }
+
+  // --- Helpers situation ---
+
+  /// Total du marché (somme qté × PU de toutes les lignes article)
+  Decimal _totalMarche(Facture f) {
+    return f.lignes
+        .where((l) => l.type == 'article')
+        .fold(Decimal.zero, (sum, l) => sum + (l.quantite * l.prixUnitaire));
+  }
+
+  /// Avancement global pondéré (totalHT / totalMarché × 100)
+  String _avancementGlobal(Facture f) {
+    final marche = _totalMarche(f);
+    if (marche == Decimal.zero) return "0.0";
+    return ((f.totalHt * Decimal.fromInt(100)) / marche)
+        .toDecimal()
+        .toDouble()
+        .toStringAsFixed(1);
   }
 
   Widget _buildRow(String label, String value,

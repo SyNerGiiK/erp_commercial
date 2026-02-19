@@ -272,7 +272,15 @@ class PdfService {
                 isSituation: isSituation, showTva: isTvaApplicable),
             pw.SizedBox(height: 20),
             _buildTotals(totalHt, remiseTaux, acompte, totalTva, netAPayer,
-                isDevis: isDevis, showTva: isTvaApplicable),
+                isDevis: isDevis,
+                showTva: isTvaApplicable,
+                isSituation: isSituation,
+                totalMarche: isSituation
+                    ? lignes.where((l) => l.type == 'article').fold<Decimal>(
+                        Decimal.zero,
+                        (Decimal sum, l) =>
+                            sum + (l.quantite * l.prixUnitaire))
+                    : null),
             pw.SizedBox(height: 30),
             if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
             pw.SizedBox(height: 20),
@@ -506,16 +514,32 @@ class PdfService {
 
   static pw.Widget _buildTotals(Decimal totalHt, Decimal remise,
       Decimal acompte, Decimal totalTva, Decimal netAPayer,
-      {bool isDevis = false, bool showTva = true}) {
+      {bool isDevis = false,
+      bool showTva = true,
+      bool isSituation = false,
+      Decimal? totalMarche}) {
     final remiseRational = (totalHt * remise) / Decimal.fromInt(100);
     final remiseMontant = remiseRational.toDecimal();
 
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       child: pw.Container(
-        width: 200,
+        width: 220,
         child: pw.Column(children: [
-          if (showTva) _buildTotalRow("Total HT", totalHt),
+          // Contexte marché pour factures d'avancement
+          if (isSituation &&
+              totalMarche != null &&
+              totalMarche > Decimal.zero) ...[
+            _buildTotalRow("Total Marché HT", totalMarche),
+            if (totalMarche > Decimal.zero)
+              _buildTotalRow("Avancement", null,
+                  label2:
+                      "${((totalHt * Decimal.fromInt(100)) / totalMarche).toDecimal().toDouble().toStringAsFixed(1)}%"),
+            pw.Divider(),
+          ],
+          if (showTva)
+            _buildTotalRow(
+                isSituation ? "Travaux réalisés HT" : "Total HT", totalHt),
           if (remise > Decimal.zero)
             _buildTotalRow("Remise ($remise%)", remiseMontant,
                 isNegative: true),
@@ -527,7 +551,14 @@ class PdfService {
 
           pw.Divider(),
           _buildTotalRow(showTva ? "Total TTC" : "NET À PAYER", netAPayer,
-              isBold: true),
+              isBold: !isSituation || acompte <= Decimal.zero),
+
+          // Déduction acompte/situations précédentes
+          if (!isDevis && acompte > Decimal.zero) ...[
+            _buildTotalRow("Déjà réglé", acompte, isNegative: true),
+            pw.Divider(),
+            _buildTotalRow("NET À PAYER", netAPayer - acompte, isBold: true),
+          ],
 
           // Pour DEVIS uniquement : Acompte demandé
           if (isDevis && acompte > Decimal.zero) ...[
@@ -540,20 +571,22 @@ class PdfService {
   }
 
   static pw.Widget _buildTotalRow(String label, Decimal? amount,
-      {bool isBold = false, bool isNegative = false}) {
-    return pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(label,
-              style: pw.TextStyle(
-                  fontWeight:
-                      isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-          if (amount != null)
-            pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
-                style: pw.TextStyle(
-                    fontWeight:
-                        isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-        ]);
+      {bool isBold = false, bool isNegative = false, String? label2}) {
+    return pw
+        .Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+      pw.Text(label,
+          style: pw.TextStyle(
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+      if (label2 != null)
+        pw.Text(label2,
+            style: pw.TextStyle(
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal))
+      else if (amount != null)
+        pw.Text("${isNegative ? "- " : ""}${FormatUtils.currency(amount)}",
+            style: pw.TextStyle(
+                fontWeight:
+                    isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+    ]);
   }
 
   static pw.Widget _buildPaiementsTable(

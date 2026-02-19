@@ -213,10 +213,6 @@ class _LigneEditorState extends State<LigneEditor> {
                 TextField(
                   controller: _descCtrl,
                   maxLines: null,
-                  readOnly: widget.isSituation, // Bloqué en situation ?
-                  // En général, on peut ajuster la description (ex: "Travaux peinture (90%)")
-                  // Mais le texte de base doit rester cohérent avec le marché.
-                  // Laissons éditable pour la flexibilité.
                   onChanged: (_) => _notify(),
                   decoration: const InputDecoration(
                     hintText: "Description",
@@ -233,6 +229,18 @@ class _LigneEditorState extends State<LigneEditor> {
                         widget.estSouligne ? TextDecoration.underline : null,
                   ),
                 ),
+                // Sous-titre marché (décomposition) en mode situation
+                if (widget.isSituation)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2, left: 2),
+                    child: Text(
+                      "${_qteCtrl.text} ${_uniteCtrl.text} × ${pu.toDouble().toStringAsFixed(2)} € = $totalMarcheStr €",
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic),
+                    ),
+                  ),
                 // Options de style (mini barre d'outils)
                 if (!widget.readOnly)
                   Row(
@@ -318,43 +326,36 @@ class _LigneEditorState extends State<LigneEditor> {
           const SizedBox(width: 8),
 
           if (widget.isSituation) ...[
-            // MODE SITUATION
-
-            // Total Marché (Info)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text("Marché",
-                    style: TextStyle(fontSize: 10, color: Colors.grey)),
-                Text(totalMarcheStr,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-            const SizedBox(width: 8),
-
-            // Avancement % (Input)
+            // MODE SITUATION — Avancement cumulé
             SizedBox(
-              width: 60,
-              child: TextField(
-                controller: _avancementCtrl,
-                focusNode: _avancementFocus,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (_) {
-                  setState(() {});
-                  _notify();
-                },
-                decoration: const InputDecoration(
-                    labelText: "%",
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    border: OutlineInputBorder()),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue),
+              width: 70,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _avancementCtrl,
+                    focusNode: _avancementFocus,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) {
+                      setState(() {});
+                      _notify();
+                    },
+                    decoration: const InputDecoration(
+                        labelText: "Avt %",
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        border: OutlineInputBorder()),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue),
+                  ),
+                  const Text("cumulé",
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
+                ],
               ),
             ),
           ] else ...[

@@ -254,7 +254,7 @@ class CalculationsUtils {
   /// Convention typeActivite :
   ///   'vente' → BIC Vente (achat/revente, taux micro 12.3%)
   ///   'prestation_bic' ou 'service_bic' → BIC Prestation (artisan, taux 21.2%)
-  ///   'service' ou 'prestation_bnc' → BNC Prestation (libéral, taux 24.6%)
+  ///   'service' ou 'prestation_bnc' → BNC Prestation (libéral, taux 25.6%)
   ///
   /// Pour l'activité mixte artisan : 'vente' pour la fourniture, 'service' (BIC par défaut)
   /// Pour le mapping réel, on utilise isBncDefault pour piloter le comportement

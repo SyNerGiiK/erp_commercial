@@ -12,6 +12,7 @@ import '../core/base_viewmodel.dart';
 import '../services/tva_service.dart';
 import '../services/relance_service.dart';
 import '../services/archivage_service.dart';
+import '../services/urssaf_sync_service.dart';
 import '../repositories/facture_repository.dart';
 
 enum DashboardPeriod { mois, trimestre, annee }
@@ -90,6 +91,14 @@ class DashboardViewModel extends BaseViewModel {
   // Cotisations Détail
   Map<String, Decimal> _cotisationBreakdown = {};
   Map<String, Decimal> get cotisationBreakdown => _cotisationBreakdown;
+
+  // Sous-répartition détaillée (maladie, retraite, etc.)
+  Map<String, Decimal> _cotisationRepartition = {};
+  Map<String, Decimal> get cotisationRepartition => _cotisationRepartition;
+
+  // Simulation VL vs IR (P6)
+  VlVsIrSimulation? _vlVsIrSimulation;
+  VlVsIrSimulation? get vlVsIrSimulation => _vlVsIrSimulation;
 
   // Conf
   UrssafConfig? _urssafConfig;
@@ -250,6 +259,7 @@ class DashboardViewModel extends BaseViewModel {
   void _calculateCotisationsCurrent() {
     _totalCotisations = Decimal.zero;
     _cotisationBreakdown = {};
+    _cotisationRepartition = {};
     _caVente = Decimal.zero;
     _caPrestaBIC = Decimal.zero;
     _caPrestaBNC = Decimal.zero;
@@ -283,6 +293,29 @@ class DashboardViewModel extends BaseViewModel {
 
       _totalCotisations = result['total'] ?? Decimal.zero;
       _cotisationBreakdown = result;
+
+      // Sous-répartition détaillée (P5)
+      _cotisationRepartition =
+          config.calculerRepartition(_caVente, _caPrestaBIC, _caPrestaBNC);
+    }
+  }
+
+  /// Lance la simulation VL vs IR via l'API Publicodes.
+  /// À appeler après le chargement initial si le CA > 0.
+  Future<void> simulerVlVsIr() async {
+    if (_urssafConfig == null || _caEncaissePeriode == Decimal.zero) return;
+
+    try {
+      final syncService = UrssafSyncService();
+      _vlVsIrSimulation = await syncService.simulerVlVsIr(
+        caVente: _caVente,
+        caPrestaBIC: _caPrestaBIC,
+        caPrestaBNC: _caPrestaBNC,
+        config: _urssafConfig!,
+      );
+      notifyListeners();
+    } catch (e, s) {
+      developer.log('🔴 Simulation VL vs IR', error: e, stackTrace: s);
     }
   }
 

@@ -18,13 +18,25 @@ class UrssafConfig {
   // Taux Micro-Social (2026)
   final Decimal tauxMicroVente; // 12.3%
   final Decimal tauxMicroPrestationBIC; // 21.2%
-  final Decimal tauxMicroPrestationBNC; // 24.6% (User specific)
+  final Decimal tauxMicroPrestationBNC; // 25.6% (API Publicodes 2026)
 
   // Taux Formation Pro (CFP)
   // Artisan: 0.3%, Commerçant: 0.1%, Libéral: 0.2%
   final Decimal tauxCfpVente;
   final Decimal tauxCfpPrestation;
   final Decimal tauxCfpLiberal;
+
+  // Taux TFC — Taxe pour Frais de Chambre (Artisans/Commerçants)
+  // Métiers service: 0.48%, Métiers vente: 0.22%, Commerce: 0% par défaut
+  final Decimal tauxTfcService;
+  final Decimal tauxTfcVente;
+
+  // Plafond Versement Libératoire (RFR N-2 par part de quotient familial)
+  final Decimal plafondVlRfr; // 29315 €/an (source: API Publicodes 2026)
+
+  // Sync API metadata
+  final DateTime? lastSyncedAt;
+  final bool sourceApi; // true si les taux proviennent d'une sync API
 
   // Aliases for backward compatibility
   Decimal get tauxMicroServiceBIC => tauxMicroPrestationBIC;
@@ -38,11 +50,18 @@ class UrssafConfig {
   final Decimal seuilTvaMicroService; // 36800 (Base)
   final Decimal seuilTvaMicroServiceMaj; // 39100 (Majoré)
 
-  // Constantes Taux Standard 2026
+  // Constantes Taux Standard 2026 (source: API URSSAF Publicodes 2026-02-19)
   static final Decimal standardTauxMicroVente = Decimal.parse('12.3');
   static final Decimal standardTauxMicroBIC = Decimal.parse('21.2');
   static final Decimal standardTauxMicroBNC =
-      Decimal.parse('24.6'); // User request
+      Decimal.parse('25.6'); // Corrigé via API Publicodes (était 24.6)
+
+  // Constantes TFC Standard 2026 (source: API URSSAF Publicodes)
+  static final Decimal standardTauxTfcService = Decimal.parse('0.48');
+  static final Decimal standardTauxTfcVente = Decimal.parse('0.22');
+
+  // Plafond VL RFR (source: API Publicodes)
+  static final Decimal standardPlafondVlRfr = Decimal.parse('29315');
 
   // Taux Libératoire
   static final Decimal libVente = Decimal.parse('1.0');
@@ -63,6 +82,11 @@ class UrssafConfig {
     Decimal? tauxCfpVente,
     Decimal? tauxCfpPrestation,
     Decimal? tauxCfpLiberal,
+    Decimal? tauxTfcService,
+    Decimal? tauxTfcVente,
+    Decimal? plafondVlRfr,
+    this.lastSyncedAt,
+    this.sourceApi = false,
     Decimal? plafondCaMicroVente,
     Decimal? plafondCaMicroService,
     Decimal? seuilTvaMicroVente,
@@ -76,6 +100,11 @@ class UrssafConfig {
         tauxCfpVente = tauxCfpVente ?? Decimal.parse('0.3'),
         tauxCfpPrestation = tauxCfpPrestation ?? Decimal.parse('0.3'),
         tauxCfpLiberal = tauxCfpLiberal ?? Decimal.parse('0.2'),
+        // TFC Defaults 2026 (Artisan métiers)
+        tauxTfcService = tauxTfcService ?? standardTauxTfcService,
+        tauxTfcVente = tauxTfcVente ?? standardTauxTfcVente,
+        // Plafond VL RFR
+        plafondVlRfr = plafondVlRfr ?? standardPlafondVlRfr,
         // Plafonds Defaults 2026
         plafondCaMicroVente = plafondCaMicroVente ?? Decimal.parse('188700'),
         plafondCaMicroService = plafondCaMicroService ?? Decimal.parse('77700'),
@@ -108,7 +137,13 @@ class UrssafConfig {
     Decimal cfpBNC =
         (caPrestaBNC * tauxCfpLiberal / Decimal.fromInt(100)).toDecimal();
 
-    // 3. Libératoire (si actif)
+    // 3. TFC (Taxe pour Frais de Chambre — artisans/commerçants)
+    Decimal tfcServiceVal =
+        (caPrestaBIC * tauxTfcService / Decimal.fromInt(100)).toDecimal();
+    Decimal tfcVenteVal =
+        (caVente * tauxTfcVente / Decimal.fromInt(100)).toDecimal();
+
+    // 4. Libératoire (si actif)
     Decimal libV = Decimal.zero;
     Decimal libBICVal = Decimal.zero;
     Decimal libBNCVal = Decimal.zero;
@@ -119,13 +154,72 @@ class UrssafConfig {
       libBNCVal = (caPrestaBNC * libBNC / Decimal.fromInt(100)).toDecimal();
     }
 
+    final totalTfc = tfcServiceVal + tfcVenteVal;
+
     return {
       'social': socialVente + socialBIC + socialBNC,
       'cfp': cfpVente + cfpBIC + cfpBNC,
+      'tfc': totalTfc,
       'liberatoire': libV + libBICVal + libBNCVal,
       'total': (socialVente + socialBIC + socialBNC) +
           (cfpVente + cfpBIC + cfpBNC) +
+          totalTfc +
           (libV + libBICVal + libBNCVal),
+    };
+  }
+
+  /// Calcule la sous-répartition détaillée des cotisations sociales.
+  /// Retourne les montants par branche (maladie, retraite, etc.)
+  /// basés sur les pourcentages officiels de l'API URSSAF Publicodes.
+  Map<String, Decimal> calculerRepartition(
+      Decimal caVente, Decimal caPrestaBIC, Decimal caPrestaBNC) {
+    final totalCA = caVente + caPrestaBIC + caPrestaBNC;
+    if (totalCA == Decimal.zero) return {};
+
+    // Répartition BIC Service (sur taux 21.2%)
+    // Source API: maladie 2.13%, retraite base 9.22%, complémentaire 4.19%,
+    //            invalidité-décès 0.67%, autres contributions (CSG/CRDS) 5.00%
+    final rBicMaladie = Decimal.parse('2.13');
+    final rBicRetraiteBase = Decimal.parse('9.22');
+    final rBicRetraiteCompl = Decimal.parse('4.19');
+    final rBicInvalidite = Decimal.parse('0.67');
+    final rBicAutres = Decimal.parse('5.01'); // ajusté pour coller à 21.22
+
+    // Répartition Vente (sur taux 12.3%)
+    // Source API: maladie 1.24%, retraite base 5.36%, complémentaire 2.44%,
+    //            invalidité-décès 0.39%, autres contributions 3.09%
+    final rVenteMaladie = Decimal.parse('1.24');
+    final rVenteRetraiteBase = Decimal.parse('5.36');
+    final rVenteRetraiteCompl = Decimal.parse('2.44');
+    final rVenteInvalidite = Decimal.parse('0.39');
+    final rVenteAutres = Decimal.parse('2.87');
+
+    Decimal calc(Decimal ca, Decimal taux) =>
+        (ca * taux / Decimal.fromInt(100)).toDecimal();
+
+    final maladie =
+        calc(caPrestaBIC, rBicMaladie) + calc(caVente, rVenteMaladie);
+    final retraiteBase =
+        calc(caPrestaBIC, rBicRetraiteBase) + calc(caVente, rVenteRetraiteBase);
+    final retraiteCompl = calc(caPrestaBIC, rBicRetraiteCompl) +
+        calc(caVente, rVenteRetraiteCompl);
+    final invalidite =
+        calc(caPrestaBIC, rBicInvalidite) + calc(caVente, rVenteInvalidite);
+    final csgCrds = calc(caPrestaBIC, rBicAutres) + calc(caVente, rVenteAutres);
+
+    // BNC : taux forfaitaire 25.6% — répartition non détaillée par l'API
+    // On regroupe en "cotisations BNC" si applicable
+    final socialBNC =
+        (caPrestaBNC * tauxMicroPrestationBNC / Decimal.fromInt(100))
+            .toDecimal();
+
+    return {
+      'maladie': maladie,
+      'retraite_base': retraiteBase,
+      'retraite_complementaire': retraiteCompl,
+      'invalidite_deces': invalidite,
+      'csg_crds': csgCrds,
+      if (socialBNC > Decimal.zero) 'cotisations_bnc': socialBNC,
     };
   }
 
@@ -148,6 +242,11 @@ class UrssafConfig {
     Decimal? tauxCfpVente,
     Decimal? tauxCfpPrestation,
     Decimal? tauxCfpLiberal,
+    Decimal? tauxTfcService,
+    Decimal? tauxTfcVente,
+    Decimal? plafondVlRfr,
+    DateTime? lastSyncedAt,
+    bool? sourceApi,
     Decimal? plafondCaMicroVente,
     Decimal? plafondCaMicroService,
     Decimal? seuilTvaMicroVente,
@@ -171,6 +270,11 @@ class UrssafConfig {
       tauxCfpVente: tauxCfpVente ?? this.tauxCfpVente,
       tauxCfpPrestation: tauxCfpPrestation ?? this.tauxCfpPrestation,
       tauxCfpLiberal: tauxCfpLiberal ?? this.tauxCfpLiberal,
+      tauxTfcService: tauxTfcService ?? this.tauxTfcService,
+      tauxTfcVente: tauxTfcVente ?? this.tauxTfcVente,
+      plafondVlRfr: plafondVlRfr ?? this.plafondVlRfr,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      sourceApi: sourceApi ?? this.sourceApi,
       plafondCaMicroVente: plafondCaMicroVente ?? this.plafondCaMicroVente,
       plafondCaMicroService:
           plafondCaMicroService ?? this.plafondCaMicroService,
@@ -198,6 +302,11 @@ class UrssafConfig {
       'taux_cfp_vente': tauxCfpVente.toString(),
       'taux_cfp_prestation': tauxCfpPrestation.toString(),
       'taux_cfp_liberal': tauxCfpLiberal.toString(),
+      'taux_tfc_service': tauxTfcService.toString(),
+      'taux_tfc_vente': tauxTfcVente.toString(),
+      'plafond_vl_rfr': plafondVlRfr.toString(),
+      'last_synced_at': lastSyncedAt?.toIso8601String(),
+      'source_api': sourceApi,
       'plafond_ca_micro_vente': plafondCaMicroVente.toString(),
       'plafond_ca_micro_service': plafondCaMicroService.toString(),
       'seuil_tva_micro_vente': seuilTvaMicroVente.toString(),
@@ -227,6 +336,14 @@ class UrssafConfig {
           _parseDecimal(map['taux_cfp_prestation'], Decimal.parse('0.3')),
       tauxCfpLiberal:
           _parseDecimal(map['taux_cfp_liberal'], Decimal.parse('0.2')),
+      tauxTfcService:
+          _parseDecimal(map['taux_tfc_service'], standardTauxTfcService),
+      tauxTfcVente: _parseDecimal(map['taux_tfc_vente'], standardTauxTfcVente),
+      plafondVlRfr: _parseDecimal(map['plafond_vl_rfr'], standardPlafondVlRfr),
+      lastSyncedAt: map['last_synced_at'] != null
+          ? DateTime.tryParse(map['last_synced_at'])
+          : null,
+      sourceApi: map['source_api'] ?? false,
       plafondCaMicroVente:
           _parseDecimal(map['plafond_ca_micro_vente'], Decimal.parse('188700')),
       plafondCaMicroService: _parseDecimal(

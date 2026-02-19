@@ -21,8 +21,21 @@ class PlafondsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final caVente = this.caVente; // Use the class member
-    final caService = caPrestaBIC + caPrestaBNC; // Use class members
+    final caVente = this.caVente;
+    final caService = caPrestaBIC + caPrestaBNC;
+    final totalCA = caVente + caService;
+
+    // Déterminer les seuils TVA appropriés selon le type d'activité principal
+    // Vente → seuils vente (91900/101000), Service → seuils service (36800/39100)
+    // Mixte / autre → on prend le seuil le plus bas (service) par prudence
+    final bool isVenteOnly =
+        caService == Decimal.zero && caVente > Decimal.zero;
+    final Decimal seuilTvaBase =
+        isVenteOnly ? config.seuilTvaMicroVente : config.seuilTvaMicroService;
+    final Decimal seuilTvaMajore = isVenteOnly
+        ? config.seuilTvaMicroVenteMaj
+        : config.seuilTvaMicroServiceMaj;
+    final String labelTypeCA = isVenteOnly ? "Vente" : "Service";
 
     return Card(
       elevation: 4,
@@ -41,42 +54,44 @@ class PlafondsCard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 1. Plafond Micro Vente
-            _buildGauge(
-              context,
-              "Plafond Micro Vente",
-              caVente,
-              config.plafondCaMicroVente,
-              Colors.purple,
-            ),
-            const SizedBox(height: 16),
+            // 1. Plafond Micro Vente (affiché seulement si CA vente > 0)
+            if (caVente > Decimal.zero)
+              _buildGauge(
+                context,
+                "Plafond Micro Vente",
+                caVente,
+                config.plafondCaMicroVente,
+                Colors.purple,
+              ),
+            if (caVente > Decimal.zero) const SizedBox(height: 16),
 
-            // 2. Plafond Micro Service
-            _buildGauge(
-              context,
-              "Plafond Micro Service",
-              caService,
-              config.plafondCaMicroService,
-              Colors.purpleAccent,
-            ),
-            const SizedBox(height: 16),
+            // 2. Plafond Micro Service (affiché seulement si CA service > 0)
+            if (caService > Decimal.zero)
+              _buildGauge(
+                context,
+                "Plafond Micro Service",
+                caService,
+                config.plafondCaMicroService,
+                Colors.purpleAccent,
+              ),
+            if (caService > Decimal.zero) const SizedBox(height: 16),
 
-            // 3. Franchise TVA Base
+            // 3. Franchise TVA Base (seuil adapté au type d'activité)
             _buildGauge(
               context,
-              "Franchise TVA (Base)",
-              caVente + caService, // Total turnover for global threshold
-              config.seuilTvaMicroVente,
+              "Franchise TVA Base ($labelTypeCA)",
+              totalCA,
+              seuilTvaBase,
               Colors.orange,
             ),
             const SizedBox(height: 16),
 
-            // 4. Franchise TVA Majoré
+            // 4. Franchise TVA Majoré (seuil adapté au type d'activité)
             _buildGauge(
               context,
-              "Franchise TVA (Majoré)",
-              caVente + caService,
-              config.seuilTvaMicroVenteMaj,
+              "Franchise TVA Majoré ($labelTypeCA)",
+              totalCA,
+              seuilTvaMajore,
               Colors.redAccent,
             ),
           ],

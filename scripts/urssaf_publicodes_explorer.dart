@@ -357,8 +357,7 @@ void _printSingleResult(String expression, dynamic result) {
     if (missingVariables != null &&
         missingVariables is Map &&
         missingVariables.isNotEmpty) {
-      final topMissing = (missingVariables as Map)
-          .entries
+      final topMissing = missingVariables.entries
           .take(3)
           .map((e) => '${e.key} (${e.value})')
           .join(', ');
@@ -448,11 +447,11 @@ Future<void> saveToFile(Map<String, dynamic> fullOutput) async {
   }
 
   final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-  final filePath = 'scripts/output/urssaf_publicodes_response.json';
+  const filePath = 'scripts/output/urssaf_publicodes_response.json';
   final filePathTimestamped =
       'scripts/output/urssaf_publicodes_$timestamp.json';
 
-  final encoder = const JsonEncoder.withIndent('  ');
+  const encoder = JsonEncoder.withIndent('  ');
   final jsonStr = encoder.convert(fullOutput);
 
   // Fichier principal (écrasé à chaque exécution)

@@ -60,6 +60,9 @@ class UrssafConfig {
   static final Decimal standardTauxTfcService = Decimal.parse('0.48');
   static final Decimal standardTauxTfcVente = Decimal.parse('0.22');
 
+  // Taux ACRE — réduction 50% sur cotisations sociales (4 premiers trimestres)
+  static final Decimal tauxReductionAcre = Decimal.parse('0.5');
+
   // Plafond VL RFR (source: API Publicodes)
   static final Decimal standardPlafondVlRfr = Decimal.parse('29315');
 
@@ -129,6 +132,13 @@ class UrssafConfig {
         (caPrestaBNC * tauxMicroPrestationBNC / Decimal.fromInt(100))
             .toDecimal();
 
+    // ACRE : réduction de 50% sur les cotisations sociales uniquement
+    if (accreActive) {
+      socialVente = socialVente * tauxReductionAcre;
+      socialBIC = socialBIC * tauxReductionAcre;
+      socialBNC = socialBNC * tauxReductionAcre;
+    }
+
     // 2. CFP
     Decimal cfpVente =
         (caVente * tauxCfpVente / Decimal.fromInt(100)).toDecimal();
@@ -137,11 +147,15 @@ class UrssafConfig {
     Decimal cfpBNC =
         (caPrestaBNC * tauxCfpLiberal / Decimal.fromInt(100)).toDecimal();
 
-    // 3. TFC (Taxe pour Frais de Chambre — artisans/commerçants)
-    Decimal tfcServiceVal =
-        (caPrestaBIC * tauxTfcService / Decimal.fromInt(100)).toDecimal();
-    Decimal tfcVenteVal =
-        (caVente * tauxTfcVente / Decimal.fromInt(100)).toDecimal();
+    // 3. TFC (Taxe pour Frais de Chambre — artisans/commerçants uniquement)
+    // Les professions libérales ne sont PAS assujetties à la TFC
+    Decimal tfcServiceVal = Decimal.zero;
+    Decimal tfcVenteVal = Decimal.zero;
+    if (statut != StatutEntrepreneur.liberal) {
+      tfcServiceVal =
+          (caPrestaBIC * tauxTfcService / Decimal.fromInt(100)).toDecimal();
+      tfcVenteVal = (caVente * tauxTfcVente / Decimal.fromInt(100)).toDecimal();
+    }
 
     // 4. Libératoire (si actif)
     Decimal libV = Decimal.zero;
@@ -212,6 +226,19 @@ class UrssafConfig {
     final socialBNC =
         (caPrestaBNC * tauxMicroPrestationBNC / Decimal.fromInt(100))
             .toDecimal();
+
+    // ACRE : réduction de 50% sur toutes les branches sociales
+    if (accreActive) {
+      return {
+        'maladie': maladie * tauxReductionAcre,
+        'retraite_base': retraiteBase * tauxReductionAcre,
+        'retraite_complementaire': retraiteCompl * tauxReductionAcre,
+        'invalidite_deces': invalidite * tauxReductionAcre,
+        'csg_crds': csgCrds * tauxReductionAcre,
+        if (socialBNC > Decimal.zero)
+          'cotisations_bnc': socialBNC * tauxReductionAcre,
+      };
+    }
 
     return {
       'maladie': maladie,

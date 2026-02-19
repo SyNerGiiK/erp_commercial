@@ -20,6 +20,7 @@ import '../viewmodels/corbeille_viewmodel.dart';
 import '../viewmodels/facture_recurrente_viewmodel.dart';
 import '../viewmodels/temps_viewmodel.dart';
 import '../viewmodels/rappel_viewmodel.dart';
+import '../viewmodels/rentabilite_viewmodel.dart';
 
 class DependencyInjection {
   static List<SingleChildWidget> get providers {
@@ -42,6 +43,7 @@ class DependencyInjection {
       ChangeNotifierProvider(create: (_) => FactureRecurrenteViewModel()),
       ChangeNotifierProvider(create: (_) => TempsViewModel()),
       ChangeNotifierProvider(create: (_) => RappelViewModel()),
+      ChangeNotifierProvider(create: (_) => RentabiliteViewModel()),
     ];
   }
 }

@@ -1,6 +1,6 @@
 # Guide du contributeur — ERP Artisan
 
-> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 18/02/2026
+> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 19/02/2026
 
 ---
 
@@ -124,6 +124,10 @@ test/models/xxx_model_test.dart              # Tests du modèle (si logique)
 ```
 
 Ajouter le Provider dans `lib/config/dependency_injection.dart` et la route dans `lib/config/router.dart`.
+
+**Note :** Pour les fonctionnalités avec auto-save (ex: progress billing), privilégier :
+- **Auto-save immédiat** pour les toggles binaires (ex: `toggleEstAchete`)
+- **Auto-save avec debounce** (400ms) pour les sliders/inputs continus (ex: `updateAvancementMo`)
 
 ---
 
@@ -429,7 +433,8 @@ test/
 │   ├── corbeille_viewmodel_test.dart       # Tests corbeille soft-delete (4 entités)
 │   ├── facture_recurrente_viewmodel_test.dart # Tests récurrence, toggle, compteur
 │   ├── temps_viewmodel_test.dart           # Tests suivi temps, KPIs, filtrage
-│   └── rappel_viewmodel_test.dart          # Tests rappels, génération fiscale
+│   ├── rappel_viewmodel_test.dart          # Tests rappels, génération fiscale
+│   └── sprint5_test.dart                   # Tests progress billing (chiffrages, avancements, rentabilité)
 ├── services/
 │   ├── tva_service_test.dart          # Tests calculs TVA
 │   ├── relance_service_test.dart      # Tests niveaux relance

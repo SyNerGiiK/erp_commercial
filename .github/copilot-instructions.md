@@ -1,7 +1,7 @@
 # ERP Artisan — Instructions Copilot
 
 **Langue:** Toujours répondre en **FRANÇAIS**.  
-Flutter Web SaaS de gestion commerciale (devis, factures, avoirs, relances, URSSAF, factures récurrentes, suivi du temps, rappels/échéances) pour micro-entrepreneurs. Backend Supabase (PostgreSQL + RLS).
+Flutter Web SaaS de gestion commerciale (devis, factures, avoirs, relances, URSSAF, factures récurrentes, suivi du temps, rappels/échéances, suivi d'avancement/progress billing) pour micro-entrepreneurs. Backend Supabase (PostgreSQL + RLS).
 
 ## Architecture MVVM
 
@@ -71,6 +71,7 @@ ScaffoldMessenger.of(context)...
 Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 17 modèles dont :
 - `Facture` + `LigneFacture` : cycle brouillon → validée → envoyée → payée, avoirs en montants positifs, champs `devise`/`tauxChange`/`notesPrivees`
 - `Devis` + `LigneDevis` : stepper 4 étapes (`lib/views/devis/stepper/`), champs `devise`/`tauxChange`/`notesPrivees`
+- `LigneChiffrage` + `TypeChiffrage` : coûts internes liés aux lignes de devis, `materiel` (toggle binaire) / `mainDoeuvre` (slider 0–100%), champs `linkedLigneDevisId`/`prixVenteInterne`/`estAchete`/`avancementMo`, getters `valeurRealisee`/`avancementPourcent`
 - `ProfilEntreprise` : identité, TVA, mentions légales, thème PDF (`PdfTheme` enum), couleur custom
 - `FactureRecurrente` + `LigneFactureRecurrente` : `FrequenceRecurrence` enum (heb/mens/trim/annuel), `prochaineEmission`, `estActive`, `nbFacturesGenerees`
 - `TempsActivite` : suivi du temps, `montant` (Decimal safe), `dureeFormatee`, `estFacturable`/`estFacture`
@@ -102,14 +103,16 @@ setUp(() {
 
 | Fichier | Rôle |
 |---|---|
-| `lib/config/dependency_injection.dart` | 18 Providers enregistrés |
+| `lib/config/dependency_injection.dart` | 20 Providers enregistrés |
 | `lib/config/router.dart` | ~25 routes + auth guard |
 | `lib/core/base_viewmodel.dart` | Loading réentrant + executeOperation |
 | `lib/core/base_repository.dart` | prepareForInsert/Update + handleError |
 | `lib/utils/calculations_utils.dart` | Calculs financiers 100% Decimal |
-| `lib/services/pdf_service.dart` | Génération PDF isolate-ready |
+| `lib/services/pdf_service.dart` | Génération PDF isolate-ready (2 blocs situation : travaux à date + déductions) |
 | `lib/services/echeance_service.dart` | Génération auto rappels fiscaux (URSSAF, CFE, Impôts, TVA) |
 | `lib/config/theme.dart` | AppTheme (design tokens, couleurs, spacing) |
+| `lib/repositories/chiffrage_repository.dart` | CRUD lignes_chiffrages avec auto-save unitaire |
+| `lib/viewmodels/rentabilite_viewmodel.dart` | Arbre Devis → LigneDevis → LigneChiffrage, auto-save debounce |
 
 ## Schéma BDD Supabase (résumé)
 
@@ -123,6 +126,7 @@ setUp(() {
 | `paiements` | facture_id (FK), montant, date_paiement, type_paiement, is_acompte | |
 | `devis` | numero_devis, client_id (FK), duree_validite, taux_acompte, devis_parent_id (self FK avenants) | → lignes_devis, → factures |
 | `lignes_devis` | devis_id (FK), mêmes champs que lignes_facture | |
+| `lignes_chiffrages` | devis_id (FK), linked_ligne_devis_id (FK), designation, type_chiffrage, prix_achat_unitaire, prix_vente_interne, est_achete, avancement_mo | → devis, lignes_devis |
 | `entreprises` | nom_entreprise, siret, type_entreprise, regime_fiscal, tva_applicable, pdf_theme, pdf_primary_color, mode_facturation, taux_penalites_retard, escompte_applicable, est_immatricule | 1:1 par user |
 | `depenses` | description, montant, date_depense, categorie, est_deductible | |
 | `articles` | designation, prix_unitaire, unite, type_activite, categorie | |
@@ -143,7 +147,7 @@ setUp(() {
 | `trg_audit_devis` | devis | Log INSERT/UPDATE/DELETE → audit_logs |
 | `trg_audit_paiements` | paiements | Log INSERT/UPDATE/DELETE → audit_logs (résout user_id via facture) |
 | `trg_protect_validated_facture` | factures | **BEFORE UPDATE** — bloque modif de total_ht, total_tva, total_ttc, objet, client_id, remise_taux, conditions_reglement si statut_juridique ≠ brouillon |
-| `trg_*_updated_at` | factures, devis, paiements, clients, depenses, factures_recurrentes, temps_activites, rappels | Auto `updated_at = NOW()` |
+| `trg_*_updated_at` | factures, devis, paiements, clients, depenses, factures_recurrentes, temps_activites, rappels, lignes_chiffrages | Auto `updated_at = NOW()` |
 
 ### Migrations (dossier `migrations/`)
 
@@ -152,6 +156,7 @@ setUp(() {
 3. `migration_sprint8_audit_email.sql` — extension CHECK constraint (EMAIL_SENT, RELANCE_SENT)
 4. `migration_sprint9_pdf_custom.sql` — colonnes pdf_primary_color, logo_footer_url
 5. `migration_sprint14_20_features.sql` — 3 tables (factures_recurrentes, temps_activites, rappels) + ALTER factures/devis (devise, taux_change, notes_privees)
+6. `migration_sprint15_progress_billing.sql` — ALTER lignes_chiffrages (linked_ligne_devis_id, type_chiffrage, est_achete, avancement_mo, prix_vente_interne) + index + trigger updated_at + RLS
 
 ## Services (statiques, sans état)
 
@@ -163,7 +168,7 @@ setUp(() {
 | `EmailService` | `envoyerDevis()`, `envoyerFacture()`, `envoyerRelance()` — via url_launcher mailto: |
 | `AuditService` | `logEnvoiEmail()`, `logRelance()` — insert audit_logs, fail-safe |
 | `ExportService` | `exportComptabilite()` (2 CSVs recettes+dépenses), `exportFactures()` |
-| `PdfService` | `generatePdf(PdfGenerationRequest)` — résout thème depuis ProfilEntreprise |
+| `PdfService` | `generatePdf(PdfGenerationRequest)` — résout thème depuis ProfilEntreprise, PDF situation 2 blocs (travaux à date + déductions) |
 | `LocalStorageService` | `saveDraft()`, `getDraft()`, `clearDraft()` — SharedPreferences |
 | `PreferencesService` | `getConfigCharges()`, `saveConfigCharges()` — config charges sociales |
 | `EcheanceService` | `genererTousRappels(annee, urssafTrimestriel, tvaApplicable, factures?, devis?)` — rappels fiscaux automatiques (URSSAF mensuel/trimestriel, CFE, Impôts, TVA) + rappels factures échues + devis expirants |

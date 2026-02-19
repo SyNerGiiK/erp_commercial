@@ -28,6 +28,9 @@ class PdfGenerationRequest {
   final Uint8List? fontItalic;
   final String? factureSourceNumero;
 
+  /// Factures précédentes liées au même devis (pour déductions situation)
+  final List<Map<String, dynamic>>? facturesPrecedentes;
+
   PdfGenerationRequest({
     required this.document,
     required this.documentType,
@@ -39,6 +42,7 @@ class PdfGenerationRequest {
     this.fontBold,
     this.fontItalic,
     this.factureSourceNumero,
+    this.facturesPrecedentes,
   });
 }
 
@@ -136,6 +140,7 @@ class PdfService {
         docType: request.docTypeLabel,
         isTvaApplicable: request.isTvaApplicable,
         factureSourceNumero: request.factureSourceNumero,
+        facturesPrecedentes: request.facturesPrecedentes,
         // Pass fonts
         fontRegular: request.fontRegular,
         fontBold: request.fontBold,
@@ -148,14 +153,15 @@ class PdfService {
       {String docType = "DOCUMENT",
       bool isTvaApplicable = true,
       String? factureSourceNumero,
+      List<Map<String, dynamic>>? facturesPrecedentes,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
-    // Let's add them at the top of PdfService class.
     return _generateDocumentInternal(document, client, entreprise,
         docType: docType,
         isTvaApplicable: isTvaApplicable,
         factureSourceNumero: factureSourceNumero,
+        facturesPrecedentes: facturesPrecedentes,
         fontRegular: fontRegular,
         fontBold: fontBold,
         fontItalic: fontItalic);
@@ -167,6 +173,7 @@ class PdfService {
       {String docType = "DOCUMENT",
       bool isTvaApplicable = true,
       String? factureSourceNumero,
+      List<Map<String, dynamic>>? facturesPrecedentes,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
@@ -279,6 +286,9 @@ class PdfService {
                     ? lignes.where((l) => l.type == 'article').fold<Decimal>(
                         Decimal.zero,
                         (Decimal sum, l) => sum + (l.quantite * l.prixUnitaire))
+                    : null,
+                deductions: isSituation
+                    ? _buildDeductionsFromMaps(facturesPrecedentes)
                     : null),
             pw.SizedBox(height: 30),
             if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
@@ -516,57 +526,135 @@ class PdfService {
       {bool isDevis = false,
       bool showTva = true,
       bool isSituation = false,
-      Decimal? totalMarche}) {
+      Decimal? totalMarche,
+      List<Map<String, dynamic>>? deductions}) {
     final remiseRational = (totalHt * remise) / Decimal.fromInt(100);
     final remiseMontant = remiseRational.toDecimal();
 
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       child: pw.Container(
-        width: 220,
+        width: 280,
         child: pw.Column(children: [
-          // Contexte marché pour factures d'avancement
+          // === BLOC 1 : Contexte marché pour factures d'avancement ===
           if (isSituation &&
               totalMarche != null &&
               totalMarche > Decimal.zero) ...[
-            _buildTotalRow("Total Marché HT", totalMarche),
-            if (totalMarche > Decimal.zero)
-              _buildTotalRow("Avancement", null,
-                  label2:
-                      "${((totalHt * Decimal.fromInt(100)) / totalMarche).toDecimal(scaleOnInfinitePrecision: 10).toDouble().toStringAsFixed(1)}%"),
-            pw.Divider(),
-          ],
-          if (showTva)
-            _buildTotalRow(
-                isSituation ? "Travaux réalisés HT" : "Total HT", totalHt),
-          if (remise > Decimal.zero)
-            _buildTotalRow("Remise ($remise%)", remiseMontant,
-                isNegative: true),
-
-          if (showTva) ...[
-            pw.Divider(),
-            _buildTotalRow("Total TVA", totalTva),
-          ],
-
-          pw.Divider(),
-          _buildTotalRow(showTva ? "Total TTC" : "NET À PAYER", netAPayer,
-              isBold: !isSituation || acompte <= Decimal.zero),
-
-          // Déduction acompte/situations précédentes
-          if (!isDevis && acompte > Decimal.zero) ...[
-            _buildTotalRow("Déjà réglé", acompte, isNegative: true),
-            pw.Divider(),
-            _buildTotalRow("NET À PAYER", netAPayer - acompte, isBold: true),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: const pw.BoxDecoration(color: _lightGrey),
+              child: pw.Column(children: [
+                pw.Text("ÉTAT D'AVANCEMENT",
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        color: _primaryColor,
+                        fontSize: 9)),
+                pw.SizedBox(height: 4),
+                _buildTotalRow("Total Marché HT", totalMarche),
+                _buildTotalRow("Avancement", null,
+                    label2:
+                        "${((totalHt * Decimal.fromInt(100)) / totalMarche).toDecimal(scaleOnInfinitePrecision: 10).toDouble().toStringAsFixed(1)}%"),
+                _buildTotalRow("Travaux réalisés HT", totalHt),
+              ]),
+            ),
+            pw.SizedBox(height: 8),
           ],
 
-          // Pour DEVIS uniquement : Acompte demandé
-          if (isDevis && acompte > Decimal.zero) ...[
-            pw.SizedBox(height: 5),
-            _buildTotalRow("Acompte demandé", acompte),
-          ]
+          // === BLOC 2 : Récapitulatif financier & Déductions ===
+          if (isSituation) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: _primaryColor, width: 0.5),
+              ),
+              child: pw.Column(children: [
+                pw.Text("RÉCAPITULATIF FINANCIER",
+                    style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        color: _primaryColor,
+                        fontSize: 9)),
+                pw.SizedBox(height: 4),
+                _buildTotalRow(
+                    showTva ? "Total brut HT" : "Total brut", totalHt),
+                if (remise > Decimal.zero)
+                  _buildTotalRow("Remise ($remise%)", remiseMontant,
+                      isNegative: true),
+                if (showTva) ...[
+                  _buildTotalRow("TVA", totalTva),
+                  pw.Divider(),
+                  _buildTotalRow("Total brut TTC", netAPayer),
+                ],
+
+                // Déductions détaillées par facture précédente
+                if (deductions != null && deductions.isNotEmpty) ...[
+                  pw.SizedBox(height: 6),
+                  pw.Text("Déductions :",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 8)),
+                  pw.SizedBox(height: 2),
+                  ...deductions.map((d) => _buildTotalRow(
+                        d['description'] as String,
+                        d['montant'] as Decimal,
+                        isNegative: true,
+                      )),
+                  pw.Divider(),
+                ] else if (acompte > Decimal.zero) ...[
+                  pw.SizedBox(height: 4),
+                  _buildTotalRow("Déjà réglé", acompte, isNegative: true),
+                  pw.Divider(),
+                ],
+
+                // Net à payer final
+                _buildTotalRow(
+                  "NET À PAYER",
+                  _calculateNetSituation(netAPayer, acompte, deductions),
+                  isBold: true,
+                ),
+              ]),
+            ),
+          ] else ...[
+            // === Mode classique (non-situation) ===
+            if (showTva) _buildTotalRow("Total HT", totalHt),
+            if (remise > Decimal.zero)
+              _buildTotalRow("Remise ($remise%)", remiseMontant,
+                  isNegative: true),
+            if (showTva) ...[
+              pw.Divider(),
+              _buildTotalRow("Total TVA", totalTva),
+            ],
+            pw.Divider(),
+            _buildTotalRow(showTva ? "Total TTC" : "NET À PAYER", netAPayer,
+                isBold: acompte <= Decimal.zero),
+
+            // Déduction acompte/situations précédentes
+            if (!isDevis && acompte > Decimal.zero) ...[
+              _buildTotalRow("Déjà réglé", acompte, isNegative: true),
+              pw.Divider(),
+              _buildTotalRow("NET À PAYER", netAPayer - acompte, isBold: true),
+            ],
+
+            // Pour DEVIS uniquement : Acompte demandé
+            if (isDevis && acompte > Decimal.zero) ...[
+              pw.SizedBox(height: 5),
+              _buildTotalRow("Acompte demandé", acompte),
+            ],
+          ],
         ]),
       ),
     );
+  }
+
+  /// Calcule le net à payer situation en priorisant les déductions détaillées
+  static Decimal _calculateNetSituation(Decimal netAPayer, Decimal acompte,
+      List<Map<String, dynamic>>? deductions) {
+    if (deductions != null && deductions.isNotEmpty) {
+      final totalDeductions = deductions.fold<Decimal>(
+        Decimal.zero,
+        (sum, d) => sum + (d['montant'] as Decimal),
+      );
+      return netAPayer - totalDeductions;
+    }
+    return netAPayer - acompte;
   }
 
   static pw.Widget _buildTotalRow(String label, Decimal? amount,
@@ -586,6 +674,35 @@ class PdfService {
                 fontWeight:
                     isBold ? pw.FontWeight.bold : pw.FontWeight.normal)),
     ]);
+  }
+
+  /// Construit la liste de déductions détaillées à partir des factures
+  /// précédentes fournies en tant que Maps (pour PDF situation).
+  static List<Map<String, dynamic>>? _buildDeductionsFromMaps(
+      List<Map<String, dynamic>>? facturesPrecedentes) {
+    if (facturesPrecedentes == null || facturesPrecedentes.isEmpty) {
+      return null;
+    }
+
+    return facturesPrecedentes.map((fMap) {
+      final type = fMap['type'] as String? ?? '';
+      final numero = fMap['numero_facture'] as String? ?? '';
+      final montant = Decimal.parse((fMap['total_ttc'] ?? '0').toString());
+
+      String label;
+      if (type == 'acompte') {
+        label = "Fact. Acompte $numero";
+      } else if (type == 'situation') {
+        label = "Situation préc. $numero";
+      } else {
+        label = "Déduction $numero";
+      }
+
+      return <String, dynamic>{
+        'description': label,
+        'montant': montant,
+      };
+    }).toList();
   }
 
   static pw.Widget _buildPaiementsTable(

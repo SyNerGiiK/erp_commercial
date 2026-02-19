@@ -1,6 +1,6 @@
 # Base de données — ERP Artisan
 
-> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 18/02/2026
+> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 19/02/2026
 
 ---
 
@@ -44,6 +44,10 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
        │    ┌─────┴──────┐
        │    │ lignes_devis │
        │    └────────────┘
+       │          │ 1:N
+       │    ┌─────┴──────────┐
+       │    │lignes_chiffrages│── (progress billing)
+       │    └────────────────┘
        │
        ├────<┌────────────────────┐     ┌────────────────────────┐
        │     │factures_recurrentes│──<│lignes_facture_recurrente│
@@ -89,6 +93,7 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 | `lignes_facture_recurrente` | Lignes facture récurrente | ✅ | ❌ | ❌ |
 | `temps_activites` | Suivi du temps | ✅ | ❌ | ✅ |
 | `rappels` | Rappels & échéances | ✅ | ❌ | ✅ |
+| `lignes_chiffrages` | Chiffrage détaillé (progress billing) | ✅ | ❌ | ✅ |
 
 ---
 
@@ -376,6 +381,35 @@ Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`.
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
 
+### lignes_chiffrages
+
+Table de chiffrage interne avec support **Progress Billing** (suivi d'avancement par type).
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `devis_id` | `UUID` | NOT NULL | — | FK → devis.id |
+| `linked_ligne_devis_id` | `UUID` | NULL | — | FK → lignes_devis.id (regroupement par ligne publique) |
+| `designation` | `TEXT` | NOT NULL | — | Désignation du coût |
+| `quantite` | `NUMERIC` | NOT NULL | — | Quantité |
+| `unite` | `TEXT` | NOT NULL | `'u'` | Unité |
+| `prix_unitaire` | `NUMERIC` | NOT NULL | — | Prix d'achat unitaire HT |
+| `total_ligne` | `NUMERIC` | NOT NULL | — | Total HT ligne |
+| `fournisseur` | `TEXT` | NULL | — | Fournisseur |
+| `type_chiffrage` | `TEXT` | NOT NULL | `'materiel'` | `'materiel'` ou `'main_doeuvre'` (CHECK) |
+| `est_achete` | `BOOLEAN` | NOT NULL | `false` | Matériel réceptionné (binaire 0%/100%) |
+| `avancement_mo` | `NUMERIC` | NOT NULL | `0` | Avancement main d'œuvre (0-100, CHECK) |
+| `prix_vente_interne` | `NUMERIC` | NOT NULL | `0` | Part du prix de vente public allouée |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
+| `updated_at` | `TIMESTAMPTZ` | NULL | `now()` | Dernière MAJ |
+
+**Type chiffrage :**
+- `materiel` : fournitures, achats — avancement binaire via `est_achete` (0% ou 100%)
+- `main_doeuvre` : travail, pose — avancement progressif via `avancement_mo` (slider 0-100%)
+
+**Calcul de la Valeur Réalisée :** `prix_vente_interne × avancement%` (matériel : 0 ou 100, MO : valeur du slider)
+
 ---
 
 ## Relations (Foreign Keys)
@@ -408,8 +442,12 @@ factures
 
 devis
   ├── 1:N → lignes_devis.devis_id
+  ├── 1:N → lignes_chiffrages.devis_id
   ├── 1:1 → factures.devis_source_id (transformation)
   └── self → devis.devis_parent_id (avenants)
+
+lignes_devis
+  └── 1:N → lignes_chiffrages.linked_ligne_devis_id (progress billing)
 
 factures_recurrentes
   └── 1:N → lignes_facture_recurrente.facture_recurrente_id
@@ -460,6 +498,7 @@ factures
 | `trg_factures_recurrentes_updated_at` | `factures_recurrentes` |
 | `trg_temps_activites_updated_at` | `temps_activites` |
 | `trg_rappels_updated_at` | `rappels` |
+| `trg_lignes_chiffrages_updated_at` | `lignes_chiffrages` |
 
 **Fonction commune :** `set_updated_at()` — met `NEW.updated_at = NOW()` avant chaque UPDATE.
 
@@ -493,6 +532,14 @@ CREATE INDEX idx_audit_logs_record ON audit_logs(record_id);
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_table ON audit_logs(table_name);
 CREATE INDEX idx_audit_logs_created ON audit_logs(created_at DESC);
+```
+
+### lignes_chiffrages (optimisation progress billing)
+
+```sql
+CREATE INDEX idx_lignes_chiffrages_linked_ligne_devis ON lignes_chiffrages(linked_ligne_devis_id) WHERE linked_ligne_devis_id IS NOT NULL;
+CREATE INDEX idx_lignes_chiffrages_devis_id ON lignes_chiffrages(devis_id) WHERE devis_id IS NOT NULL;
+CREATE INDEX idx_lignes_chiffrages_type ON lignes_chiffrages(type_chiffrage);
 ```
 
 ### Autres index (créés automatiquement)
@@ -543,6 +590,14 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 6. **ALTER `devis`** : Ajout `devise`, `taux_change`, `notes_privees`
 7. **3 triggers `updated_at`** sur factures_recurrentes, temps_activites, rappels
 
+### Sprint 15 : Smart Progress Billing (`migration_sprint15_progress_billing.sql`)
+
+1. **ALTER `lignes_chiffrages`** : Ajout colonnes `linked_ligne_devis_id` (FK → lignes_devis), `type_chiffrage` (CHECK materiel/main_doeuvre), `est_achete`, `avancement_mo` (CHECK 0-100), `prix_vente_interne`
+2. **3 index** : `idx_lignes_chiffrages_linked_ligne_devis`, `idx_lignes_chiffrages_devis_id`, `idx_lignes_chiffrages_type`
+3. **Trigger `updated_at`** : `trg_lignes_chiffrages_updated_at`
+4. **RLS policy** : `lignes_chiffrages_user_policy` (FOR ALL, user_id = auth.uid())
+5. **Commentaires SQL** : Documentation des colonnes pour les outils Supabase
+
 ### Ordre d'exécution
 
 ```
@@ -551,6 +606,7 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 3. migration_sprint8_audit_email.sql        (Sprint 8)
 4. migration_sprint9_pdf_custom.sql         (Sprint 9)
 5. migration_sprint14_20_features.sql       (Sprint 14-20)
+6. migration_sprint15_progress_billing.sql  (Sprint 15)
 ```
 
-> **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Seules les 4 migrations ci-dessus sont effectives.
+> **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Seules les 6 migrations ci-dessus sont effectives.

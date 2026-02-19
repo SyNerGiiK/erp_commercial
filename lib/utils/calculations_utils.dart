@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import '../models/chiffrage_model.dart';
 
 class CalculationsUtils {
   /// Calcule un montant de charge URSSAF
@@ -87,6 +88,161 @@ class CalculationsUtils {
   static Decimal roundDecimal(Decimal value, int decimals) {
     final factor = Decimal.parse('1${'0' * decimals}');
     return ((value * factor).round() / factor).toDecimal();
+  }
+
+  // ========== PROGRESS BILLING — AVANCEMENT INTELLIGENT ==========
+
+  /// Calcule l'avancement d'une ligne de devis à partir de ses coûts enfants.
+  ///
+  /// Formule : (Valeur Réalisée / Prix Total LigneDevis) × 100
+  ///
+  /// La "Valeur Réalisée" est la somme des valeurs réalisées de chaque LigneChiffrage
+  /// liée à cette ligne de devis :
+  /// - Matériel : `est_achete ? prixVenteInterne : 0`
+  /// - Main d'œuvre : `prixVenteInterne × (avancementMo / 100)`
+  ///
+  /// Retourne un pourcentage 0–100 arrondi à 1 décimale.
+  /// Si aucun chiffrage, retourne Decimal.zero.
+  static Decimal calculateLigneDevisAvancement({
+    required List<LigneChiffrage> chiffrageEnfants,
+    required Decimal prixTotalLigneDevis,
+  }) {
+    if (chiffrageEnfants.isEmpty || prixTotalLigneDevis <= Decimal.zero) {
+      return Decimal.zero;
+    }
+
+    Decimal valeurRealisee = Decimal.zero;
+    for (final c in chiffrageEnfants) {
+      valeurRealisee += c.valeurRealisee;
+    }
+
+    if (valeurRealisee <= Decimal.zero) return Decimal.zero;
+
+    // Avancement = (valeurRealisée / prixTotal) × 100
+    final avancement =
+        ((valeurRealisee * Decimal.fromInt(100)) / prixTotalLigneDevis)
+            .toDecimal(scaleOnInfinitePrecision: 10);
+
+    // Cap à 100% maximum
+    if (avancement > Decimal.fromInt(100)) return Decimal.fromInt(100);
+
+    return roundDecimal(avancement, 1);
+  }
+
+  /// Calcule l'avancement global d'un devis (toutes lignes confondues) en mode Global.
+  ///
+  /// Formule : Σ(valeurRealisée de chaque chiffrage) / Σ(prixVenteInterne total) × 100
+  ///
+  /// Cette approche pondérée évite les biais quand les lignes ont des poids différents.
+  static Decimal calculateDevisAvancementGlobal({
+    required List<LigneChiffrage> tousChiffrages,
+  }) {
+    if (tousChiffrages.isEmpty) return Decimal.zero;
+
+    Decimal totalPrixVenteInterne = Decimal.zero;
+    Decimal totalValeurRealisee = Decimal.zero;
+
+    for (final c in tousChiffrages) {
+      totalPrixVenteInterne += c.prixVenteInterne;
+      totalValeurRealisee += c.valeurRealisee;
+    }
+
+    if (totalPrixVenteInterne <= Decimal.zero) return Decimal.zero;
+
+    final avancement =
+        ((totalValeurRealisee * Decimal.fromInt(100)) / totalPrixVenteInterne)
+            .toDecimal(scaleOnInfinitePrecision: 10);
+
+    if (avancement > Decimal.fromInt(100)) return Decimal.fromInt(100);
+
+    return roundDecimal(avancement, 1);
+  }
+
+  /// Pour une liste de lignes de devis, calcule l'avancement de chacune
+  /// à partir du chiffrage groupé par `linkedLigneDevisId`.
+  ///
+  /// Retourne une Map<String, Decimal> : ligneDevisId → avancement (0–100)
+  static Map<String, Decimal> calculateAllLignesAvancement({
+    required List<dynamic> lignesDevis,
+    required List<LigneChiffrage> tousChiffrages,
+  }) {
+    final result = <String, Decimal>{};
+
+    // Grouper les chiffrages par ligneDevisId
+    final grouped = <String, List<LigneChiffrage>>{};
+    for (final c in tousChiffrages) {
+      if (c.linkedLigneDevisId != null) {
+        grouped.putIfAbsent(c.linkedLigneDevisId!, () => []).add(c);
+      }
+    }
+
+    for (final ligne in lignesDevis) {
+      final ligneId = ligne.id as String?;
+      if (ligneId == null) continue;
+
+      // Ignorer les lignes non-chiffrables
+      final type = ligne.type as String;
+      if (['titre', 'sous-titre', 'texte', 'saut_page'].contains(type)) {
+        continue;
+      }
+
+      final enfants = grouped[ligneId] ?? [];
+      final prixTotal =
+          (ligne.quantite as Decimal) * (ligne.prixUnitaire as Decimal);
+
+      result[ligneId] = calculateLigneDevisAvancement(
+        chiffrageEnfants: enfants,
+        prixTotalLigneDevis: prixTotal,
+      );
+    }
+
+    return result;
+  }
+
+  /// Calcule le total brut des travaux à date pour une facture de situation.
+  /// Pour chaque ligne : prixUnitaire × quantité × (avancement / 100)
+  static Decimal calculateTotalBrutTravauxADate(List<dynamic> lignesFacture) {
+    Decimal total = Decimal.zero;
+    for (final l in lignesFacture) {
+      final type = l.type as String;
+      if (['titre', 'sous-titre', 'texte', 'saut_page'].contains(type)) {
+        continue;
+      }
+      total += l.totalLigne as Decimal;
+    }
+    return total;
+  }
+
+  /// Génère les lignes de déduction à partir des factures précédentes
+  /// liées au même devis source.
+  ///
+  /// Retourne une liste de maps {description, montant} prêtes pour le PDF.
+  static List<Map<String, dynamic>> generateDeductionLines({
+    required List<dynamic> facturesPrecedentes,
+  }) {
+    final deductions = <Map<String, dynamic>>[];
+
+    for (final f in facturesPrecedentes) {
+      final type = f.type as String;
+      final numero = f.numeroFacture as String;
+      final totalTtc = f.totalTtc as Decimal;
+
+      String label;
+      if (type == 'acompte') {
+        label = "Déduction Facture d'Acompte $numero";
+      } else if (type == 'situation') {
+        label = "Déduction Situation précédente $numero";
+      } else {
+        label = "Déduction $numero";
+      }
+
+      deductions.add({
+        'description': label,
+        'montant': totalTtc,
+      });
+    }
+
+    return deductions;
   }
 
   // ========== VENTILATION URSSAF BIC/BNC ==========

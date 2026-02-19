@@ -3,12 +3,12 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-green?logo=supabase)](https://supabase.com)
-[![Tests](https://img.shields.io/badge/Tests-636%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-636%2B%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
 **ERP Artisan** est une solution SaaS moderne développée en **Flutter Web**, conçue pour simplifier la gestion quotidienne des **artisans, micro-entrepreneurs et TPE du bâtiment**.
 
-L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Factures récurrentes, Suivi du temps, Rappels & Échéances fiscales, Tableaux de bord financiers, Suivi URSSAF, Suivi TVA et Multi-devises.
+L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Factures récurrentes, Suivi du temps, Rappels & Échéances fiscales, Suivi d'avancement / Progress Billing, Tableaux de bord financiers, Suivi URSSAF, Suivi TVA et Multi-devises.
 
 ---
 
@@ -43,6 +43,7 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 | **Dépenses** | Suivi des dépenses professionnelles par catégorie |
 | **Articles** | Bibliothèque de produits/services réutilisables pour saisie rapide |
 | **Liste de courses** | Gestion des achats matériaux avec calcul des quantités |
+| **Rentabilité** | Analyse de rentabilité et suivi d'avancement (Progress Billing) par devis |
 
 ### 🎨 Éditeur de Documents & PDF
 
@@ -118,7 +119,17 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - **Priorités** : Urgente, haute, normale, basse — code couleur visuel
 - **Suivi** : Jours restants, détection retard, rappels proches (< 7 jours)
 
-### 💱 Multi-Devises
+### � Suivi d'Avancement / Progress Billing
+
+- **Vue arborescente** : Panneau gauche avec arbre Devis → Lignes → Coûts internes (matériel / main d'œuvre)
+- **Chiffrage par type** : Matériel (toggle binaire acheté/non acheté) et Main d'œuvre (slider 0-100%)
+- **Auto-save intelligent** : Sauvegarde immédiate pour les toggles, debounce 400ms pour les sliders
+- **Avancement automatique** : Calcul en temps réel de l'avancement par ligne de devis et global
+- **Bridge facturation** : Pré-remplissage automatique des factures de situation depuis l'avancement chiffrage
+- **PDF 2 blocs** : Facture de situation avec bloc "État d'avancement" + bloc "Récapitulatif financier" (déductions détaillées)
+- **ChiffrageDialog** : Dialogue spécialisé avec sélection type MAT/MO, prix d'imputation, bibliothèque articles
+
+### �💱 Multi-Devises
 
 - **Devise configurable** : EUR par défaut, extensible à toute devise
 - **Taux de change** : Stocké sur chaque facture et devis
@@ -188,7 +199,7 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 
 - **ViewModels** héritent de `BaseViewModel` (`lib/core/base_viewmodel.dart`) avec pattern `_loadingDepth` réentrant + `executeOperation()` pour tout appel async
 - **Repositories** : interface abstraite `IXxxRepository` + implémentation concrète héritant de `BaseRepository` (`lib/core/base_repository.dart`) avec `prepareForInsert()`/`prepareForUpdate()`
-- **Injection** : repositories injectés via constructeur optionnel dans les VMs (`IFactureRepository? repository`) → fallback vers impl concrète. 18 Providers enregistrés dans `lib/config/dependency_injection.dart`
+- **Injection** : repositories injectés via constructeur optionnel dans les VMs (`IFactureRepository? repository`) → fallback vers impl concrète. 20 Providers enregistrés dans `lib/config/dependency_injection.dart`
 - **Navigation** : GoRouter avec auth guard (redirige `/app/*` → `/login` si non connecté). Objets passés via `state.extra`
 - **Mixins** : `AutoSaveMixin` (brouillons SharedPreferences) et `PdfGenerationMixin` (génération PDF) sur DevisViewModel/FactureViewModel
 - **Calculs financiers** : 100% `Decimal` (jamais `double` pour l'argent) — référence `lib/utils/calculations_utils.dart`
@@ -202,7 +213,7 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 ```
 lib/                          (155+ fichiers Dart)
 ├── config/                   # Configuration (4 fichiers)
-│   ├── dependency_injection.dart   # 18 Providers enregistrés
+│   ├── dependency_injection.dart   # 20 Providers enregistrés
 │   ├── router.dart                 # ~28 routes (GoRouter + auth guard)
 │   ├── supabase_config.dart        # Connexion Supabase
 │   └── theme.dart                  # AppTheme (Material 3 + design tokens)
@@ -233,9 +244,10 @@ lib/                          (155+ fichiers Dart)
 │   ├── urssaf_model.dart           # Déclaration URSSAF + UrssafConfig
 │   └── enums/                      # Énumérations (TypeEntreprise, PdfTheme, etc.)
 │
-├── repositories/             # Accès données (15 fichiers)
+├── repositories/             # Accès données (16 fichiers)
 │   ├── article_repository.dart     # IArticleRepository + impl
 │   ├── auth_repository.dart        # IAuthRepository + impl (Supabase Auth)
+│   ├── chiffrage_repository.dart   # IChiffrageRepository + impl (progress billing)
 │   ├── client_repository.dart      # IClientRepository + impl
 │   ├── dashboard_repository.dart   # IDashboardRepository + impl
 │   ├── depense_repository.dart     # IDepenseRepository + impl
@@ -250,7 +262,7 @@ lib/                          (155+ fichiers Dart)
 │   ├── temps_repository.dart       # ITempsRepository + impl
 │   └── urssaf_repository.dart      # IUrssafRepository + impl
 │
-├── viewmodels/               # Logique métier (18 fichiers)
+├── viewmodels/               # Logique métier (20 fichiers)
 │   ├── article_viewmodel.dart      # CRUD articles
 │   ├── auth_viewmodel.dart         # Auth (login, signup, logout)
 │   ├── client_viewmodel.dart       # CRUD clients
@@ -266,6 +278,7 @@ lib/                          (155+ fichiers Dart)
 │   ├── planning_viewmodel.dart     # CRUD événements + filtres
 │   ├── rappel_viewmodel.dart       # CRUD rappels + génération auto fiscale
 │   ├── relance_viewmodel.dart      # Relances impayés + envoi email
+│   ├── rentabilite_viewmodel.dart  # Suivi avancement + progress billing + auto-save
 │   ├── shopping_viewmodel.dart     # CRUD liste de courses
 │   ├── temps_viewmodel.dart        # Suivi temps + CA potentiel + groupement
 │   └── urssaf_viewmodel.dart       # Simulation URSSAF + config seuils TVA
@@ -327,7 +340,8 @@ lib/                          (155+ fichiers Dart)
 │   │   ├── factures_retard_card.dart
 │   │   ├── archivage_suggestion_card.dart
 │   │   └── ...
-│   └── dialogs/                    # Dialogues spécialisés (4)
+│   └── dialogs/                    # Dialogues spécialisés (5)
+│       ├── chiffrage_dialog.dart        # Dialog chiffrage (MAT/MO, bibliothèque)
 │
 └── main.dart                 # Point d'entrée
 
@@ -355,7 +369,7 @@ Tous les modèles implémentent `fromMap()`, `toMap()` et `copyWith()`.
 | `Paiement` | `paiements` | Paiement partiel/total rattaché à une facture, flag acompte/solde |
 | `Devis` | `devis` | Devis avec analyse de rentabilité, devise, taux change, notes privées |
 | `LigneDevis` | `lignes_devis` | Ligne de devis (idem LigneFacture) |
-| `LigneChiffrage` | `lignes_chiffrages` | Chiffrage matières (achat, marge, fournisseur) |
+| `LigneChiffrage` | `lignes_chiffrages` | Chiffrage avec type (matériel/MO), avancement, prix vente interne |
 | `Depense` | `depenses` | Dépense professionnelle catégorisée |
 | `Article` | `articles` | Article catalogue réutilisable |
 | `ProfilEntreprise` | `entreprises` | Profil entreprise (logo, couleurs custom, thème PDF, mentions légales, TVA) |
@@ -393,6 +407,8 @@ Génération de PDF professionnels pour factures et devis :
 - Couleur primaire custom configurable par utilisateur
 - Logo header + footer, mentions légales obligatoires (pénalités, indemnité 40€, escompte)
 - Référence facture source dans les avoirs
+- **PDF Situation 2 blocs** : Bloc "État d'avancement" (total marché, % avancement, travaux réalisés) + Bloc "Récapitulatif financier" (brut, TVA, déductions détaillées par facture précédente, NET À PAYER)
+- `PdfGenerationRequest` enrichi avec `facturesPrecedentes` pour le calcul des déductions
 - Exécution isolate-ready via `PdfGenerationRequest`
 
 ### TvaService (`lib/services/tva_service.dart`)
@@ -441,6 +457,7 @@ Calculs financiers avec précision `Decimal` :
 - `calculateTotalLigne` (gestion mode situation/avancement)
 - `calculateTauxMarge`, `calculateTotalTva` (multi-taux)
 - `roundDecimal`, `ventilerCA` (vente/service)
+- **Progress Billing** : `calculateLigneDevisAvancement`, `calculateDevisAvancementGlobal`, `calculateAllLignesAvancement`, `calculateTotalBrutTravauxADate`, `generateDeductionLines`
 
 ### FormatUtils (`lib/utils/format_utils.dart`)
 Formatage locale française (`fr_FR`) :
@@ -576,4 +593,4 @@ flutter clean                   # Si fichiers éphémères corrompus
 
 ---
 
-*ERP Artisan 3.0 — Dernière mise à jour : 18 février 2026*
+*ERP Artisan 3.0 — Dernière mise à jour : 19 février 2026*

@@ -3,7 +3,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-green?logo=supabase)](https://supabase.com)
-[![Tests](https://img.shields.io/badge/Tests-636%2B%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-662%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
 **ERP Artisan** est une solution SaaS moderne développée en **Flutter Web**, conçue pour simplifier la gestion quotidienne des **artisans, micro-entrepreneurs et TPE du bâtiment**.
@@ -96,7 +96,16 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 - **Onboarding guidé** : Assistant 4 étapes (Identité → Coordonnées → Facturation/TVA → Logo/Récap)
 - **Validation SIRET** : Algorithme Luhn standard + cas spécial La Poste
 - **Auto-génération** : Mentions légales générées automatiquement depuis le profil
-- **Design système** : `AppTheme` avec spacing, radius, shadows, couleurs status
+- **Design système** : `AppTheme` Aurora 2030 — glassmorphisme, ombres colorées, typographie cinétique
+
+### 🎨 Design System — Aurora 2030
+
+- **Glassmorphisme lumineux** : Surfaces givrées semi-transparentes avec `BackdropFilter` et bordures lumineuses
+- **Palette chromatique** : Indigo (#6366F1) → Violet (#8B5CF6), Émeraude (#10B981), Cyan (#06B6D4), Rose (#F43F5E)
+- **Typographie cinétique** : Space Grotesk (titres, letter-spacing négatif) + Inter (corps)
+- **Ombres colorées** : Ombres teintées par la couleur primaire au lieu du noir
+- **Micro-interactions** : AnimatedContainer sur la navigation, glow contextuel sur sélection
+- **Widgets Aurora** : `GlassContainer`, `AuroraBackground` (mesh gradient), `GlowIcon` (halo lumineux)
 
 ### 🔄 Factures Récurrentes
 
@@ -216,7 +225,7 @@ lib/                          (155+ fichiers Dart)
 │   ├── dependency_injection.dart   # 20 Providers enregistrés
 │   ├── router.dart                 # ~28 routes (GoRouter + auth guard)
 │   ├── supabase_config.dart        # Connexion Supabase
-│   └── theme.dart                  # AppTheme (Material 3 + design tokens)
+│   └── theme.dart                  # AppTheme Aurora 2030 (glassmorphism + design tokens)
 │
 ├── core/                     # Classes de base (5 fichiers)
 │   ├── base_viewmodel.dart         # ChangeNotifier + _loadingDepth + executeOperation
@@ -328,13 +337,17 @@ lib/                          (155+ fichiers Dart)
 │   ├── devis/stepper/              # Stepper devis 4 étapes
 │   └── ...                         # Autres vues (client, dépense, login, etc.)
 │
-├── widgets/                  # Composants réutilisables (30 fichiers)
-│   ├── base_screen.dart            # Layout responsive avec drawer
-│   ├── custom_drawer.dart          # Drawer sectionné (5 groupes, 16 entrées)
+├── widgets/                  # Composants réutilisables (33 fichiers)
+│   ├── aurora/                     # Widgets Aurora 2030
+│   │   ├── glass_container.dart    # Conteneur givré réutilisable (BackdropFilter)
+│   │   ├── aurora_background.dart  # Fond mesh gradient ambiant (3 orbes)
+│   │   └── glow_icon.dart          # Icône à halo lumineux contextuel
+│   ├── base_screen.dart            # Layout responsive avec drawer + AuroraBackground
+│   ├── custom_drawer.dart          # Sidebar glassmorphique (BackdropFilter, glow)
 │   ├── ligne_editor.dart           # Éditeur de lignes documents
 │   ├── tva_alert_banner.dart       # Alerte TVA (seuils approchés/dépassés)
 │   ├── dashboard/                  # 11 widgets tableau de bord
-│   │   ├── gradient_kpi_card.dart
+│   │   ├── gradient_kpi_card.dart  # KPI premium (ombres colorées, orbe lumineux)
 │   │   ├── revenue_chart.dart
 │   │   ├── suivi_seuil_tva_card.dart
 │   │   ├── factures_retard_card.dart
@@ -535,10 +548,10 @@ Formatage locale française (`fr_FR`) :
 
 ## ✅ Tests
 
-**636 tests — 100% passés** | **0 issue d'analyse statique**
+**662 tests — 100% passés** | **0 issue d'analyse statique**
 
 ```bash
-flutter test    → 636 tests passed
+flutter test    → 662 tests passed
 flutter analyze → No issues found!
 ```
 
@@ -546,8 +559,8 @@ flutter analyze → No issues found!
 
 | Catégorie | Fichiers | Tests | Détail |
 |-----------|----------|-------|--------|
-| **ViewModels** | 18 | ~400 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage, corbeille, récurrence, temps, rappels |
-| **Services** | 8 | ~90 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, EcheanceService, design system, PDF themes |
+| **ViewModels** | 18 | ~420 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage, corbeille, récurrence, temps, rappels |
+| **Services** | 8 | ~100 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, EcheanceService, design system Aurora, PDF themes |
 | **Models** | 6 | ~75 | `fromMap`, `toMap`, `copyWith`, getters calculés, champs complets, FactureRecurrente, TempsActivite, Rappel |
 | **Utils** | 3 | ~35 | Calculs Decimal, formatage FR, validation (Luhn SIRET, TVA, etc.) |
 | **Widgets** | 3 | ~12 | FacturesRetardCard, ListeClientsView, LoginView |
@@ -586,7 +599,7 @@ flutter analyze → No issues found!
 ```bash
 flutter run -d chrome           # Dev web
 flutter build windows           # Build Windows (production)
-flutter test                    # 636 tests unitaires + intégration
+flutter test                    # 662 tests unitaires + intégration
 flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```

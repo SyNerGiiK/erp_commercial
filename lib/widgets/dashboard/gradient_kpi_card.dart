@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Carte KPI Aurora 2030 — gradient lumineux, icône watermark,
+/// ombre colorée contextuelle et variation animée.
 class GradientKpiCard extends StatelessWidget {
   final String title;
   final String value;
@@ -22,7 +24,7 @@ class GradientKpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           colors: gradientColors,
           begin: Alignment.topLeft,
@@ -30,27 +32,52 @@ class GradientKpiCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.last.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: gradientColors.last.withValues(alpha: 0.30),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+          BoxShadow(
+            color: gradientColors.first.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Stack(
         children: [
-          // Background Icon (Watermark)
+          // Background Icon Watermark — plus grand, plus subtil
           Positioned(
-            right: -10,
-            top: -10,
+            right: -14,
+            top: -14,
             child: Icon(
               icon,
-              size: 80,
-              color: Colors.white.withValues(alpha: 0.1),
+              size: 90,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+
+          // Reflet lumineux en haut à gauche
+          Positioned(
+            left: -20,
+            top: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.white.withValues(alpha: 0.12),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
             ),
           ),
 
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -61,20 +88,24 @@ class GradientKpiCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 20),
+                      child: Icon(icon, color: Colors.white, size: 18),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         title.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -82,22 +113,24 @@ class GradientKpiCard extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
-                // Value
+                // Value — typographie cinématique
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     value,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      height: 1.1,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Footer (Variation & Subtitle)
                 Row(
@@ -105,29 +138,33 @@ class GradientKpiCard extends StatelessWidget {
                     if (variation != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: variation! >= 0
-                              ? Colors.white.withValues(alpha: 0.25)
-                              : Colors.red.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
+                              ? Colors.white.withValues(alpha: 0.22)
+                              : Colors.red.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 0.5,
+                          ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               variation! >= 0
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
+                                  ? Icons.trending_up_rounded
+                                  : Icons.trending_down_rounded,
                               color: Colors.white,
                               size: 12,
                             ),
-                            const SizedBox(width: 2),
+                            const SizedBox(width: 3),
                             Text(
                               "${variation!.abs().toStringAsFixed(1)}%",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -138,9 +175,10 @@ class GradientKpiCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         subtitle,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 11,
+                          fontWeight: FontWeight.w400,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),

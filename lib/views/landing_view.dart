@@ -38,12 +38,16 @@ class LandingView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E5572),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -53,11 +57,11 @@ class LandingView extends StatelessWidget {
           // Logo
           Text(
             'ARTISAN 3.0',
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
-              letterSpacing: 1.2,
+              letterSpacing: 0.5,
             ),
           ),
 
@@ -66,10 +70,10 @@ class LandingView extends StatelessWidget {
             onPressed: () => context.go('/login'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF1E5572),
+              foregroundColor: const Color(0xFF6366F1),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
             ),
@@ -98,8 +102,8 @@ class LandingView extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1E5572),
-            Color(0xFF2A6A8C),
+            Color(0xFF6366F1),
+            Color(0xFF8B5CF6),
           ],
         ),
       ),
@@ -109,11 +113,12 @@ class LandingView extends StatelessWidget {
           Text(
             'L\'ERP par les artisans,\npour les artisans',
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: isDesktop ? 48 : 32,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: isDesktop ? 52 : 34,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
-              height: 1.2,
+              height: 1.15,
+              letterSpacing: -1,
             ),
           ),
 
@@ -137,15 +142,15 @@ class LandingView extends StatelessWidget {
             onPressed: () => context.go('/login'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF1E5572),
+              foregroundColor: const Color(0xFF6366F1),
               padding: EdgeInsets.symmetric(
                 horizontal: isDesktop ? 48 : 32,
                 vertical: isDesktop ? 20 : 16,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 8,
+              elevation: 0,
             ),
             child: Text(
               'Commencer',
@@ -167,16 +172,17 @@ class LandingView extends StatelessWidget {
         horizontal: isDesktop ? 80 : 24,
         vertical: isDesktop ? 100 : 60,
       ),
-      color: const Color(0xFFF8FAFB),
+      color: const Color(0xFFF8FAFC),
       child: Column(
         children: [
           // Titre de section
           Text(
             'Fonctionnalités clés',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.spaceGrotesk(
               fontSize: isDesktop ? 36 : 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E5572),
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+              letterSpacing: -0.5,
             ),
           ),
 
@@ -254,13 +260,18 @@ class LandingView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.7),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
           ),
         ],
       ),
@@ -268,15 +279,18 @@ class LandingView extends StatelessWidget {
         children: [
           // Icône
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E5572).withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+              ),
             ),
             child: Icon(
               icon,
-              size: 40,
-              color: const Color(0xFF1E5572),
+              size: 36,
+              color: const Color(0xFF6366F1),
             ),
           ),
 
@@ -286,10 +300,10 @@ class LandingView extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E5572),
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
             ),
           ),
 
@@ -314,7 +328,13 @@ class LandingView extends StatelessWidget {
   Widget _buildFooter(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      color: const Color(0xFF1E5572),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
       child: Center(
         child: Text(
           '© 2026 Artisan 3.0 - Tous droits réservés',

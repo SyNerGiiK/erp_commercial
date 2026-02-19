@@ -64,7 +64,11 @@ ScaffoldMessenger.of(context)...
 - **Switch** : `activeTrackColor:` — jamais `activeColor:`
 - **ListTile** : `leading`/`trailing` — jamais `secondary`
 - **PDF** : `import 'package:pdf/widgets.dart' as pw;` — jamais `const` devant `pw.TextStyle` avec `PdfColor.fromInt()`
-- **Design tokens** : `AppTheme` dans `lib/config/theme.dart` (spacing, radius, shadows, couleurs status)
+- **Design tokens** : `AppTheme` Aurora 2030 dans `lib/config/theme.dart` (glassmorphism, ombres colorées, spacing, radius, surfaces glass)
+- **Widgets Aurora** : `GlassContainer`, `AuroraBackground`, `GlowIcon` dans `lib/widgets/aurora/`
+- **Typographie** : `GoogleFonts.spaceGrotesk()` (titres) + `GoogleFonts.inter()` (corps)
+- **Ombres** : Teintées primary `AppTheme.shadowSmall/Medium/Large/Glow` — jamais `Colors.black`
+- **Surfaces** : `AppTheme.surfaceGlass*`, `AppTheme.glassDecoration` — plus d'élévation Material
 
 ## Modèles
 
@@ -84,7 +88,7 @@ Tous dans `lib/models/` avec `fromMap()`, `toMap()`, `copyWith()`. 17 modèles d
 
 ## Tests
 
-**636 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
+**662 tests**, structure miroir `test/` ↔ `lib/`. Commande : `flutter test`
 
 - **Mocking** : `mocktail` — mocks dans `test/mocks/`
 - **Pattern** : mock l'interface repository, injecte dans le VM via constructeur
@@ -110,7 +114,7 @@ setUp(() {
 | `lib/utils/calculations_utils.dart` | Calculs financiers 100% Decimal |
 | `lib/services/pdf_service.dart` | Génération PDF isolate-ready (2 blocs situation : travaux à date + déductions) |
 | `lib/services/echeance_service.dart` | Génération auto rappels fiscaux (URSSAF, CFE, Impôts, TVA) |
-| `lib/config/theme.dart` | AppTheme (design tokens, couleurs, spacing) |
+| `lib/config/theme.dart` | AppTheme Aurora 2030 (glassmorphism, ombres colorées, palette Indigo→Violet) |
 | `lib/repositories/chiffrage_repository.dart` | CRUD lignes_chiffrages avec auto-save unitaire |
 | `lib/viewmodels/rentabilite_viewmodel.dart` | Arbre Devis → LigneDevis → LigneChiffrage, auto-save debounce |
 
@@ -186,7 +190,7 @@ setUp(() {
 
 ```bash
 flutter pub get
-flutter test                    # 636 tests, doit être 100% vert
+flutter test                    # 662 tests, doit être 100% vert
 flutter build windows           # Build Windows (prod)
 flutter run -d chrome           # Dev web
 flutter clean                   # Si fichiers éphémères corrompus

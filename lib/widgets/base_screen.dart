@@ -1,8 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import '../config/theme.dart';
+import '../widgets/aurora/aurora_background.dart';
 import 'custom_drawer.dart';
 import 'custom_app_bar.dart';
 
+/// Écran de base Aurora 2030 — fond ambiant + sidebar glass + contenu centré.
 class BaseScreen extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -37,26 +39,29 @@ class BaseScreen extends StatelessWidget {
       bottom: appBarBottom,
     );
 
-    final bodyContent = Container(
-      color: AppTheme.background,
+    final bodyContent = AuroraBackground(
       child: Column(
         children: [
           if (subtitle.isNotEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              // Correctif : Couleur déplacée dans BoxDecoration
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                color: Colors.white.withValues(alpha: 0.7),
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppTheme.divider.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
               child: Text(
                 subtitle.toUpperCase(),
                 style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLight,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2),
+                  fontSize: 11,
+                  color: AppTheme.textLight,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -84,7 +89,7 @@ class BaseScreen extends StatelessWidget {
           ? Row(
               children: [
                 SizedBox(
-                  width: 280,
+                  width: 260,
                   child: CustomDrawer(
                     selectedIndex: menuIndex,
                     isPermanent: true,

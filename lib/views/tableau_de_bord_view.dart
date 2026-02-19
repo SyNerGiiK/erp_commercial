@@ -108,8 +108,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             variation: vm.caVariation,
                             icon: Icons.monetization_on_outlined,
                             gradientColors: const [
-                              Color(0xFF6B8EFF),
-                              Color(0xFF3B66F5)
+                              Color(0xFF6366F1),
+                              Color(0xFF8B5CF6)
                             ],
                           ),
                         ),
@@ -125,8 +125,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             variation: vm.beneficeVariation,
                             icon: Icons.savings_outlined,
                             gradientColors: const [
-                              Color(0xFF43E97B),
-                              Color(0xFF38F9D7)
+                              Color(0xFF10B981),
+                              Color(0xFF06B6D4)
                             ],
                           ),
                         ),
@@ -140,8 +140,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             subtitle: "Estimé selon statut",
                             icon: Icons.account_balance_outlined,
                             gradientColors: const [
-                              Color(0xFFFA709A),
-                              Color(0xFFFEE140)
+                              Color(0xFFF43F5E),
+                              Color(0xFFF59E0B)
                             ],
                           ),
                         ),
@@ -156,8 +156,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                             variation: vm.depensesVariation,
                             icon: Icons.shopping_bag_outlined,
                             gradientColors: const [
-                              Color(0xFFA8BFFF),
-                              Color(0xFF884D80)
+                              Color(0xFF818CF8),
+                              Color(0xFF475569)
                             ],
                           ),
                         ),
@@ -428,20 +428,24 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
               dateStr.toUpperCase(),
               style: const TextStyle(
                 color: AppTheme.textLight,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
+                letterSpacing: 1.5,
               ),
             ),
           ],
         ),
 
-        // Sélecteur de Période Moderne
+        // Sélecteur de Période Aurora — pilule glass
         Container(
-          padding: const EdgeInsets.all(AppTheme.spacing4),
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surfaceGlassBright,
             borderRadius: AppTheme.borderRadiusMedium,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.7),
+              width: 1,
+            ),
             boxShadow: AppTheme.shadowSmall,
           ),
           child: Row(
@@ -463,18 +467,30 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     return GestureDetector(
       onTap: () => vm.setPeriod(period),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(
             horizontal: AppTheme.spacing16, vertical: AppTheme.spacing8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primary : Colors.transparent,
           borderRadius: AppTheme.borderRadiusSmall,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                    spreadRadius: -2,
+                  ),
+                ]
+              : [],
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : AppTheme.textLight,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
           ),
         ),
       ),
@@ -488,9 +504,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     required String subtitle,
     required Color color,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceGlassBright,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.8),
+          width: 1,
+        ),
+        boxShadow: AppTheme.shadowSmall,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -498,10 +521,14 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.12),
+                  width: 1,
+                ),
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -510,10 +537,11 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                       color: AppTheme.textLight,
+                      letterSpacing: 0.3,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -521,8 +549,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                     value,
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       color: color,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 2),

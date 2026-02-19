@@ -83,11 +83,13 @@ class _TransformationDialogState extends State<TransformationDialog> {
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppTheme.primary.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: AppTheme.primary),
+                      const Icon(Icons.info_outline,
+                          size: 16, color: AppTheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -102,31 +104,40 @@ class _TransformationDialogState extends State<TransformationDialog> {
                   ),
                 ),
               ),
-            // Situation : saisie libre du pourcentage d'avancement
-            if (_selectedType == TransformationType.situation)
-              Padding(
-                padding: const EdgeInsets.only(left: 40, bottom: 10),
-                child: TextField(
-                  controller: _valueCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: "Pourcentage d'avancement (%)",
-                    suffixText: "%",
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (val) {
-                    setState(() {});
-                  },
-                ),
-              ),
             _buildOption(
               TransformationType.situation,
               "Facture d'Avancement (Situation)",
-              "Facturer un % d'avancement travaux.",
+              "Avancement par ligne — ajustez les % dans l'éditeur.",
               Icons.timelapse,
             ),
+            // Situation : info en lecture seule
+            if (_selectedType == TransformationType.situation)
+              Padding(
+                padding: const EdgeInsets.only(left: 40, bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 16, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Les lignes de service seront à 0% par défaut.\n"
+                          "Les lignes de vente (fournitures) seront à 0% car couvertes par l'acompte.\n"
+                          "Ajustez l'avancement de chaque ligne dans l'éditeur.",
+                          style: TextStyle(fontSize: 12, color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             _buildOption(
               TransformationType.solde,
               "Facture de Solde",
@@ -205,12 +216,12 @@ class _TransformationDialogState extends State<TransformationDialog> {
 
   void _submit() {
     Decimal val = Decimal.zero;
-    if (_selectedType == TransformationType.acompte ||
-        _selectedType == TransformationType.situation) {
+    if (_selectedType == TransformationType.acompte) {
       val = Decimal.tryParse(_valueCtrl.text.replaceAll(',', '.')) ??
           Decimal.zero;
       _isPercent = true;
     }
+    // Situation : pas de valeur globale, l'avancement est par ligne
     Navigator.pop(
         context, TransformationResultWrapper(_selectedType, val, _isPercent));
   }

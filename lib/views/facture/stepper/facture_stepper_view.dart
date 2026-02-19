@@ -496,6 +496,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
             content: Step3Lignes(
               lignes: _lignes,
               onLignesChanged: (l) => setState(() => _lignes = l),
+              isSituation: _typeFacture == 'situation',
             ),
             isActive: _currentStep >= 2,
             state: _currentStep > 2 ? StepState.complete : StepState.indexed,

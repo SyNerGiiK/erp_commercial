@@ -258,45 +258,40 @@ class DevisViewModel extends BaseViewModel
     }
 
     if (type == 'situation') {
-      // NOUVELLE LOGIQUE: Le calcul se fait sur (Devis - Acompte)
-      // Exemple: Devis 10k€, Acompte 3k€ → Base = 7k€
-      // Situation 50% = 50% × 7k€ = 3.5k€
-
-      // Calculer la base de référence
-      final montantDeReference = d.totalHt - d.acompteMontant;
-
-      // Ratio de réduction à appliquer sur chaque ligne
-      // Si pas d'acompte, ratio = 1.0 (comportement standard)
-      final ratioReduction = d.acompteMontant > Decimal.zero
-          ? (montantDeReference / d.totalHt).toDecimal()
-          : Decimal.one;
+      // FACTURE DE SITUATION (AVANCEMENT) — Règles légales :
+      // 1. Les prix unitaires restent ceux du marché (devis original)
+      // 2. L'avancement se définit PAR LIGNE (pas globalement)
+      // 3. Lignes "vente" (fournitures) : avancement 0% car couvertes par l'acompte
+      // 4. Lignes "service" (main d'œuvre) : avancement 0% par défaut, l'utilisateur ajuste
+      // 5. Total = somme des (qté × PU × avancement%) par ligne
+      // 6. Le montant déjà réglé (acomptes + situations précédentes) est déduit
 
       final newLignes = d.lignes.map((l) {
-        // Appliquer le ratio sur le prix unitaire
-        // Decimal * Decimal = Decimal (pas besoin de toDecimal)
-        final prixUnitaireAjuste = l.prixUnitaire * ratioReduction;
+        // Les lignes de vente (fournitures) sont à 0% car déjà couvertes par l'acompte
+        // Les lignes de service sont à 0% par défaut — l'utilisateur ajustera dans l'éditeur
+        final avancementLigne = Decimal.zero;
 
         return LigneFacture(
             description: l.description,
             quantite: l.quantite,
-            prixUnitaire:
-                prixUnitaireAjuste, // Prix réduit en fonction de l'acompte
+            prixUnitaire: l.prixUnitaire, // Prix du marché conservé
             totalLigne: Decimal.zero, // Sera calculé par l'avancement dans l'UI
             unite: l.unite,
+            typeActivite: l.typeActivite, // Conserver service/vente pour distinguer
             type: l.type,
             estGras: l.estGras,
             estItalique: l.estItalique,
             estSouligne: l.estSouligne,
-            avancement: value); // Utilise le pourcentage saisi dans le dialog
+            tauxTva: l.tauxTva,
+            avancement: avancementLigne);
       }).toList();
 
       return base.copyWith(
           lignes: newLignes,
           totalHt: Decimal.zero,
           objet: "Situation - ${d.objet}",
-          acompteDejaRegle: dejaRegle ??
-              Decimal.zero // Situation souvent autonome ou cumulative?
-          );
+          acompteDejaRegle: dejaRegle ?? Decimal.zero,
+      );
     }
 
     if (type == 'solde') {

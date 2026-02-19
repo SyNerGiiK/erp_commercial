@@ -314,4 +314,117 @@ void main() {
       expect(ValidationUtils.validateQuantite('abc'), isNotNull);
     });
   });
+
+  // --- TESTS VALIDATION IBAN (ISO 13616) ---
+
+  group('ValidationUtils - validateIban', () {
+    test('devrait accepter null (optionnel)', () {
+      expect(ValidationUtils.validateIban(null), isNull);
+    });
+
+    test('devrait accepter une chaîne vide (optionnel)', () {
+      expect(ValidationUtils.validateIban(''), isNull);
+    });
+
+    test('devrait accepter un IBAN français valide', () {
+      // IBAN de test standard FR76 3000 6000 0112 3456 7890 189
+      expect(
+          ValidationUtils.validateIban('FR7630006000011234567890189'), isNull);
+    });
+
+    test('devrait accepter un IBAN avec espaces', () {
+      expect(
+        ValidationUtils.validateIban('FR76 3000 6000 0112 3456 7890 189'),
+        isNull,
+      );
+    });
+
+    test('devrait accepter un IBAN en minuscules', () {
+      expect(
+        ValidationUtils.validateIban('fr7630006000011234567890189'),
+        isNull,
+      );
+    });
+
+    test('devrait accepter un IBAN allemand valide', () {
+      // DE89 3704 0044 0532 0130 00
+      expect(ValidationUtils.validateIban('DE89370400440532013000'), isNull);
+    });
+
+    test('devrait accepter un IBAN britannique valide', () {
+      // GB29 NWBK 6016 1331 9268 19
+      expect(ValidationUtils.validateIban('GB29NWBK60161331926819'), isNull);
+    });
+
+    test('devrait accepter un IBAN espagnol valide', () {
+      // ES91 2100 0418 4502 0005 1332
+      expect(ValidationUtils.validateIban('ES9121000418450200051332'), isNull);
+    });
+
+    test('devrait accepter un IBAN belge valide', () {
+      // BE68 5390 0754 7034
+      expect(ValidationUtils.validateIban('BE68539007547034'), isNull);
+    });
+
+    test('devrait rejeter un IBAN trop court', () {
+      expect(ValidationUtils.validateIban('FR76300'), isNotNull);
+    });
+
+    test('devrait rejeter un format sans code pays', () {
+      expect(ValidationUtils.validateIban('1234567890123456'), isNotNull);
+    });
+
+    test('devrait rejeter un code pays inconnu', () {
+      expect(ValidationUtils.validateIban('XX1234567890123456'), isNotNull);
+    });
+
+    test('devrait rejeter un IBAN français de mauvaise longueur', () {
+      // FR attend 27 caractères, ici 25
+      expect(ValidationUtils.validateIban('FR76300060000112345678'), isNotNull);
+    });
+
+    test('devrait rejeter un IBAN avec clé de contrôle incorrecte', () {
+      // Clé modifiée : FR00 au lieu de FR76
+      expect(
+        ValidationUtils.validateIban('FR0030006000011234567890189'),
+        isNotNull,
+      );
+    });
+
+    test('devrait rejeter un IBAN avec caractères spéciaux', () {
+      expect(
+        ValidationUtils.validateIban('FR76-3000-6000-0112-3456-7890-189'),
+        isNotNull,
+      );
+    });
+
+    test('devrait rejeter un IBAN allemand avec mauvaise clé', () {
+      // DE00 au lieu de DE89
+      expect(ValidationUtils.validateIban('DE00370400440532013000'), isNotNull);
+    });
+  });
+
+  group('ValidationUtils - validateIbanRequired', () {
+    test('devrait rejeter null', () {
+      expect(ValidationUtils.validateIbanRequired(null), isNotNull);
+    });
+
+    test('devrait rejeter une chaîne vide', () {
+      expect(ValidationUtils.validateIbanRequired(''), isNotNull);
+    });
+
+    test('devrait accepter un IBAN valide', () {
+      expect(
+        ValidationUtils.validateIbanRequired('FR7630006000011234567890189'),
+        isNull,
+      );
+    });
+
+    test('devrait rejeter un IBAN invalide', () {
+      expect(
+        ValidationUtils.validateIbanRequired('FR0000000000000000000000000'),
+        isNotNull,
+      );
+    });
+  });
 }

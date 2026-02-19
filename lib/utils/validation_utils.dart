@@ -157,4 +157,165 @@ class ValidationUtils {
       return "Quantité invalide";
     }
   }
+
+  // --- VALIDATION IBAN (ISO 13616) ---
+
+  /// Table des longueurs IBAN par pays (norme ISO 13616).
+  /// Couvre les pays européens + principaux pays internationaux.
+  static const Map<String, int> _ibanLengths = {
+    'AL': 28,
+    'AD': 24,
+    'AT': 20,
+    'AZ': 28,
+    'BH': 22,
+    'BY': 28,
+    'BE': 16,
+    'BA': 20,
+    'BR': 29,
+    'BG': 22,
+    'CR': 22,
+    'HR': 21,
+    'CY': 28,
+    'CZ': 24,
+    'DK': 18,
+    'DO': 28,
+    'TL': 23,
+    'EE': 20,
+    'FO': 18,
+    'FI': 18,
+    'FR': 27,
+    'GE': 22,
+    'DE': 22,
+    'GI': 23,
+    'GR': 27,
+    'GL': 18,
+    'GT': 28,
+    'HU': 28,
+    'IS': 26,
+    'IQ': 23,
+    'IE': 22,
+    'IL': 23,
+    'IT': 27,
+    'JO': 30,
+    'KZ': 20,
+    'XK': 20,
+    'KW': 30,
+    'LV': 21,
+    'LB': 28,
+    'LI': 21,
+    'LT': 20,
+    'LU': 20,
+    'MK': 19,
+    'MT': 31,
+    'MR': 27,
+    'MU': 30,
+    'MC': 27,
+    'MD': 24,
+    'ME': 22,
+    'NL': 18,
+    'NO': 15,
+    'PK': 24,
+    'PS': 29,
+    'PL': 28,
+    'PT': 25,
+    'QA': 29,
+    'RO': 24,
+    'SM': 27,
+    'SA': 24,
+    'RS': 22,
+    'SC': 31,
+    'SK': 24,
+    'SI': 19,
+    'ES': 24,
+    'SE': 24,
+    'CH': 21,
+    'TN': 24,
+    'TR': 26,
+    'UA': 29,
+    'AE': 23,
+    'GB': 22,
+    'VG': 24,
+  };
+
+  /// Valide un IBAN selon la norme ISO 13616 :
+  /// 1. Format : 2 lettres (pays) + 2 chiffres (clé) + BBAN
+  /// 2. Longueur spécifique au pays
+  /// 3. Vérification modulo 97 (algorithme MOD-97-10, ISO 7064)
+  ///
+  /// Champ optionnel : retourne null si vide.
+  static String? validateIban(String? value) {
+    if (value == null || value.trim().isEmpty) return null; // Optionnel
+
+    // Nettoyage : suppression espaces et mise en majuscules
+    final cleaned = value.replaceAll(RegExp(r'\s'), '').toUpperCase();
+
+    // Vérification format de base : min 15 chars, commence par 2 lettres + 2 chiffres
+    if (cleaned.length < 15) {
+      return "IBAN trop court";
+    }
+    if (!RegExp(r'^[A-Z]{2}\d{2}').hasMatch(cleaned)) {
+      return "Format IBAN invalide (doit commencer par 2 lettres + 2 chiffres)";
+    }
+
+    // Vérification que le reste ne contient que des caractères alphanumériques
+    if (!RegExp(r'^[A-Z0-9]+$').hasMatch(cleaned)) {
+      return "L'IBAN ne doit contenir que des lettres et des chiffres";
+    }
+
+    // Vérification longueur par pays
+    final countryCode = cleaned.substring(0, 2);
+    final expectedLength = _ibanLengths[countryCode];
+    if (expectedLength == null) {
+      return "Code pays IBAN non reconnu ($countryCode)";
+    }
+    if (cleaned.length != expectedLength) {
+      return "L'IBAN $countryCode doit contenir $expectedLength caractères "
+          "(${cleaned.length} fournis)";
+    }
+
+    // Vérification MOD-97-10 (ISO 7064)
+    if (!_ibanMod97Check(cleaned)) {
+      return "IBAN invalide (clé de contrôle incorrecte)";
+    }
+
+    return null;
+  }
+
+  /// Valide un IBAN obligatoire
+  static String? validateIbanRequired(String? value) {
+    if (value == null || value.trim().isEmpty) return "IBAN requis";
+    return validateIban(value);
+  }
+
+  /// Algorithme MOD-97-10 (ISO 7064) pour la validation IBAN.
+  ///
+  /// 1. Déplace les 4 premiers caractères à la fin
+  /// 2. Convertit les lettres en chiffres (A=10, B=11, ..., Z=35)
+  /// 3. Calcule le modulo 97 du nombre résultant
+  /// 4. Le résultat doit être égal à 1
+  static bool _ibanMod97Check(String iban) {
+    // Réarrangement : BBAN + pays + clé
+    final rearranged = iban.substring(4) + iban.substring(0, 4);
+
+    // Conversion lettres → chiffres
+    final StringBuffer numericStr = StringBuffer();
+    for (int i = 0; i < rearranged.length; i++) {
+      final code = rearranged.codeUnitAt(i);
+      if (code >= 65 && code <= 90) {
+        // A-Z → 10-35
+        numericStr.write(code - 55);
+      } else {
+        numericStr.write(rearranged[i]);
+      }
+    }
+
+    // Calcul modulo 97 par segments (le nombre peut être très grand)
+    final digits = numericStr.toString();
+    int remainder = 0;
+    for (int i = 0; i < digits.length; i++) {
+      remainder = (remainder * 10 + (digits.codeUnitAt(i) - 48)) % 97;
+    }
+
+    return remainder == 1;
+  }
 }

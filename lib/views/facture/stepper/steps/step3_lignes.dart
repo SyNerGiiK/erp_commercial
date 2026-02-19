@@ -106,6 +106,33 @@ class Step3Lignes extends StatelessWidget {
 
     return Column(
       children: [
+        // Bannière d'information pour les factures d'avancement
+        if (isSituation)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Facture d'avancement : saisissez le pourcentage d'avancement CUMULÉ "
+                    "pour chaque ligne (ex : 60% = 60% du marché réalisé à ce jour).\n"
+                    "Le montant déjà réglé (acompte + situations précédentes) sera "
+                    "automatiquement déduit dans le récapitulatif.",
+                    style: TextStyle(fontSize: 13, color: Colors.blue),
+                  ),
+                ),
+              ],
+            ),
+          ),
         AppCard(
           child: Column(
             children: [

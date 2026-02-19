@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 
+/// Badge de statut Aurora 2030 — pilule glass avec icône et micro-glow.
 class StatutBadge extends StatelessWidget {
   final String statut;
   final DateTime? dateEcheance;
@@ -22,59 +23,74 @@ class StatutBadge extends StatelessWidget {
     final s = statut.toLowerCase();
 
     if (s == 'brouillon') {
-      color = Colors.grey;
+      color = AppTheme.textLight;
       label = "Brouillon";
-      icon = Icons.edit_note;
+      icon = Icons.edit_note_rounded;
     } else if (s == 'payee') {
       color = AppTheme.accent;
       label = "Payée";
-      icon = Icons.check_circle;
+      icon = Icons.check_circle_rounded;
     } else if (s == 'envoye' ||
         s == 'envoyee' ||
         s == 'validee' ||
         s == 'en_attente') {
-      color = Colors.blue;
+      color = AppTheme.info;
       label = "Envoyé";
-      icon = Icons.send;
+      icon = Icons.send_rounded;
     } else if (s == 'signe' || s == 'transforme') {
-      color = Colors.green.shade700;
+      color = AppTheme.accent;
       label = "Signé";
-      icon = Icons.thumb_up;
+      icon = Icons.thumb_up_rounded;
     } else if (s == 'refuse') {
       color = AppTheme.error;
       label = "Refusé";
-      icon = Icons.block;
+      icon = Icons.block_rounded;
     } else if (s == 'expire') {
-      color = Colors.orange;
+      color = AppTheme.warning;
       label = "Expiré";
-      icon = Icons.timer_off;
+      icon = Icons.timer_off_rounded;
     } else if (s == 'annule' || s == 'annulee') {
-      color = Colors.black45;
+      color = const Color(0xFF64748B);
       label = "Annulé";
-      icon = Icons.cancel;
+      icon = Icons.cancel_rounded;
     } else {
-      color = Colors.blueGrey;
+      color = AppTheme.textLight;
       label = s.toUpperCase();
-      icon = Icons.info;
+      icon = Icons.info_rounded;
     }
 
     if (isSmall) {
       return Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.08),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 6,
+              spreadRadius: -2,
+            ),
+          ],
         ),
         child: Icon(icon, size: 14, color: color),
       );
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusCircular),
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+            spreadRadius: -2,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -85,8 +101,9 @@ class StatutBadge extends StatelessWidget {
             label,
             style: TextStyle(
               color: color,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               fontSize: 12,
+              letterSpacing: 0.3,
             ),
           ),
         ],

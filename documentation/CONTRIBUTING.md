@@ -69,7 +69,7 @@ flutter pub get
 | Commande | Description |
 |---|---|
 | `flutter pub get` | Installe les dépendances |
-| `flutter test` | Lance les 636 tests |
+| `flutter test` | Lance les 662 tests |
 | `flutter test test/viewmodels/` | Tests d'un dossier |
 | `flutter test test/viewmodels/facture_viewmodel_test.dart` | Test d'un fichier |
 | `dart analyze` | Analyse statique (0 issues attendu) |
@@ -329,17 +329,39 @@ pw.TextStyle(color: PdfColor.fromInt(0xFF000000));         // ✅ OK
 
 ### Design tokens
 
-Utiliser `AppTheme` (dans `lib/config/theme.dart`) pour les valeurs constantes :
+Utiliser `AppTheme` (dans `lib/config/theme.dart`) pour les valeurs constantes — **Design System Aurora 2030** :
 
 ```dart
-// ✅ CORRECT
-padding: EdgeInsets.all(AppTheme.spacingMd),  // 16.0
-borderRadius: BorderRadius.circular(AppTheme.radiusMedium),  // 12.0
+// ✅ CORRECT — Design tokens Aurora
+padding: EdgeInsets.all(AppTheme.spacing16),  // 16.0
+borderRadius: BorderRadius.circular(AppTheme.radiusMedium),  // 16.0
+color: AppTheme.primary,  // Indigo #6366F1
+
+// ✅ Surfaces glassmorphiques
+decoration: AppTheme.glassDecoration,
+background: AppTheme.surfaceGlassBright,
+
+// ✅ Ombres colorées (teintées primary)
+boxShadow: AppTheme.shadowMedium,
+
+// ✅ Typographie
+GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700)  // Titres
+GoogleFonts.inter()  // Corps
 
 // ❌ INTERDIT — valeurs magiques
 padding: EdgeInsets.all(16.0),
-borderRadius: BorderRadius.circular(12.0),
+borderRadius: BorderRadius.circular(16.0),
 ```
+
+**Palette Aurora :**
+
+| Token | Couleur | Hex | Usage |
+|---|---|---|---|
+| `primary` | Indigo Électrique | `#6366F1` | Action principale, accents |
+| `secondary` | Violet Cosmique | `#8B5CF6` | Premium, créativité |
+| `accent` | Émeraude | `#10B981` | Succès, paiements |
+| `highlight` | Cyan | `#06B6D4` | Highlights dynamiques |
+| `error` | Rose Vif | `#F43F5E` | Erreurs, alertes |
 
 ---
 
@@ -347,7 +369,7 @@ borderRadius: BorderRadius.circular(12.0),
 
 ### Statistiques actuelles
 
-- **636 tests** — 100% passants
+- **662 tests** — 100% passants
 - Structure miroir : `test/` ↔ `lib/`
 - Commande : `flutter test`
 
@@ -495,13 +517,14 @@ Types :
 
 ## Checklist avant commit
 
-- [ ] `flutter test` → 636/636 tests verts (ou plus si nouveaux tests ajoutés)
+- [ ] `flutter test` → 662/662 tests verts (ou plus si nouveaux tests ajoutés)
 - [ ] `dart analyze` → 0 issues
 - [ ] Pas de `double` pour l'argent → `Decimal` partout
 - [ ] `mounted` / `context.mounted` vérifié après chaque `await` dans les widgets
 - [ ] `.withValues(alpha:)` utilisé (pas `.withOpacity()`)
 - [ ] `initialValue` + `ValueKey` sur les `DropdownButtonFormField`
-- [ ] Design tokens de `AppTheme` utilisés (pas de valeurs magiques)
+- [ ] Design tokens Aurora de `AppTheme` utilisés (pas de valeurs magiques, pas de `Colors.black` pour les ombres)
+- [ ] Surfaces glass (`surfaceGlass*`, `glassDecoration`) pour les conteneurs
 - [ ] Interface repository créée/mise à jour si nouveau repository
 - [ ] Provider ajouté dans `dependency_injection.dart` si nouveau VM
 - [ ] Route ajoutée dans `router.dart` si nouvelle vue

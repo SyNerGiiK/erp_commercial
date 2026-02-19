@@ -59,7 +59,7 @@
 | Routing | GoRouter | 14.x |
 | PDF | pdf + printing | 3.x |
 | Monétaire | decimal (package) | 3.x |
-| Tests | flutter_test + mocktail | 636 tests |
+| Tests | flutter_test + mocktail | 662 tests |
 | Fonts | google_fonts | 6.x |
 | Charts | fl_chart | 0.x |
 | UUID | uuid | 4.x |
@@ -112,7 +112,7 @@ lib/
 │   ├── dependency_injection.dart      # 18 Providers enregistrés (MultiProvider)
 │   ├── router.dart                    # ~30 routes GoRouter + auth guard
 │   ├── supabase_config.dart           # URL + anon key Supabase
-│   └── theme.dart                     # AppTheme : design tokens complets
+│   └── theme.dart                     # AppTheme Aurora 2030 : design tokens + glassmorphism
 ├── core/
 │   ├── base_viewmodel.dart            # BaseViewModel : loading réentrant
 │   ├── base_repository.dart           # BaseRepository : CRUD helpers Supabase
@@ -233,6 +233,7 @@ lib/
 │   ├── article_selection_dialog.dart  # Sélection article catalogue
 │   ├── client_selection_dialog.dart   # Sélection client existant
 │   ├── dashboard/                     # 11 widgets dashboard (KPI, charts...)
+│   ├── aurora/                         # 3 widgets Aurora 2030 (glass, background, glow)
 │   └── dialogs/                       # 5 dialogs (paiement, signature, chiffrage, etc.)
 └── utils/
     ├── calculations_utils.dart        # Calculs financiers 100% Decimal
@@ -616,7 +617,7 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 
 | Widget | Rôle |
 |---|---|
-| `GradientKpiCard` | Carte KPI avec gradient de couleur |
+| `GradientKpiCard` | Carte KPI premium (double ombre colorée, orbe lumineux, glass) |
 | `KpiCard` | Carte KPI simple |
 | `RevenueChart` | Graphique CA mensuel (fl_chart) |
 | `ExpensePieChart` | Camembert dépenses par catégorie |
@@ -628,16 +629,24 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 | `SuiviSeuilTvaCard` | Suivi seuils franchise TVA |
 | `ArchivageSuggestionCard` | Suggestions d'archivage |
 
-### Widgets réutilisables (16+)
+### Widgets Aurora 2030 (3)
+
+| Widget | Fichier | Rôle |
+|---|---|---|
+| `GlassContainer` | `widgets/aurora/glass_container.dart` | Conteneur givré réutilisable (BackdropFilter optionnel, ombre colorée, bordure lumineuse) |
+| `AuroraBackground` | `widgets/aurora/aurora_background.dart` | Fond mesh gradient ambiant avec 3 orbes décoratives (Indigo, Cyan, Violet) |
+| `GlowIcon` | `widgets/aurora/glow_icon.dart` | Icône avec halo lumineux contextuel (actif/inactif, rayon et couleur configurables) |
+
+### Widgets réutilisables (19+)
 
 | Widget | Rôle |
 |---|---|
-| `BaseScreen` | Layout commun avec drawer |
-| `CustomDrawer` | Navigation latérale avec badges compteurs |
-| `CustomAppBar` | App bar avec actions contextuelles |
+| `BaseScreen` | Layout commun avec drawer + AuroraBackground |
+| `CustomDrawer` | Sidebar glassmorphique (BackdropFilter, glow sur sélection) |
+| `CustomAppBar` | App bar avec pilule glass recherche |
 | `CustomTextField` | Champ texte avec validation |
-| `AppCard` | Carte Material avec élévation |
-| `StatutBadge` | Badge coloré selon statut |
+| `AppCard` | Carte glass à ombres colorées (plus d'élévation Material) |
+| `StatutBadge` | Badge luminescent avec micro-glow |
 | `LigneEditor` | Éditeur de ligne de document |
 | `SplitEditorScaffold` | Layout split formulaire/preview PDF |
 | `ChiffrageEditor` | Éditeur de chiffrage détaillé |
@@ -693,14 +702,17 @@ GoRouter avec ~30 routes et un auth guard :
 
 ### Theme (`lib/config/theme.dart`)
 
-`AppTheme` — Design system complet :
+`AppTheme` — Design system **Aurora 2030** complet :
 
-- **15 couleurs** : primary, secondary, accent, success, warning, error, info, + statuts document
-- **Spacing grid** : base 4px (`xs=4, sm=8, md=16, lg=24, xl=32, xxl=48`)
-- **Border radius** : `small=8, medium=12, large=16, xlarge=24`
-- **Shadows** : `light`, `medium`, `strong`
-- **Gradients** : `primary`, `secondary`, `accent`
-- **ThemeData** : Google Fonts (Poppins), Material 3
+- **Palette chromatique** : Indigo Électrique (#6366F1), Violet Cosmique (#8B5CF6), Émeraude (#10B981), Cyan (#06B6D4), Rose (#F43F5E)
+- **Surfaces glass** : `surfaceGlass` (72% opacité), `surfaceGlassBright` (85%), `surfaceGlassSubtle` (50%)
+- **Spacing grid** : base 4px (`spacing4=4, spacing8=8, spacing16=16, spacing24=24, spacing32=32, spacing48=48`)
+- **Border radius** : `small=12, medium=16, large=20, xlarge=28` (généreux, organique)
+- **Ombres colorées** : teintées par `primary` — `shadowSmall` (6%), `shadowMedium` (8%), `shadowLarge` (12%), `shadowGlow` (18%)
+- **Dégradés** : `primaryGradient` (Indigo→Violet), `accentGradient` (Cyan→Émeraude), `auroraGradient` (maille ambiante)
+- **Glass decorations** : `glassDecoration`, `glassDecorationSubtle` — BoxDecoration réutilisables
+- **Typographie** : Space Grotesk (titres, weight 700, letter-spacing -0.5) + Inter (corps, weight 400-500)
+- **ThemeData** : Material 3, zero-elevation cards, bordures glass
 
 ---
 

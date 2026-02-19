@@ -13,8 +13,8 @@ void main() {
         expect(AppTheme.statusColor('payee'), AppTheme.accent);
       });
 
-      test('validee → secondary', () {
-        expect(AppTheme.statusColor('validee'), AppTheme.secondary);
+      test('validee → highlight (cyan)', () {
+        expect(AppTheme.statusColor('validee'), AppTheme.highlight);
       });
 
       test('partielle → warning', () {
@@ -52,8 +52,9 @@ void main() {
         expect(AppTheme.statusBackgroundColor('envoyee'), AppTheme.infoSoft);
       });
 
-      test('validee → primarySoft', () {
-        expect(AppTheme.statusBackgroundColor('validee'), AppTheme.primarySoft);
+      test('validee → highlightSoft', () {
+        expect(
+            AppTheme.statusBackgroundColor('validee'), AppTheme.highlightSoft);
       });
 
       test('annulee → errorSoft', () {
@@ -75,10 +76,10 @@ void main() {
 
     group('border radius', () {
       test('les constantes de rayon sont bien définies', () {
-        expect(AppTheme.radiusSmall, 8);
-        expect(AppTheme.radiusMedium, 12);
-        expect(AppTheme.radiusLarge, 16);
-        expect(AppTheme.radiusXLarge, 20);
+        expect(AppTheme.radiusSmall, 12);
+        expect(AppTheme.radiusMedium, 16);
+        expect(AppTheme.radiusLarge, 20);
+        expect(AppTheme.radiusXLarge, 28);
         expect(AppTheme.radiusCircular, 50);
       });
 
@@ -124,7 +125,7 @@ void main() {
     test('crée un badge pour "validee"', () {
       final badge = AppBadge.fromStatus('validee');
       expect(badge.label, 'Validée');
-      expect(badge.color, AppTheme.secondary);
+      expect(badge.color, AppTheme.highlight);
     });
 
     test('permet un label personnalisé', () {

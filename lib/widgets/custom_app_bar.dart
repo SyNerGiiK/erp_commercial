@@ -2,6 +2,8 @@
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 
+/// AppBar Aurora 2030 — gradient signature Indigo→Violet
+/// avec recherche intégrée en pilule glass.
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
@@ -19,40 +21,53 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final List<Widget> finalActions = [
-      IconButton(
-        icon: const Icon(Icons.search),
-        tooltip: "Rechercher",
-        style: IconButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.15),
-          shape: const CircleBorder(),
+      // Bouton recherche en pilule glass
+      Container(
+        margin: const EdgeInsets.only(right: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
-        onPressed: () => context.push('/app/search'),
+        child: IconButton(
+          icon: const Icon(Icons.search_rounded, size: 20),
+          tooltip: "Rechercher",
+          onPressed: () => context.push('/app/search'),
+          style: IconButton.styleFrom(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: 4),
       if (actions != null) ...actions!,
       const SizedBox(width: 8),
     ];
 
     return AppBar(
       title: Text(title),
-      centerTitle: true,
+      centerTitle: false,
       actions: finalActions,
       bottom: bottom,
       iconTheme: const IconThemeData(color: Colors.white),
       titleTextStyle: const TextStyle(
         color: Colors.white,
         fontSize: 20,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.0,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
       ),
       flexibleSpace: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: AppTheme.primaryGradient,
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
+              color: AppTheme.primary.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+              spreadRadius: -4,
             ),
           ],
         ),

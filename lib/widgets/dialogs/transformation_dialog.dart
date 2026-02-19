@@ -71,65 +71,54 @@ class _TransformationDialogState extends State<TransformationDialog> {
             _buildOption(
               TransformationType.acompte,
               "Facture d'Acompte",
-              "Facturer un % du devis avant travaux.",
+              "Acompte de ${(widget.acomptePercentage ?? Decimal.fromInt(30)).toStringAsFixed(0)}% défini dans le devis.",
               Icons.savings,
             ),
-            if (_selectedType == TransformationType.acompte ||
-                _selectedType == TransformationType.situation)
+            // Acompte : affichage en lecture seule du taux du devis
+            if (_selectedType == TransformationType.acompte)
               Padding(
                 padding: const EdgeInsets.only(left: 40, bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _valueCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: "Pourcentage (%)",
-                              suffixText: "%",
-                              isDense: true,
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (val) {
-                              setState(() {});
-                            },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: AppTheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Acompte de ${_valueCtrl.text}% — ${FormatUtils.currency(_calculateAmount())}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
                           ),
                         ),
-                        // Only show amount calculation for Acompte, as Situation is more complex (per line)
-                        if (_selectedType == TransformationType.acompte) ...[
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text("Montant calculé :",
-                                      style: TextStyle(
-                                          fontSize: 10, color: Colors.grey)),
-                                  Text(
-                                    FormatUtils.currency(_calculateAmount()),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // Situation : saisie libre du pourcentage d'avancement
+            if (_selectedType == TransformationType.situation)
+              Padding(
+                padding: const EdgeInsets.only(left: 40, bottom: 10),
+                child: TextField(
+                  controller: _valueCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: "Pourcentage d'avancement (%)",
+                    suffixText: "%",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (val) {
+                    setState(() {});
+                  },
                 ),
               ),
             _buildOption(

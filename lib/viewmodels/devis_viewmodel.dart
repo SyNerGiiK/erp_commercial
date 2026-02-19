@@ -176,8 +176,10 @@ class DevisViewModel extends BaseViewModel
   /// [value] : Pourcentage ou Montant (pour acompte)
   /// [isPercent] : Si la valeur est un pourcentage
   /// [dejaRegle] : Montant total déjà réglé sur ce devis (acomptes, situations...)
+  /// [avancementsChiffrage] : Map ligneDevisId → avancement% (depuis RentabiliteViewModel)
+  ///   Utilisé en mode Global pour pré-remplir l'avancement des lignes de situation
   Facture prepareFacture(Devis d, String type, Decimal value, bool isPercent,
-      {Decimal? dejaRegle}) {
+      {Decimal? dejaRegle, Map<String, Decimal>? avancementsChiffrage}) {
     if (d.id == null) {
       throw Exception("Le devis n'a pas d'ID");
     }
@@ -261,10 +263,13 @@ class DevisViewModel extends BaseViewModel
       // FACTURE DE SITUATION (AVANCEMENT) — Règles légales :
       // 1. Les prix unitaires restent ceux du marché (devis original)
       // 2. L'avancement se définit PAR LIGNE (pas globalement)
-      // 3. Lignes "vente" (fournitures) : avancement 0% car couvertes par l'acompte
-      // 4. Lignes "service" (main d'œuvre) : avancement 0% par défaut, l'utilisateur ajuste
-      // 5. Total = somme des (qté × PU × avancement%) par ligne
-      // 6. Le montant déjà réglé (acomptes + situations précédentes) est déduit
+      // 3. Total = somme des (qté × PU × avancement%) par ligne
+      // 4. Le montant déjà réglé (acomptes + situations précédentes) est déduit
+      //
+      // SMART PROGRESS BILLING (mode Global) :
+      // Si avancementsChiffrage est fourni (depuis RentabiliteViewModel),
+      // chaque ligne est pré-remplie avec l'avancement calculé depuis le suivi
+      // des matériaux et de la main d'œuvre. L'utilisateur peut toujours ajuster.
 
       // Montant à déduire = max(acompte théorique du devis, paiements réels)
       final montantADeduire =
@@ -273,15 +278,24 @@ class DevisViewModel extends BaseViewModel
               : d.acompteMontant;
 
       final newLignes = d.lignes.map((l) {
-        // Les lignes de vente (fournitures) sont à 0% car déjà couvertes par l'acompte
-        // Les lignes de service sont à 0% par défaut — l'utilisateur ajustera dans l'éditeur
-        final avancementLigne = Decimal.zero;
+        // Auto-fill depuis chiffrage si disponible, sinon 0%
+        Decimal avancementLigne = Decimal.zero;
+        if (avancementsChiffrage != null && l.id != null) {
+          avancementLigne = avancementsChiffrage[l.id] ?? Decimal.zero;
+        }
+
+        // Calcul du total ligne basé sur l'avancement
+        final totalAvancement = avancementLigne > Decimal.zero
+            ? ((l.quantite * l.prixUnitaire * avancementLigne) /
+                    Decimal.fromInt(100))
+                .toDecimal()
+            : Decimal.zero;
 
         return LigneFacture(
             description: l.description,
             quantite: l.quantite,
             prixUnitaire: l.prixUnitaire, // Prix du marché conservé
-            totalLigne: Decimal.zero, // Sera calculé par l'avancement dans l'UI
+            totalLigne: totalAvancement,
             unite: l.unite,
             typeActivite:
                 l.typeActivite, // Conserver service/vente pour distinguer
@@ -293,9 +307,13 @@ class DevisViewModel extends BaseViewModel
             avancement: avancementLigne);
       }).toList();
 
+      // Calculer le total HT brut (somme des totalLigne pré-remplis)
+      final totalHtBrut =
+          newLignes.fold(Decimal.zero, (Decimal s, l) => s + l.totalLigne);
+
       return base.copyWith(
         lignes: newLignes,
-        totalHt: Decimal.zero,
+        totalHt: totalHtBrut,
         objet: "Situation - ${d.objet}",
         acompteDejaRegle: montantADeduire,
       );

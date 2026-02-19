@@ -138,7 +138,7 @@ lib/
 │   ├── rappel_model.dart              # Rappel/échéance (7 types, 4 priorités)
 │   ├── planning_model.dart            # Événement planning
 │   └── shopping_model.dart            # Liste courses / matériaux
-├── repositories/                      # 15 repositories (interface + impl)
+├── repositories/                      # 16 repositories (interface + impl)
 │   ├── facture_repository.dart        # IFactureRepository + FactureRepository
 │   ├── devis_repository.dart          # IDevisRepository + DevisRepository
 │   ├── client_repository.dart         # IClientRepository + ClientRepository
@@ -148,6 +148,7 @@ lib/
 │   ├── urssaf_repository.dart         # IUrssafRepository + UrssafRepository
 │   ├── article_repository.dart        # IArticleRepository + ArticleRepository
 │   ├── auth_repository.dart           # IAuthRepository + AuthRepository
+│   ├── chiffrage_repository.dart      # IChiffrageRepository + ChiffrageRepository (progress billing)
 │   ├── global_search_repository.dart  # IGlobalSearchRepository + impl
 │   ├── planning_repository.dart       # IPlanningRepository + PlanningRepository
 │   ├── facture_recurrente_repository.dart # IFactureRecurrenteRepository + impl
@@ -171,7 +172,7 @@ lib/
 │       ├── moderne_theme.dart         # Thème moderne coloré
 │       ├── minimaliste_theme.dart     # Thème épuré minimal
 │       └── pdf_themes.dart            # Barrel export
-├── viewmodels/                        # 18 ViewModels
+├── viewmodels/                        # 20 ViewModels
 │   ├── facture_viewmodel.dart         # Cycle facture complet (458 lignes)
 │   ├── devis_viewmodel.dart           # Cycle devis complet (458 lignes)
 │   ├── dashboard_viewmodel.dart       # KPI, graphiques, alertes (390 lignes)
@@ -189,6 +190,7 @@ lib/
 │   ├── facture_recurrente_viewmodel.dart # Gérer factures récurrentes
 │   ├── temps_viewmodel.dart           # Suivi du temps
 │   ├── rappel_viewmodel.dart          # Rappels & échéances
+│   ├── rentabilite_viewmodel.dart     # Progress billing + auto-save (298 lignes)
 │   └── editor_state_provider.dart     # État éditeur partagé
 ├── views/                             # ~26 vues
 │   ├── tableau_de_bord_view.dart      # Dashboard principal
@@ -231,7 +233,7 @@ lib/
 │   ├── article_selection_dialog.dart  # Sélection article catalogue
 │   ├── client_selection_dialog.dart   # Sélection client existant
 │   ├── dashboard/                     # 11 widgets dashboard (KPI, charts...)
-│   └── dialogs/                       # 4 dialogs (paiement, signature, etc.)
+│   └── dialogs/                       # 5 dialogs (paiement, signature, chiffrage, etc.)
 └── utils/
     ├── calculations_utils.dart        # Calculs financiers 100% Decimal
     ├── format_utils.dart              # Formatage dates, montants, numéros
@@ -351,7 +353,7 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 | `Article` | `articles` | Bibliothèque prix | `designation`, `prixUnitaire` (Decimal), `unite`, `typeActivite` |
 | `CotisationUrssaf` | `cotisations` | Cotisation URSSAF | `montantCa`, `tauxCotisation`, `montantCotisation` (Decimal) |
 | `ConfigCharges` | — (local) | Config charges sociales | Taux par type d'activité, impôt libératoire |
-| `Chiffrage` | — (local) | Chiffrage détaillé | Matériaux, main d'œuvre, marge |
+| `Chiffrage` | — (local + DB) | Ligne chiffrage + progress | TypeChiffrage (materiel/mainDoeuvre), linkedLigneDevisId, estAchete, avancementMo, prixVenteInterne, `valeurRealisee`, `avancementPourcent` |
 | `Planning` | `events` | Événement calendrier | `titre`, `dateDebut`, `dateFin`, `clientId` |
 | `Shopping` | `shopping_items` | Item liste courses | `nom`, `quantite`, `prix`, `isChecked` |
 | `FactureRecurrente` | `factures_recurrentes` | Facture récurrente | `frequence` (FrequenceRecurrence), `prochaineEmission`, `estActive`, `nbFacturesGenerees`, `totalHt/Tva/Ttc`, `devise`, `remiseTaux` |
@@ -373,6 +375,7 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 | `CaisseRetraite` | ssi, cipav, carmf, carpimko |
 | `PdfTheme` | classique, moderne, minimaliste |
 | `ModeFacturation` | global, detaille |
+| `TypeChiffrage` | materiel, mainDoeuvre |
 | `FrequenceRecurrence` | hebdomadaire, mensuel, trimestriel, annuel |
 | `TypeRappel` | urssaf, cfe, impots, tva, echeanceFacture, echeanceDevis, autre |
 | `PrioriteRappel` | basse, normale, haute, urgente |
@@ -462,6 +465,7 @@ class FactureViewModel extends BaseViewModel
 | `FactureRecurrenteViewModel` | ~200 | — | IFactureRecurrenteRepository | CRUD factures récurrentes, toggle actif, génération |
 | `TempsViewModel` | ~150 | — | ITempsRepository | CRUD temps, KPIs, filtrage périodes |
 | `RappelViewModel` | ~200 | — | IRappelRepository | CRUD rappels, génération fiscale, complétion |
+| `RentabiliteViewModel` | 298 | — | IChiffrage + IDevis | Arbre devis→lignes→chiffrages, toggle/slider, auto-save debounce, avancement temps réel |
 | `EditorStateProvider` | ~50 | — | — | État partagé de l'éditeur |
 
 ---
@@ -547,11 +551,13 @@ class PdfGenerationRequest {
   final Client client;
   final ProfilEntreprise profil;
   final List<dynamic> lignes;
+  final List<Map<String, dynamic>>? facturesPrecedentes; // Pour PDF situation (déductions)
 }
 
 class PdfService {
   static Future<Uint8List> generatePdf(PdfGenerationRequest request);
   // Résout le thème dynamiquement depuis profil.pdfTheme
+  // Mode situation : 2 blocs (État d'avancement + Récapitulatif financier avec déductions)
 }
 ```
 
@@ -649,7 +655,7 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 
 ### Injection de dépendances (`lib/config/dependency_injection.dart`)
 
-18 providers enregistrés via `MultiProvider` :
+20 providers enregistrés via `MultiProvider` :
 
 ```dart
 MultiProvider(
@@ -672,6 +678,7 @@ MultiProvider(
     ChangeNotifierProvider(create: (_) => FactureRecurrenteViewModel()),
     ChangeNotifierProvider(create: (_) => TempsViewModel()),
     ChangeNotifierProvider(create: (_) => RappelViewModel()),
+    ChangeNotifierProvider(create: (_) => RentabiliteViewModel()),
   ],
 )
 ```
@@ -818,6 +825,28 @@ final prixUnit = (totalHt / quantite).toDecimal();
 // Multiplication → Decimal direct
 final total = prix * quantite;  // Pas de .toDecimal()
 ```
+
+### 6. Auto-save avec debounce (Progress Billing)
+
+Pattern utilisé dans `RentabiliteViewModel` pour l'auto-save transparent :
+
+```dart
+// Toggle binaire (matériel acheté/non acheté) → save immédiat
+void toggleEstAchete(String id) {
+  _updateLocally(id);
+  _recalculerAvancements();
+  _autoSave(() => _repo.updateEstAchete(id, newValue));  // Immédiat
+}
+
+// Slider progressif (avancement MO 0-100%) → debounce 400ms
+void updateAvancementMo(String id, Decimal value) {
+  _updateLocally(id);
+  _recalculerAvancements();
+  _debounceSave(() => _repo.updateAvancementMo(id, value));
+}
+```
+
+Principe : mise à jour locale immédiate (UI réactive), persistance réseau différée (debounce 400ms pour sliders).
 
 ---
 

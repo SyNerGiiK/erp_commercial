@@ -266,7 +266,6 @@ class _DevisStepperViewState extends State<DevisStepperView> {
 
     // 3. Ouvrir le client email
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-    final clientVM = Provider.of<ClientViewModel>(context, listen: false);
     final updatedDevis = vm.devis.where((d) => d.id == devisId).firstOrNull;
 
     if (updatedDevis != null && _selectedClient != null) {

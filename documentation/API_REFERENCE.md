@@ -1,6 +1,6 @@
 # Référence API — ERP Artisan
 
-> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 18/02/2026
+> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 19/02/2026
 
 ---
 
@@ -393,6 +393,47 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 
 **Méthodes :** `fromMap(Map)`, `toMap()`, `copyWith(...)`
 
+### TypeChiffrage (Enum)
+
+**Fichier :** `lib/models/chiffrage_model.dart`
+
+| Valeur | DB Value | Label | Description |
+|---|---|---|---|
+| `materiel` | `materiel` | Matériel / Fourniture | Coût matériel binaire (acheté / pas acheté) |
+| `mainDoeuvre` | `main_doeuvre` | Main d'œuvre | Coût MO progressif (slider 0–100%) |
+
+### LigneChiffrage
+
+**Fichier :** `lib/models/chiffrage_model.dart` — Table : `lignes_chiffrages`
+
+| Champ | Type Dart | Colonne DB | Description |
+|---|---|---|---|
+| `id` | `String?` | `id` (UUID) | Identifiant |
+| `userId` | `String?` | `user_id` | Propriétaire (RLS) |
+| `devisId` | `String?` | `devis_id` (FK) | Devis parent |
+| `factureId` | `String?` | `facture_id` (FK) | Facture liée (optionnel) |
+| `designation` | `String` | `designation` | Désignation du coût |
+| `quantite` | `Decimal` | `quantite` | Quantité |
+| `unite` | `String` | `unite` | Unité (u, h, m², etc.) |
+| `prixAchatUnitaire` | `Decimal` | `prix_achat_unitaire` | Prix d'achat unitaire HT |
+| `prixVenteUnitaire` | `Decimal` | `prix_vente_unitaire` | Prix de vente unitaire HT |
+| `linkedLigneDevisId` | `String?` | `linked_ligne_devis_id` (FK) | Ligne de devis parente (progress billing) |
+| `typeChiffrage` | `TypeChiffrage` | `type_chiffrage` | `materiel` ou `main_doeuvre` |
+| `estAchete` | `bool` | `est_achete` | Matériel acheté (toggle binaire) |
+| `avancementMo` | `Decimal` | `avancement_mo` | Avancement main d'œuvre 0–100% |
+| `prixVenteInterne` | `Decimal` | `prix_vente_interne` | Prix vente interne (poids dans l'avancement) |
+
+**Getters calculés :**
+
+| Getter | Type | Description |
+|---|---|---|
+| `totalAchat` | `Decimal` | `quantite × prixAchatUnitaire` |
+| `totalVente` | `Decimal` | `quantite × prixVenteUnitaire` |
+| `valeurRealisee` | `Decimal` | Matériel : `estAchete ? prixVenteInterne : 0` / MO : `prixVenteInterne × avancementMo / 100` |
+| `avancementPourcent` | `Decimal` | Matériel : `estAchete ? 100 : 0` / MO : `avancementMo` |
+
+**Méthodes :** `fromMap(Map)`, `toMap()`, `copyWith(...)`
+
 ---
 
 ## Repositories
@@ -558,6 +599,21 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `completerRappel(String id)` | `Future<void>` | Marque comme complété |
 | `createMany(List<Rappel>)` | `Future<void>` | Crée plusieurs rappels (génération batch) |
 
+### IChiffrageRepository
+
+**Fichier :** `lib/repositories/chiffrage_repository.dart`
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `getByDevisId(String devisId)` | `Future<List<LigneChiffrage>>` | Toutes les lignes de chiffrage d'un devis |
+| `getByLigneDevisId(String ligneDevisId)` | `Future<List<LigneChiffrage>>` | Lignes liées à une ligne de devis spécifique |
+| `create(LigneChiffrage)` | `Future<LigneChiffrage>` | Crée une ligne de chiffrage (retourne avec ID) |
+| `update(LigneChiffrage)` | `Future<void>` | Met à jour une ligne complète (auto-save) |
+| `updateEstAchete(String id, bool)` | `Future<void>` | Toggle rapide statut d'achat matériel |
+| `updateAvancementMo(String id, Decimal)` | `Future<void>` | Mise à jour slider avancement MO |
+| `delete(String id)` | `Future<void>` | Supprime une ligne de chiffrage |
+| `deleteAllForDevis(String devisId)` | `Future<void>` | Supprime toutes les lignes d'un devis |
+
 ---
 
 ## ViewModels
@@ -631,6 +687,7 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `checkExpiredDevis()` | `Future<void>` | Vérifie les devis expirés |
 | `generatePdf(Devis, Client, ProfilEntreprise)` | `Future<Uint8List?>` | Génère le PDF |
 | `uploadSignature(Uint8List bytes)` | `Future<bool>` | Upload signature |
+| `prepareFacture(Devis, String type, Decimal, bool, {Decimal? dejaRegle, Map<String, Decimal>? avancementsChiffrage})` | `Facture` | Prépare une facture depuis un devis (acompte/situation/solde). `avancementsChiffrage` injecte les avancements du progress billing |
 
 ### DashboardViewModel
 
@@ -684,6 +741,58 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `FactureRecurrenteViewModel` | `loadRecurrentes()`, `createRecurrente()`, `updateRecurrente()`, `deleteRecurrente()`, `toggleActive()`, `genererFacture()` |
 | `TempsViewModel` | `loadTemps()`, `createTemps()`, `updateTemps()`, `deleteTemps()`, `getTotalHeures()`, `getMontantTotal()`, `filterByPeriode()` |
 | `RappelViewModel` | `loadRappels()`, `createRappel()`, `updateRappel()`, `deleteRappel()`, `completerRappel()`, `genererRappelsFiscaux()` |
+| `RentabiliteViewModel` | `loadDevis()`, `selectDevis()`, `selectLigneDevis()`, `toggleEstAchete()`, `updateAvancementMo()`, `ajouterChiffrage()`, `supprimerChiffrage()`, `updateChiffrage()` |
+
+### RentabiliteViewModel
+
+**Fichier :** `lib/viewmodels/rentabilite_viewmodel.dart` (298 lignes)
+**Repositories :** `IChiffrageRepository`, `IDevisRepository`
+
+#### Data Class : LigneDevisAvancement
+
+| Propriété | Type | Description |
+|---|---|---|
+| `ligne` | `LigneDevis` | Ligne de devis source |
+| `avancement` | `Decimal` | Avancement calculé 0–100% |
+| `valeurRealisee` | `Decimal` | Somme des valeurs réalisées des chiffrages enfants |
+| `prixTotal` | `Decimal` | Prix total de la ligne (quantité × prix unitaire) |
+| `chiffrages` | `List<LigneChiffrage>` | Chiffrages rattachés |
+| `isComplete` | `bool` | `avancement >= 100` |
+
+#### État
+
+| Propriété | Type | Description |
+|---|---|---|
+| `devisList` | `List<Devis>` | Devis actifs (non archivés) |
+| `selectedDevis` | `Devis?` | Devis sélectionné dans le panneau gauche |
+| `selectedLigneDevis` | `LigneDevis?` | Ligne de devis sélectionnée |
+| `chiffrages` | `List<LigneChiffrage>` | Chiffrages du devis sélectionné |
+| `avancements` | `Map<String, Decimal>` | Avancement par ligneDevisId (0–100) |
+| `avancementGlobal` | `Decimal` | Avancement global du devis |
+| `expandedDevisIds` | `Set<String>` | IDs des devis expandus dans l'arbre |
+| `isDirty` | `bool` | Changements en attente de sauvegarde |
+
+#### Méthodes publiques
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `loadDevis()` | `Future<void>` | Charge tous les devis actifs |
+| `selectDevis(Devis)` | `Future<void>` | Sélectionne un devis et charge ses chiffrages |
+| `toggleDevisExpanded(String id)` | `void` | Toggle expansion dans le panneau gauche |
+| `selectLigneDevis(LigneDevis)` | `void` | Sélectionne une ligne pour le panneau droit |
+| `ajouterChiffrage(LigneChiffrage)` | `Future<bool>` | Ajoute un coût lié à la ligne sélectionnée |
+| `supprimerChiffrage(String id)` | `Future<bool>` | Supprime un coût |
+| `toggleEstAchete(String id)` | `void` | Toggle achat matériel (auto-save immédiat) |
+| `updateAvancementMo(String id, Decimal)` | `void` | Met à jour avancement MO (auto-save debounce 400ms) |
+| `updateChiffrage(LigneChiffrage)` | `Future<bool>` | Met à jour un chiffrage complet |
+| `getAvancementsForFactureSituation()` | `Map<String, Decimal>` | Map avancements pour facturation de situation |
+
+#### Getters calculés
+
+| Getter | Type | Description |
+|---|---|---|
+| `chiffragesForSelectedLigne` | `List<LigneChiffrage>` | Chiffrages filtrés pour la ligne sélectionnée |
+| `lignesAvancement` | `List<LigneDevisAvancement>` | Avancements détaillés de chaque ligne (exclut titres/sous-titres) |
 
 ---
 
@@ -788,8 +897,14 @@ class PdfGenerationRequest {
   final Client client;
   final ProfilEntreprise profil;
   final List<dynamic> lignes;   // LigneFacture ou LigneDevis
+  final List<Facture> facturesPrecedentes; // Factures précédentes (situations/acomptes) pour déductions PDF
 }
 ```
+
+**Facturation de situation (2 blocs PDF) :**
+Quand `facturesPrecedentes` n'est pas vide, le PDF affiche :
+1. **Bloc 1 — Travaux à date** : lignes avec avancements individuels
+2. **Bloc 2 — Déductions** : factures/acomptes précédents déduits du total
 
 ### PdfThemeBase
 
@@ -868,6 +983,11 @@ class PdfGenerationRequest {
 | `calculateTotalHt` | `static Decimal calculateTotalHt(List<LigneFacture> lignes)` | Total HT de toutes les lignes |
 | `calculateTotalTva` | `static Decimal calculateTotalTva(List<LigneFacture> lignes)` | Total TVA de toutes les lignes |
 | `calculateTotalTtc` | `static Decimal calculateTotalTtc(Decimal ht, Decimal tva)` | Total TTC |
+| `calculateLigneDevisAvancement` | `static Decimal calculateLigneDevisAvancement({List<LigneChiffrage> chiffrageEnfants, Decimal prixTotalLigneDevis})` | Avancement d'une ligne de devis (0–100%) à partir de ses chiffrages enfants |
+| `calculateDevisAvancementGlobal` | `static Decimal calculateDevisAvancementGlobal({List<LigneChiffrage> tousChiffrages})` | Avancement global pondéré d'un devis (Σ valeurRealisée / Σ prixVenteInterne × 100) |
+| `calculateAllLignesAvancement` | `static Map<String, Decimal> calculateAllLignesAvancement({List<dynamic> lignesDevis, List<LigneChiffrage> tousChiffrages})` | Map ligneDevisId → avancement pour toutes les lignes d'un devis |
+| `calculateTotalBrutTravauxADate` | `static Decimal calculateTotalBrutTravauxADate(List<dynamic> lignesFacture)` | Total brut des travaux à date pour une facture de situation |
+| `generateDeductionLines` | `static List<Map<String, dynamic>> generateDeductionLines({List<dynamic> facturesPrecedentes})` | Génère les lignes de déduction (acomptes/situations précédentes) pour le PDF |
 
 > **Règle absolue :** Division → `.toDecimal()` obligatoire. Multiplication → pas de `.toDecimal()`.
 

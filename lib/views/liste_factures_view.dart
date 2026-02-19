@@ -243,19 +243,27 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                      FormatUtils.currency(
-                          f.acompteDejaRegle > Decimal.zero
-                              ? f.netAPayer
-                              : f.totalTtc),
+                  // Montant TTC de la facture
+                  Text(FormatUtils.currency(f.totalTtc),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           color: itemColor)),
-                  if (f.acompteDejaRegle > Decimal.zero)
-                    Text("sur ${FormatUtils.currency(f.totalTtc)}",
+                  // Reste dû si paiements ou acompte déduit
+                  if (f.netAPayer != f.totalTtc && f.netAPayer > Decimal.zero)
+                    Text("Reste dû : ${FormatUtils.currency(f.netAPayer)}",
                         style: const TextStyle(
-                            fontSize: 11, color: Colors.grey)),
+                            fontSize: 11,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600))
+                  else if (f.estSoldee &&
+                      f.statut != 'brouillon' &&
+                      f.statut != 'annulee')
+                    const Text("Soldée",
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600)),
                 ],
               ),
               PopupMenuButton<String>(

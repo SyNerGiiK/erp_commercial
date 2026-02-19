@@ -16,11 +16,15 @@ class TransformationResult {
 class TransformationDialog extends StatefulWidget {
   final Decimal totalTTC;
   final Decimal? acomptePercentage;
+  final Decimal? acompteMontant;
+  final Decimal? dejaRegle;
 
   const TransformationDialog({
     super.key,
     required this.totalTTC,
     this.acomptePercentage,
+    this.acompteMontant,
+    this.dejaRegle,
   });
 
   @override
@@ -119,20 +123,49 @@ class _TransformationDialogState extends State<TransformationDialog> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
-                  child: const Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline,
-                          size: 16, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Les lignes de service seront à 0% par défaut.\n"
-                          "Les lignes de vente (fournitures) seront à 0% car couvertes par l'acompte.\n"
-                          "Ajustez l'avancement de chaque ligne dans l'éditeur.",
-                          style: TextStyle(fontSize: 12, color: Colors.orange),
+                      if ((widget.dejaRegle ?? Decimal.zero) > Decimal.zero ||
+                          (widget.acompteMontant ?? Decimal.zero) >
+                              Decimal.zero)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.payments,
+                                  size: 16, color: Colors.green),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Déjà réglé : ${FormatUtils.currency(_effectiveDejaRegle())}\n"
+                                  "(sera déduit de la facture)",
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                      const Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 16, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Ajustez l'avancement de chaque ligne dans l'éditeur.\n"
+                              "Les fournitures démarrent à 0% (couvertes par l'acompte).",
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.orange),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -203,15 +236,14 @@ class _TransformationDialogState extends State<TransformationDialog> {
     if (_selectedType != TransformationType.acompte) return Decimal.zero;
     final percent =
         Decimal.tryParse(_valueCtrl.text.replaceAll(',', '.')) ?? Decimal.zero;
-    // Calcul sur le TTC global (car l'acompte est souvent perçu sur le total)
-    // Mais pour la facture d'acompte (qui est une facture), on raisonne souvent en HT + TVA.
-    // LE USer a dit "Montant de l'acompte".
-    // Si on a le totalTTC du devis, on applique le % au TTC pour savoir combien le client paie.
-    // MAIS la facture d'acompte générée sera en HT.
-    // Ma méthode prepareFacture prend un %, calcule le HT.
-    // Ici on affiche le montant TTC ou HT ?
-    // Affichons simplement le % du TotalTTC pour info client.
     return ((widget.totalTTC * percent) / Decimal.fromInt(100)).toDecimal();
+  }
+
+  /// Calcule le montant effectivement déjà réglé (max entre acompte théorique et paiements réels)
+  Decimal _effectiveDejaRegle() {
+    final acompte = widget.acompteMontant ?? Decimal.zero;
+    final paiements = widget.dejaRegle ?? Decimal.zero;
+    return acompte > paiements ? acompte : paiements;
   }
 
   void _submit() {

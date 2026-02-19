@@ -112,20 +112,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
   }
 
   void _showTransformationDialog(Devis d) async {
-    final result = await showDialog<TransformationResultWrapper>(
-      context: context,
-      builder: (ctx) => TransformationDialog(
-        totalTTC: d.totalTtc,
-        acomptePercentage: d.acomptePercentage,
-      ),
-    );
-
-    if (result == null || !mounted) return;
-
-    final vm = Provider.of<DevisViewModel>(context, listen: false);
     final factureVM = Provider.of<FactureViewModel>(context, listen: false);
 
-    // Récupérer l'historique des paiements sur ce devis
+    // Calculer l'historique des règlements AVANT d'afficher le dialog
+    // pour pouvoir afficher le montant déjà réglé dans le dialog
     Decimal dejaRegle = Decimal.zero;
     if (d.id != null) {
       try {
@@ -135,7 +125,27 @@ class _ListeDevisViewState extends State<ListeDevisView>
       }
     }
 
+    // Garantir que l'acompte théorique du devis est toujours inclus
+    // même si le paiement correspondant n'a pas encore été saisi
+    if (d.acompteMontant > dejaRegle) {
+      dejaRegle = d.acompteMontant;
+    }
+
     if (!mounted) return;
+
+    final result = await showDialog<TransformationResultWrapper>(
+      context: context,
+      builder: (ctx) => TransformationDialog(
+        totalTTC: d.totalTtc,
+        acomptePercentage: d.acomptePercentage,
+        acompteMontant: d.acompteMontant,
+        dejaRegle: dejaRegle,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final vm = Provider.of<DevisViewModel>(context, listen: false);
 
     try {
       final draftFacture = vm.prepareFacture(

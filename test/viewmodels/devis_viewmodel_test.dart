@@ -379,14 +379,14 @@ void main() {
       });
 
       test(
-          'TYPE SITUATION: devrait créer facture situation avec avancement 50%',
+          'TYPE SITUATION: devrait créer facture situation avec avancement par ligne à 0%',
           () {
-        // ACT - Situation à 50%
+        // ACT - Situation (pas de valeur globale, avancement par ligne)
         final facture = viewModel.prepareFacture(
           testDevis,
           'situation',
-          Decimal.parse('50'),
-          true, // isPercent (utilisé comme avancement)
+          Decimal.zero, // Plus de % global
+          true,
         );
 
         // ASSERT
@@ -394,18 +394,16 @@ void main() {
         expect(facture.objet, 'Situation - Devis Test');
         expect(facture.lignes.length, 2);
 
-        // Vérifier que l'avancement est appliqué
-        expect(facture.lignes[0].avancement, Decimal.parse('50'));
-        expect(facture.lignes[1].avancement, Decimal.parse('50'));
+        // L'avancement est à 0% par défaut (l'utilisateur ajuste par ligne dans l'éditeur)
+        expect(facture.lignes[0].avancement, Decimal.zero);
+        expect(facture.lignes[1].avancement, Decimal.zero);
 
-        // Le prix unitaire est ajusté en fonction de l'acompte déjà versé
-        // Base = 10000 - 3000 = 7000
-        // Ratio = 7000/10000 = 0.7
-        final expectedPU1 = Decimal.parse('2500') * Decimal.parse('0.7');
-        final expectedPU2 = Decimal.parse('5000') * Decimal.parse('0.7');
+        // Les prix unitaires restent ceux du marché (devis original)
+        expect(facture.lignes[0].prixUnitaire, Decimal.parse('2500'));
+        expect(facture.lignes[1].prixUnitaire, Decimal.parse('5000'));
 
-        expect(facture.lignes[0].prixUnitaire, expectedPU1);
-        expect(facture.lignes[1].prixUnitaire, expectedPU2);
+        // Le typeActivite est conservé pour distinguer service/vente
+        expect(facture.lignes[0].typeActivite, isNotNull);
       });
 
       test('TYPE SOLDE: devrait créer facture solde avec acompte déduit', () {

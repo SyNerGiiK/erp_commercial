@@ -601,5 +601,71 @@ void main() {
       expect(facture.typeDocument, 'facture');
       expect(facture.parentDocumentId, isNull);
     });
+
+    group('montantNetFacture (BUG 4 fix)', () {
+      test('montantNetFacture = totalTtc quand aucun acompte', () {
+        final facture = Facture(
+          objet: 'Standard sans acompte',
+          clientId: 'client-1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('1000'),
+          totalTtc: Decimal.parse('1200'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+        );
+
+        expect(facture.montantNetFacture, Decimal.parse('1200'));
+        expect(facture.montantNetFacture, facture.totalTtc);
+      });
+
+      test('montantNetFacture déduit acompteDejaRegle (match PDF NET À PAYER)',
+          () {
+        final facture = Facture(
+          objet: 'Situation avec acompte',
+          clientId: 'client-1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          type: 'situation',
+          totalHt: Decimal.parse('4000'),
+          totalTtc: Decimal.parse('4800'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.parse('1200'),
+        );
+
+        // montantNetFacture = 4800 - 1200 = 3600 (= NET À PAYER du PDF)
+        expect(facture.montantNetFacture, Decimal.parse('3600'));
+      });
+
+      test('montantNetFacture ignore les paiements (contrairement à netAPayer)',
+          () {
+        final facture = Facture(
+          objet: 'Situation avec paiement partiel',
+          clientId: 'client-1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          type: 'situation',
+          totalHt: Decimal.parse('4000'),
+          totalTtc: Decimal.parse('4800'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.parse('1200'),
+          paiements: [
+            Paiement(
+              factureId: 'f-1',
+              montant: Decimal.parse('2000'),
+              datePaiement: DateTime.now(),
+            ),
+          ],
+        );
+
+        // montantNetFacture = 4800 - 1200 = 3600 (pas affecté par paiements)
+        expect(facture.montantNetFacture, Decimal.parse('3600'));
+        // netAPayer = 4800 - 1200 - 2000 = 1600 (inclut paiements)
+        expect(facture.netAPayer, Decimal.parse('1600'));
+        // Différence = paiements reçus
+        expect(facture.montantNetFacture - facture.netAPayer,
+            Decimal.parse('2000'));
+      });
+    });
   });
 }

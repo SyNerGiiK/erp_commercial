@@ -13,6 +13,8 @@ import '../models/client_model.dart';
 import '../models/devis_model.dart';
 import '../services/pdf_service.dart';
 import '../viewmodels/facture_viewmodel.dart'; // Added for history
+import '../repositories/chiffrage_repository.dart';
+import '../utils/calculations_utils.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/app_card.dart';
 import '../widgets/statut_badge.dart';
@@ -148,12 +150,32 @@ class _ListeDevisViewState extends State<ListeDevisView>
     final vm = Provider.of<DevisViewModel>(context, listen: false);
 
     try {
+      // Pour la situation : charger les avancements depuis le suivi de rentabilité
+      Map<String, Decimal>? avancementsChiffrage;
+      if (result.type.name == 'situation' && d.id != null) {
+        try {
+          final chiffrageRepo = ChiffrageRepository();
+          final chiffrages = await chiffrageRepo.getByDevisId(d.id!);
+          if (chiffrages.isNotEmpty) {
+            avancementsChiffrage =
+                CalculationsUtils.calculateAllLignesAvancement(
+              lignesDevis: d.lignes,
+              tousChiffrages: chiffrages,
+            );
+          }
+        } catch (e) {
+          debugPrint("Erreur chargement avancements chiffrage: $e");
+        }
+        if (!mounted) return;
+      }
+
       final draftFacture = vm.prepareFacture(
           d,
           result.type.name, // 'standard', 'acompte', ...
           result.value,
           result.isPercent,
-          dejaRegle: dejaRegle);
+          dejaRegle: dejaRegle,
+          avancementsChiffrage: avancementsChiffrage);
 
       if (!mounted) return;
 

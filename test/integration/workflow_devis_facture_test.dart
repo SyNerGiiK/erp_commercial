@@ -357,5 +357,210 @@ void main() {
       expect(factureSituation2.acompteDejaRegle, Decimal.parse('3600'));
       expect(factureSituation2.netAPayer, Decimal.parse('4800'));
     });
+
+    test(
+        'Scénario 5: Cascades situations multiples — '
+        'acompte + sit1 payée + sit2 déduit les cumuls', () {
+      // ACOMPTE: 3000€ (25% du TTC 12000)
+      final factureAcompte = Facture(
+        id: 'f-ac-001',
+        numeroFacture: 'FACT-AC-2026-001',
+        objet: 'Acompte - ${testDevis.objet}',
+        clientId: testDevis.clientId,
+        devisSourceId: testDevis.id,
+        dateEmission: DateTime(2026, 2, 1),
+        dateEcheance: DateTime(2026, 3, 1),
+        type: 'acompte',
+        totalHt: Decimal.parse('3000'),
+        totalTtc: Decimal.parse('3000'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+        statut: 'payee',
+        paiements: [
+          Paiement(
+            factureId: 'f-ac-001',
+            montant: Decimal.parse('3000'),
+            datePaiement: DateTime(2026, 2, 5),
+            typePaiement: 'virement',
+          ),
+        ],
+      );
+
+      // Vérifier devisSourceId préservé (fix stepper)
+      expect(factureAcompte.devisSourceId, testDevis.id);
+      expect(factureAcompte.montantNetFacture, Decimal.parse('3000'));
+
+      // SITUATION 1: 40% des travaux, acompte déduit
+      // Total brut: 12000 * 40% = 4800€, acompte 3000€ déduit
+      final factureSit1 = Facture(
+        id: 'f-sit-001',
+        numeroFacture: 'FACT-SIT-2026-001',
+        objet: 'Situation 1 - ${testDevis.objet}',
+        clientId: testDevis.clientId,
+        devisSourceId: testDevis.id,
+        dateEmission: DateTime(2026, 3, 15),
+        dateEcheance: DateTime(2026, 4, 15),
+        type: 'situation',
+        avancementGlobal: Decimal.parse('40'),
+        totalHt: Decimal.parse('4800'),
+        totalTtc: Decimal.parse('4800'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.parse('3000'), // Acompte déduit
+        statut: 'payee',
+        paiements: [
+          Paiement(
+            factureId: 'f-sit-001',
+            montant: Decimal.parse('1800'), // Net à payer: 4800-3000
+            datePaiement: DateTime(2026, 4, 1),
+            typePaiement: 'virement',
+          ),
+        ],
+        lignes: testDevis.lignes
+            .map((l) => LigneFacture(
+                  description: l.description,
+                  quantite: l.quantite,
+                  prixUnitaire: l.prixUnitaire,
+                  totalLigne: l.totalLigne,
+                  typeActivite: l.typeActivite,
+                  unite: l.unite,
+                  avancement: Decimal.parse('40'),
+                  tauxTva: l.tauxTva,
+                ))
+            .toList(),
+      );
+
+      expect(factureSit1.devisSourceId, testDevis.id);
+      expect(factureSit1.netAPayer, Decimal.zero); // Payée intégralement
+      expect(factureSit1.montantNetFacture, Decimal.parse('1800'));
+
+      // --- Calcul du cumul pour Situation 2 ---
+      // Simule calculateHistoriqueReglements avec les 2 factures précédentes
+      final linkedFactures = [factureAcompte, factureSit1];
+
+      Decimal totalPaiements = Decimal.zero;
+      Decimal totalFacture = Decimal.zero;
+      for (var f in linkedFactures) {
+        for (var p in f.paiements) {
+          totalPaiements += p.montant;
+        }
+        if (f.statut != 'brouillon' && f.statut != 'annulee') {
+          totalFacture += f.montantNetFacture;
+        }
+      }
+
+      final dejaRegle =
+          totalPaiements > totalFacture ? totalPaiements : totalFacture;
+
+      // totalPaiements = 3000 + 1800 = 4800
+      // totalFacture = 3000 + 1800 = 4800
+      expect(totalPaiements, Decimal.parse('4800'));
+      expect(totalFacture, Decimal.parse('4800'));
+      expect(dejaRegle, Decimal.parse('4800'));
+
+      // SITUATION 2: 75% des travaux, cumul 4800€ déduit
+      final totalBrut75 =
+          (testDevis.totalTtc * Decimal.parse('75') / Decimal.fromInt(100))
+              .toDecimal();
+      // = 12000 * 75% = 9000€
+
+      final factureSit2 = Facture(
+        id: 'f-sit-002',
+        numeroFacture: 'FACT-SIT-2026-002',
+        objet: 'Situation 2 - ${testDevis.objet}',
+        clientId: testDevis.clientId,
+        devisSourceId: testDevis.id,
+        dateEmission: DateTime(2026, 5, 15),
+        dateEcheance: DateTime(2026, 6, 15),
+        type: 'situation',
+        avancementGlobal: Decimal.parse('75'),
+        totalHt: totalBrut75,
+        totalTtc: totalBrut75,
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: dejaRegle, // 4800€ — acompte + sit1
+        statut: 'envoye',
+        lignes: testDevis.lignes
+            .map((l) => LigneFacture(
+                  description: l.description,
+                  quantite: l.quantite,
+                  prixUnitaire: l.prixUnitaire,
+                  totalLigne: l.totalLigne,
+                  typeActivite: l.typeActivite,
+                  unite: l.unite,
+                  avancement: Decimal.parse('75'),
+                  tauxTva: l.tauxTva,
+                ))
+            .toList(),
+      );
+
+      // Net à payer situation 2 = 9000 - 4800 = 4200€
+      expect(factureSit2.totalTtc, Decimal.parse('9000'));
+      expect(factureSit2.acompteDejaRegle, Decimal.parse('4800'));
+      expect(factureSit2.netAPayer, Decimal.parse('4200'));
+      expect(factureSit2.devisSourceId, testDevis.id);
+    });
+
+    test(
+        'Scénario 6: Situation non payée — le montant facturé est quand même '
+        'déduit de la situation suivante', () {
+      // SITUATION 1: 30%, pas encore payée (envoyée seulement)
+      final factureSit1 = Facture(
+        id: 'f-sit-np-001',
+        numeroFacture: 'FACT-SIT-NP-001',
+        objet: 'Situation 1',
+        clientId: testDevis.clientId,
+        devisSourceId: testDevis.id,
+        dateEmission: DateTime(2026, 2, 15),
+        dateEcheance: DateTime(2026, 3, 15),
+        type: 'situation',
+        avancementGlobal: Decimal.parse('30'),
+        totalHt: Decimal.parse('3600'),
+        totalTtc: Decimal.parse('3600'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: Decimal.zero,
+        statut: 'envoye', // PAS encore payée
+        paiements: [], // Aucun paiement
+      );
+
+      // Simule calculateHistoriqueReglements
+      final linkedFactures = [factureSit1];
+      Decimal totalPaiements = Decimal.zero;
+      Decimal totalFacture = Decimal.zero;
+      for (var f in linkedFactures) {
+        for (var p in f.paiements) {
+          totalPaiements += p.montant;
+        }
+        if (f.statut != 'brouillon' && f.statut != 'annulee') {
+          totalFacture += f.montantNetFacture;
+        }
+      }
+      final dejaRegle =
+          totalPaiements > totalFacture ? totalPaiements : totalFacture;
+
+      // totalPaiements = 0, totalFacture = 3600 → max = 3600
+      expect(totalPaiements, Decimal.zero);
+      expect(totalFacture, Decimal.parse('3600'));
+      expect(dejaRegle, Decimal.parse('3600'));
+
+      // SITUATION 2: 60%, même sans paiement de sit1, 3600€ déduit
+      final factureSit2 = Facture(
+        id: 'f-sit-np-002',
+        numeroFacture: 'FACT-SIT-NP-002',
+        objet: 'Situation 2',
+        clientId: testDevis.clientId,
+        devisSourceId: testDevis.id,
+        dateEmission: DateTime(2026, 3, 15),
+        dateEcheance: DateTime(2026, 4, 15),
+        type: 'situation',
+        avancementGlobal: Decimal.parse('60'),
+        totalHt: Decimal.parse('7200'),
+        totalTtc: Decimal.parse('7200'),
+        remiseTaux: Decimal.zero,
+        acompteDejaRegle: dejaRegle,
+        statut: 'brouillon',
+      );
+
+      // Net à payer = 7200 - 3600 = 3600€
+      expect(factureSit2.netAPayer, Decimal.parse('3600'));
+    });
   });
 }

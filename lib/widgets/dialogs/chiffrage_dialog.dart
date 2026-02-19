@@ -87,16 +87,10 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
   }
 
   /// Auto-calcul du prix de vente interne si non renseigné.
-  /// Utilise le prix total de la ligne devis comme basale de répartition.
+  /// Utilise le prix total de la ligne devis (prix de vente) comme base.
   Decimal _calculerPrixVenteInterneAuto() {
-    // Fallback : même montant que le total d'achat
-    try {
-      final qte = Decimal.parse(_quantiteCtrl.text.replaceAll(',', '.'));
-      final prix = Decimal.parse(_prixAchatCtrl.text.replaceAll(',', '.'));
-      return qte * prix;
-    } catch (_) {
-      return Decimal.zero;
-    }
+    // Fallback : valeur de vente de la ligne devis (pas le coût d'achat)
+    return widget.prixTotalLigne;
   }
 
   @override
@@ -278,7 +272,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
                   controller: _prixVenteInterneCtrl,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  hint: "Vide = total achat",
+                  hint: "Vide = valeur ligne devis",
                   validator: (v) {
                     if (v != null && v.isNotEmpty) {
                       if (Decimal.tryParse(v.replaceAll(',', '.')) == null) {

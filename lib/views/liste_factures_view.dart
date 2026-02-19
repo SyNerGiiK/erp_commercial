@@ -240,11 +240,24 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
                           style: const TextStyle(color: Colors.grey)),
                     Text(f.objet),
                   ])),
-              Text(FormatUtils.currency(f.totalHt),
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: itemColor)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                      FormatUtils.currency(
+                          f.acompteDejaRegle > Decimal.zero
+                              ? f.netAPayer
+                              : f.totalTtc),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: itemColor)),
+                  if (f.acompteDejaRegle > Decimal.zero)
+                    Text("sur ${FormatUtils.currency(f.totalTtc)}",
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.grey)),
+                ],
+              ),
               PopupMenuButton<String>(
                   onSelected: (val) async {
                     final vm =

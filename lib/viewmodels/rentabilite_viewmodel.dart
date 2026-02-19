@@ -106,10 +106,90 @@ class RentabiliteViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  /// Sélectionne une ligne de devis pour afficher ses coûts dans le panneau droit
-  void selectLigneDevis(LigneDevis ligne) {
+  /// Sélectionne une ligne de devis pour afficher ses coûts dans le panneau droit.
+  /// Si la ligne n'a aucun coût interne et qu'elle est chiffrable,
+  /// un coût par défaut est créé automatiquement.
+  /// Le type (matériel vs main d'œuvre) est déduit par analyse textuelle de la description.
+  Future<void> selectLigneDevis(LigneDevis ligne) async {
     _selectedLigneDevis = ligne;
     notifyListeners();
+
+    // Auto-init : créer un coût par défaut si la ligne est chiffrable et vide
+    if (ligne.id != null &&
+        _selectedDevis != null &&
+        !['titre', 'sous-titre', 'texte', 'saut_page'].contains(ligne.type)) {
+      final existing =
+          _chiffrages.where((c) => c.linkedLigneDevisId == ligne.id);
+      if (existing.isEmpty) {
+        try {
+          final prixTotalVente = ligne.quantite * ligne.prixUnitaire;
+          final type = _detecterTypeChiffrage(ligne.description);
+          final defaultChiffrage = LigneChiffrage(
+            devisId: _selectedDevis!.id,
+            linkedLigneDevisId: ligne.id,
+            designation: ligne.description,
+            quantite: ligne.quantite,
+            prixAchatUnitaire: Decimal.zero, // Prix d'achat inconnu par défaut
+            prixVenteInterne: prixTotalVente,
+            typeChiffrage: type,
+            estAchete: false,
+          );
+          final created = await _chiffrageRepo.create(defaultChiffrage);
+          _chiffrages.add(created);
+          _recalculerAvancements();
+        } catch (e) {
+          developer.log('🔴 Auto-init chiffrage error: $e');
+        }
+      }
+    }
+  }
+
+  /// Détecte le type de chiffrage à partir de la description textuelle.
+  /// Si la description contient des termes liés à la main d'œuvre,
+  /// retourne [TypeChiffrage.mainDoeuvre], sinon [TypeChiffrage.materiel].
+  static TypeChiffrage _detecterTypeChiffrage(String description) {
+    final lower = description.toLowerCase();
+    const motsClesMo = [
+      'main d\'oeuvre',
+      'main d\'œuvre',
+      'main-d\'oeuvre',
+      'main-d\'œuvre',
+      'mo ',
+      'm.o.',
+      'pose',
+      'installation',
+      'montage',
+      'démontage',
+      'dépose',
+      'mise en service',
+      'mise en place',
+      'intervention',
+      'prestation',
+      'réparation',
+      'entretien',
+      'nettoyage',
+      'peinture',
+      'enduit',
+      'plâtre',
+      'maçonnerie',
+      'soudure',
+      'câblage',
+      'raccordement',
+      'tirage de câble',
+      'heure',
+      'heures',
+      'journée',
+      'journées',
+      'forfait mo',
+      'forfait main',
+      'travaux',
+    ];
+    for (final mot in motsClesMo) {
+      if (lower.contains(mot)) {
+        return TypeChiffrage.mainDoeuvre;
+      }
+    }
+    return TypeChiffrage.materiel;
   }
 
   /// Charge les chiffrages d'un devis et recalcule les avancements

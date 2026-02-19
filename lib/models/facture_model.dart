@@ -176,6 +176,11 @@ class Facture {
   Decimal get netAPayer => totalTtc - acompteDejaRegle - totalPaiements;
   Decimal get totalPaiements =>
       paiements.fold(Decimal.zero, (prev, element) => prev + element.montant);
+
+  /// Montant net facturé (TTC après déduction des acomptes/situations précédentes).
+  /// Correspond au « NET À PAYER » affiché sur le PDF.
+  Decimal get montantNetFacture => totalTtc - acompteDejaRegle;
+
   bool get estSoldee => netAPayer <= Decimal.zero;
 
   Facture({

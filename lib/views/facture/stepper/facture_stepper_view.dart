@@ -70,6 +70,12 @@ class _FactureStepperViewState extends State<FactureStepperView> {
   Decimal _remiseTaux = Decimal.zero;
   Decimal _acompteDejaRegle = Decimal.zero;
 
+  // Liens parent préservés pour getLinkedFactures et historique
+  String? _devisSourceId;
+  String? _factureSourceId;
+  String? _parentDocumentId;
+  Decimal? _avancementGlobal;
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +110,10 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       _acompteDejaRegle = f.acompteDejaRegle;
       _signatureUrl = f.signatureUrl;
       _dateSignature = f.dateSignature;
+      _devisSourceId = f.devisSourceId;
+      _factureSourceId = f.factureSourceId;
+      _parentDocumentId = f.parentDocumentId;
+      _avancementGlobal = f.avancementGlobal;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -146,6 +156,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
         _chiffrage = List.from(devis.chiffrage);
         _remiseTaux = devis.remiseTaux;
         _acompteDejaRegle = devis.acompteMontant;
+        _devisSourceId = devis.id;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -192,6 +203,8 @@ class _FactureStepperViewState extends State<FactureStepperView> {
         _chiffrage = List.from(source.chiffrage);
         _remiseTaux = source.remiseTaux;
         _acompteDejaRegle = source.acompteDejaRegle;
+        _factureSourceId = source.id;
+        _devisSourceId = source.devisSourceId;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final clientVM = Provider.of<ClientViewModel>(context, listen: false);
@@ -262,10 +275,14 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       numeroFacture: _numeroCtrl.text,
       objet: _objetCtrl.text,
       clientId: _selectedClient?.id ?? "temp-client",
+      devisSourceId: _devisSourceId,
+      factureSourceId: _factureSourceId ?? widget.sourceFactureId,
+      parentDocumentId: _parentDocumentId,
       dateEmission: _dateEmission,
       dateEcheance: _dateEcheance,
       statut: _statut,
       type: _typeFacture,
+      avancementGlobal: _avancementGlobal,
       totalHt: totalHt,
       totalTva: totalTvaRemisee,
       totalTtc: netAPayer,
@@ -276,7 +293,6 @@ class _FactureStepperViewState extends State<FactureStepperView> {
       numeroBonCommande:
           _bonCommandeCtrl.text.isNotEmpty ? _bonCommandeCtrl.text : null,
       motifAvoir: _motifAvoirCtrl.text.isNotEmpty ? _motifAvoirCtrl.text : null,
-      factureSourceId: widget.sourceFactureId,
       lignes: _lignes,
       chiffrage: _chiffrage,
       paiements: _paiements,

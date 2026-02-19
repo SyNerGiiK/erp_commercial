@@ -1024,7 +1024,7 @@ void main() {
   group('calculateHistoriqueReglements', () {
     test('devrait calculer le total des paiements des factures liées',
         () async {
-      // ARRANGE
+      // ARRANGE — factures payées : paiements = montantNetFacture
       final linkedFactures = <Facture>[
         Facture(
           id: 'f-linked-1',
@@ -1079,8 +1079,165 @@ void main() {
       final total = await viewModel.calculateHistoriqueReglements(
           'devis-1', 'facture-current');
 
-      // ASSERT
+      // ASSERT — paiements = 5000, montantNetFacture = 5000 → max = 5000
       expect(total, Decimal.parse('5000'));
+    });
+
+    test(
+        'devrait déduire le montant facturé même sans paiement enregistré '
+        '(bug surfacturation situation)', () async {
+      // ARRANGE — Situation 1 validée mais NON payée
+      // Devis de 10000€, situation 1 à 30% = 3000€ HT
+      final linkedFactures = <Facture>[
+        Facture(
+          id: 'f-sit-1',
+          userId: 'user-1',
+          numeroFacture: 'FACT-SIT-001',
+          objet: 'Situation 1',
+          clientId: 'c1',
+          type: 'situation',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('3000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'envoye', // Envoyée mais pas encore payée
+          paiements: [], // Aucun paiement !
+        ),
+      ];
+
+      when(() => mockRepository.getLinkedFactures(
+            'devis-1',
+            excludeFactureId: null,
+          )).thenAnswer((_) async => linkedFactures);
+
+      // ACT
+      final total =
+          await viewModel.calculateHistoriqueReglements('devis-1', '');
+
+      // ASSERT — totalPaiements = 0, montantNetFacture = 3000 → max = 3000
+      expect(total, Decimal.parse('3000'));
+    });
+
+    test(
+        'devrait utiliser montantNetFacture pour situation avec acompte déduit',
+        () async {
+      // ARRANGE — Acompte 1000€ payé + Situation 1 (3000€ HT, acompte 1000€ déduit)
+      final linkedFactures = <Facture>[
+        Facture(
+          id: 'f-acompte',
+          userId: 'user-1',
+          numeroFacture: 'FACT-AC-001',
+          objet: 'Acompte',
+          clientId: 'c1',
+          type: 'acompte',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('1000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'payee',
+          paiements: [
+            Paiement(
+              factureId: 'f-acompte',
+              montant: Decimal.parse('1000'),
+              datePaiement: DateTime.now(),
+              typePaiement: 'virement',
+            ),
+          ],
+        ),
+        Facture(
+          id: 'f-sit-1',
+          userId: 'user-1',
+          numeroFacture: 'FACT-SIT-001',
+          objet: 'Situation 1',
+          clientId: 'c1',
+          type: 'situation',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('3000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.parse('1000'), // Acompte déduit
+          statut: 'envoye', // Pas encore payée
+          paiements: [],
+        ),
+      ];
+
+      when(() => mockRepository.getLinkedFactures(
+            'devis-1',
+            excludeFactureId: null,
+          )).thenAnswer((_) async => linkedFactures);
+
+      // ACT
+      final total =
+          await viewModel.calculateHistoriqueReglements('devis-1', '');
+
+      // ASSERT
+      // totalPaiements = 1000 (acompte payé)
+      // totalFacture = 1000 (acompte net) + 2000 (sit1: 3000-1000) = 3000
+      // max = 3000
+      expect(total, Decimal.parse('3000'));
+    });
+
+    test('devrait ignorer les brouillons et annulées pour le montant facturé',
+        () async {
+      // ARRANGE — 1 facture validée + 1 brouillon + 1 annulée
+      final linkedFactures = <Facture>[
+        Facture(
+          id: 'f-validee',
+          userId: 'user-1',
+          numeroFacture: 'FACT-001',
+          objet: 'Situation 1',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('3000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+          paiements: [],
+        ),
+        Facture(
+          id: 'f-brouillon',
+          userId: 'user-1',
+          numeroFacture: '',
+          objet: 'Draft en cours',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('5000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'brouillon',
+          paiements: [],
+        ),
+        Facture(
+          id: 'f-annulee',
+          userId: 'user-1',
+          numeroFacture: 'FACT-ANN',
+          objet: 'Annulée',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now(),
+          totalHt: Decimal.parse('2000'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'annulee',
+          paiements: [],
+        ),
+      ];
+
+      when(() => mockRepository.getLinkedFactures(
+            'devis-1',
+            excludeFactureId: null,
+          )).thenAnswer((_) async => linkedFactures);
+
+      // ACT
+      final total =
+          await viewModel.calculateHistoriqueReglements('devis-1', '');
+
+      // ASSERT — seule la validée (3000) est comptée
+      expect(total, Decimal.parse('3000'));
     });
 
     test('devrait retourner zéro en cas d\'erreur', () async {

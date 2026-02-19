@@ -406,6 +406,74 @@ void main() {
         expect(facture.lignes[0].typeActivite, isNotNull);
       });
 
+      test(
+          'TYPE SITUATION + avancementsChiffrage: pré-remplit avancement par ligne (BUG 3 fix)',
+          () {
+        // ARRANGE — lignes avec IDs pour le mapping
+        final devisAvecIds = Devis(
+          id: 'devis-1',
+          userId: 'user-1',
+          numeroDevis: 'DEV-2024-001',
+          objet: 'Devis Test',
+          clientId: 'client-1',
+          dateEmission: DateTime(2024, 1, 15),
+          dateValidite: DateTime(2024, 2, 15),
+          totalHt: Decimal.parse('10000'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.zero,
+          statut: 'signe',
+          lignes: [
+            LigneDevis(
+              id: 'ligne-a',
+              description: 'Fourniture',
+              quantite: Decimal.fromInt(2),
+              prixUnitaire: Decimal.parse('2500'),
+              totalLigne: Decimal.parse('5000'),
+              type: 'article',
+            ),
+            LigneDevis(
+              id: 'ligne-b',
+              description: 'Main d\'oeuvre',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('5000'),
+              totalLigne: Decimal.parse('5000'),
+              type: 'article',
+            ),
+          ],
+        );
+
+        final avancements = <String, Decimal>{
+          'ligne-a': Decimal.fromInt(60), // 60%
+          'ligne-b': Decimal.fromInt(40), // 40%
+        };
+
+        // ACT
+        final facture = viewModel.prepareFacture(
+          devisAvecIds,
+          'situation',
+          Decimal.zero,
+          true,
+          avancementsChiffrage: avancements,
+        );
+
+        // ASSERT
+        expect(facture.type, 'situation');
+        expect(facture.lignes.length, 2);
+
+        // Avancement pré-rempli depuis le chiffrage
+        expect(facture.lignes[0].avancement, Decimal.fromInt(60));
+        expect(facture.lignes[1].avancement, Decimal.fromInt(40));
+
+        // total ligne = qté × PU × avancement%
+        // Ligne A: 2 × 2500 × 60 / 100 = 3000
+        expect(facture.lignes[0].totalLigne, Decimal.parse('3000'));
+        // Ligne B: 1 × 5000 × 40 / 100 = 2000
+        expect(facture.lignes[1].totalLigne, Decimal.parse('2000'));
+
+        // Total HT brut = 3000 + 2000 = 5000
+        expect(facture.totalHt, Decimal.parse('5000'));
+      });
+
       test('TYPE SOLDE: devrait créer facture solde avec acompte déduit', () {
         // ACT
         final facture = viewModel.prepareFacture(

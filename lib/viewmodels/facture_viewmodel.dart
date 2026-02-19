@@ -158,7 +158,15 @@ class FactureViewModel extends BaseViewModel
 
   // --- LOGIQUE MÉTIER ---
 
-  /// Calcule le total déjà réglé sur les factures liées au même devis (acomptes)
+  /// Calcule le total déjà réglé/facturé sur les factures liées au même devis.
+  ///
+  /// Retourne le **max** entre :
+  /// - la somme des paiements enregistrés (montants réellement encaissés)
+  /// - la somme des montants net facturés (totalTtc - acompteDejaRegle) des
+  ///   factures finalisées (non-brouillon, non-annulée)
+  ///
+  /// Cela garantit que même si une facture de situation précédente n'a pas
+  /// encore été payée, son montant est bien déduit de la prochaine situation.
   Future<Decimal> calculateHistoriqueReglements(
       String devisSourceId, String excludeFactureId) async {
     try {
@@ -167,13 +175,23 @@ class FactureViewModel extends BaseViewModel
         excludeFactureId: excludeFactureId.isNotEmpty ? excludeFactureId : null,
       );
 
-      Decimal total = Decimal.zero;
+      Decimal totalPaiements = Decimal.zero;
+      Decimal totalFacture = Decimal.zero;
+
       for (var f in linkedFactures) {
+        // Somme des paiements enregistrés (toutes factures)
         for (var p in f.paiements) {
-          total += p.montant;
+          totalPaiements += p.montant;
+        }
+
+        // Somme des montants net facturés (factures finalisées uniquement)
+        if (f.statut != 'brouillon' && f.statut != 'annulee') {
+          totalFacture += f.montantNetFacture;
         }
       }
-      return total;
+
+      // Retourner le max pour ne jamais sous-déduire
+      return totalPaiements > totalFacture ? totalPaiements : totalFacture;
     } catch (e) {
       developer.log("Erreur calcul historique règlements", error: e);
       return Decimal.zero;

@@ -243,14 +243,15 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Montant TTC de la facture
-                  Text(FormatUtils.currency(f.totalTtc),
+                  // Montant net de la facture (= NET À PAYER du PDF)
+                  Text(FormatUtils.currency(f.montantNetFacture),
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                           color: itemColor)),
-                  // Reste dû si paiements ou acompte déduit
-                  if (f.netAPayer != f.totalTtc && f.netAPayer > Decimal.zero)
+                  // Reste dû si paiements partiels
+                  if (f.netAPayer != f.montantNetFacture &&
+                      f.netAPayer > Decimal.zero)
                     Text("Reste dû : ${FormatUtils.currency(f.netAPayer)}",
                         style: const TextStyle(
                             fontSize: 11,

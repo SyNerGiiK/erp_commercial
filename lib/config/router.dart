@@ -30,6 +30,7 @@ import '../views/rentabilite_view.dart';
 import '../views/onboarding_view.dart';
 import '../views/relances_view.dart';
 import '../views/corbeille_view.dart';
+import '../views/parametres_view.dart';
 import '../views/factures_recurrentes_view.dart';
 import '../views/suivi_temps_view.dart';
 import '../views/rappels_echeances_view.dart';
@@ -116,7 +117,7 @@ class AppRouter {
         ),
         GoRoute(
           path: '/app/config_urssaf',
-          redirect: (_, __) => '/app/parametres',
+          builder: (_, __) => const ParametresView(),
         ),
         GoRoute(
           path: '/app/profil',

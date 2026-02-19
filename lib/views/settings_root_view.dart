@@ -1,16 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:decimal/decimal.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:typed_data';
 
 import '../config/theme.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
-import '../models/urssaf_model.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
-import '../viewmodels/urssaf_viewmodel.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/dialogs/signature_dialog.dart';
@@ -49,19 +47,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
   bool _tvaApplicable = false;
 
-  // URSSAF intégré
-  StatutEntrepreneur _statut = StatutEntrepreneur.artisan;
-  TypeActiviteMicro _activite = TypeActiviteMicro.mixte;
-  bool _versementLiberatoire = false;
-  bool _accreActive = false;
-  int _accreAnnee = 1;
-  final _tauxVenteCtrl = TextEditingController();
-  final _tauxPrestaBICCtrl = TextEditingController();
-  final _tauxPrestaBNCCtrl = TextEditingController();
-  final _tauxCfpVenteCtrl = TextEditingController();
-  final _tauxCfpPrestaCtrl = TextEditingController();
-  final _tauxCfpLiberalCtrl = TextEditingController();
-
   // === SECTION 3: Préférences d'Édition ===
   PdfTheme _pdfTheme = PdfTheme.moderne;
   ModeFacturation _modeFacturation = ModeFacturation.global;
@@ -77,9 +62,7 @@ class _SettingsRootViewState extends State<SettingsRootView> {
 
   Future<void> _loadData() async {
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-    final urssafVM = Provider.of<UrssafViewModel>(context, listen: false);
-
-    await Future.wait([entVM.fetchProfil(), urssafVM.loadConfig()]);
+    await entVM.fetchProfil();
 
     if (!mounted) return;
 
@@ -107,23 +90,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
         _modeDiscret = p.modeDiscret;
       });
     }
-
-    final c = urssafVM.config;
-    if (c != null) {
-      setState(() {
-        _statut = c.statut;
-        _activite = c.typeActivite;
-        _versementLiberatoire = c.versementLiberatoire;
-        _accreActive = c.accreActive;
-        _accreAnnee = c.accreAnnee;
-      });
-      _tauxVenteCtrl.text = c.tauxMicroVente.toString();
-      _tauxPrestaBICCtrl.text = c.tauxMicroPrestationBIC.toString();
-      _tauxPrestaBNCCtrl.text = c.tauxMicroPrestationBNC.toString();
-      _tauxCfpVenteCtrl.text = c.tauxCfpVente.toString();
-      _tauxCfpPrestaCtrl.text = c.tauxCfpPrestation.toString();
-      _tauxCfpLiberalCtrl.text = c.tauxCfpLiberal.toString();
-    }
   }
 
   @override
@@ -139,12 +105,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
     _ibanController.dispose();
     _bicController.dispose();
     _mentionsController.dispose();
-    _tauxVenteCtrl.dispose();
-    _tauxPrestaBICCtrl.dispose();
-    _tauxPrestaBNCCtrl.dispose();
-    _tauxCfpVenteCtrl.dispose();
-    _tauxCfpPrestaCtrl.dispose();
-    _tauxCfpLiberalCtrl.dispose();
     super.dispose();
   }
 
@@ -154,7 +114,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
     setState(() => _isSaving = true);
 
     final entVM = Provider.of<EntrepriseViewModel>(context, listen: false);
-    final urssafVM = Provider.of<UrssafViewModel>(context, listen: false);
 
     final profil = ProfilEntreprise(
       id: entVM.profil?.id,
@@ -181,27 +140,8 @@ class _SettingsRootViewState extends State<SettingsRootView> {
       modeDiscret: _modeDiscret,
     );
 
-    final urssafConfig = UrssafConfig(
-      id: urssafVM.config?.id,
-      userId: '',
-      statut: _statut,
-      typeActivite: _activite,
-      versementLiberatoire: _versementLiberatoire,
-      accreActive: _accreActive,
-      accreAnnee: _accreAnnee,
-      tauxMicroVente: Decimal.tryParse(_tauxVenteCtrl.text),
-      tauxMicroPrestationBIC: Decimal.tryParse(_tauxPrestaBICCtrl.text),
-      tauxMicroPrestationBNC: Decimal.tryParse(_tauxPrestaBNCCtrl.text),
-      tauxCfpVente: Decimal.tryParse(_tauxCfpVenteCtrl.text),
-      tauxCfpPrestation: Decimal.tryParse(_tauxCfpPrestaCtrl.text),
-      tauxCfpLiberal: Decimal.tryParse(_tauxCfpLiberalCtrl.text),
-    );
-
     try {
-      await Future.wait([
-        entVM.saveProfil(profil),
-        urssafVM.saveConfig(urssafConfig),
-      ]);
+      await entVM.saveProfil(profil);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -240,24 +180,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(success ? "Signature mise à jour !" : "Erreur upload")));
-  }
-
-  void _applyStatutDefaults(StatutEntrepreneur statut) {
-    Decimal cfpRate = Decimal.zero;
-    switch (statut) {
-      case StatutEntrepreneur.artisan:
-        cfpRate = Decimal.parse('0.3');
-        break;
-      case StatutEntrepreneur.commercant:
-        cfpRate = Decimal.parse('0.1');
-        break;
-      case StatutEntrepreneur.liberal:
-        cfpRate = Decimal.parse('0.2');
-        break;
-    }
-    _tauxCfpVenteCtrl.text = cfpRate.toString();
-    _tauxCfpPrestaCtrl.text = cfpRate.toString();
-    _tauxCfpLiberalCtrl.text = cfpRate.toString();
   }
 
   @override
@@ -506,83 +428,32 @@ class _SettingsRootViewState extends State<SettingsRootView> {
           onChanged: (v) => setState(() => _tvaApplicable = v),
         ),
         const Divider(height: 30),
-        const Text("Configuration URSSAF",
+
+        // === CONFIGURATION URSSAF — Renvoi vers page dédiée ===
+        const Text("Configuration URSSAF & Cotisations",
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primary)),
-        const SizedBox(height: 10),
-        RadioGroup<StatutEntrepreneur>(
-          groupValue: _statut,
-          onChanged: (v) {
-            if (v != null) {
-              setState(() => _statut = v);
-              _applyStatutDefaults(v);
-            }
-          },
-          child: Column(
-            children: StatutEntrepreneur.values
-                .map((s) => RadioListTile<StatutEntrepreneur>(
-                      title: Text(s.label),
-                      value: s,
-                    ))
-                .toList(),
-          ),
+        const SizedBox(height: 8),
+        const Text(
+          "Statut, activité, taux cotisations, TFC, versement libératoire, ACRE, synchronisation API.",
+          style: TextStyle(color: Colors.grey, fontSize: 12),
         ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<TypeActiviteMicro>(
-          key: ValueKey(_activite),
-          initialValue: _activite,
-          decoration: const InputDecoration(
-            labelText: "Type d'activité principale",
-            border: OutlineInputBorder(),
-          ),
-          items: TypeActiviteMicro.values
-              .map((a) => DropdownMenuItem(value: a, child: Text(a.label)))
-              .toList(),
-          onChanged: (v) => setState(() => _activite = v!),
-        ),
-        const SizedBox(height: 10),
-        SwitchListTile(
-          title: const Text("Versement Libératoire de l'Impôt"),
-          subtitle: const Text("Paiement IR avec les cotisations"),
-          value: _versementLiberatoire,
-          onChanged: (v) => setState(() => _versementLiberatoire = v),
-        ),
-        SwitchListTile(
-          title: const Text("Bénéficiaire ACRE"),
-          subtitle: const Text("Exonération partielle en début d'activité"),
-          value: _accreActive,
-          onChanged: (v) => setState(() => _accreActive = v),
-        ),
-        if (_accreActive)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DropdownButtonFormField<int>(
-              key: ValueKey(_accreAnnee),
-              initialValue: _accreAnnee,
-              decoration: const InputDecoration(labelText: "Année ACRE"),
-              items: [1, 2, 3]
-                  .map((y) =>
-                      DropdownMenuItem(value: y, child: Text("Année $y")))
-                  .toList(),
-              onChanged: (v) => setState(() => _accreAnnee = v!),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => context.push('/app/config_urssaf'),
+            icon: const Icon(Icons.tune),
+            label: const Text("Configurer URSSAF"),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: AppTheme.primary),
             ),
           ),
-        const SizedBox(height: 16),
-        const Text("Taux Appliqués (2026)",
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        const Text("Définis automatiquement. Ajustables si nécessaire.",
-            style: TextStyle(
-                color: Colors.grey, fontStyle: FontStyle.italic, fontSize: 12)),
-        const SizedBox(height: 12),
-        _buildRateRow("Vente (BIC)", _tauxVenteCtrl, _tauxCfpVenteCtrl,
-            UrssafConfig.libVente),
-        _buildRateRow("Prestation (BIC)", _tauxPrestaBICCtrl,
-            _tauxCfpPrestaCtrl, UrssafConfig.libBIC),
-        _buildRateRow("Prestation (BNC)", _tauxPrestaBNCCtrl,
-            _tauxCfpLiberalCtrl, UrssafConfig.libBNC),
+        ),
+
         const Divider(height: 30),
         const Text("Coordonnées Bancaires",
             style: TextStyle(
@@ -615,52 +486,6 @@ class _SettingsRootViewState extends State<SettingsRootView> {
           maxLines: 3,
         ),
       ],
-    );
-  }
-
-  Widget _buildRateRow(String label, TextEditingController socialCtrl,
-      TextEditingController cfpCtrl, Decimal libRate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        Expanded(
-            flex: 3,
-            child: Text(label,
-                style: const TextStyle(fontWeight: FontWeight.w600))),
-        Expanded(
-          flex: 2,
-          child: TextFormField(
-            controller: socialCtrl,
-            decoration:
-                const InputDecoration(labelText: "Social %", isDense: true),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 2,
-          child: TextFormField(
-            controller: cfpCtrl,
-            decoration:
-                const InputDecoration(labelText: "CFP %", isDense: true),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-        ),
-        if (_versementLiberatoire) ...[
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                  labelText: "Lib. %",
-                  isDense: true,
-                  border: OutlineInputBorder()),
-              child: Text("${libRate.toString()}%",
-                  style: const TextStyle(color: Colors.grey)),
-            ),
-          ),
-        ],
-      ]),
     );
   }
 

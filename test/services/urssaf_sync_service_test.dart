@@ -1,4 +1,4 @@
-/// Tests P2-P6 : Modèle étendu, SyncService, répartition, simulation VL vs IR
+// Tests P2-P6 : Modèle étendu, SyncService, répartition, simulation VL vs IR
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +118,42 @@ void main() {
         Decimal.zero,
       );
       expect(result['tfc'], Decimal.zero);
+    });
+
+    test('devrait retourner TFC = 0 pour un libéral même avec CA', () {
+      final config = UrssafConfig(
+        userId: 'u1',
+        statut: StatutEntrepreneur.liberal,
+        tauxTfcService: Decimal.parse('0.48'),
+        tauxTfcVente: Decimal.parse('0.22'),
+      );
+
+      final result = config.calculerCotisations(
+        Decimal.parse('10000'), // caVente
+        Decimal.parse('20000'), // caPrestaBIC
+        Decimal.parse('5000'), // caPrestaBNC
+      );
+
+      // TFC ne s'applique PAS aux professions libérales
+      expect(result['tfc'], Decimal.zero);
+    });
+
+    test('devrait appliquer TFC pour un commerçant', () {
+      final config = UrssafConfig(
+        userId: 'u1',
+        statut: StatutEntrepreneur.commercant,
+        tauxTfcService: Decimal.parse('0.48'),
+        tauxTfcVente: Decimal.parse('0.22'),
+      );
+
+      final result = config.calculerCotisations(
+        Decimal.parse('10000'), // caVente
+        Decimal.parse('20000'), // caPrestaBIC
+        Decimal.zero,
+      );
+
+      // TFC doit s'appliquer : 96 + 22 = 118
+      expect(result['tfc'], Decimal.parse('118'));
     });
   });
 
@@ -495,6 +531,93 @@ void main() {
 
     test('Plafond VL RFR = 29315', () {
       expect(UrssafConfig.standardPlafondVlRfr, Decimal.parse('29315'));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  //  ACRE — réduction 50% cotisations sociales
+  // ═══════════════════════════════════════════════════════
+  group('ACRE — réduction 50% cotisations sociales', () {
+    test('devrait réduire de 50% les cotisations sociales avec ACRE actif', () {
+      final configSansAcre = UrssafConfig(userId: 'u1', accreActive: false);
+      final configAvecAcre = UrssafConfig(userId: 'u1', accreActive: true);
+
+      final ca = Decimal.parse('50000');
+
+      final resultSans =
+          configSansAcre.calculerCotisations(Decimal.zero, ca, Decimal.zero);
+      final resultAvec =
+          configAvecAcre.calculerCotisations(Decimal.zero, ca, Decimal.zero);
+
+      // Social devrait être divisé par 2
+      expect(
+          resultAvec['social'], resultSans['social']! * Decimal.parse('0.5'));
+      // CFP ne doit PAS changer
+      expect(resultAvec['cfp'], resultSans['cfp']);
+      // TFC ne doit PAS changer
+      expect(resultAvec['tfc'], resultSans['tfc']);
+    });
+
+    test('ACRE ne devrait PAS affecter le versement libératoire', () {
+      final configAvecAcre = UrssafConfig(
+        userId: 'u1',
+        accreActive: true,
+        versementLiberatoire: true,
+      );
+      final configSansAcre = UrssafConfig(
+        userId: 'u1',
+        accreActive: false,
+        versementLiberatoire: true,
+      );
+
+      final ca = Decimal.parse('50000');
+
+      final resAvec =
+          configAvecAcre.calculerCotisations(ca, Decimal.zero, Decimal.zero);
+      final resSans =
+          configSansAcre.calculerCotisations(ca, Decimal.zero, Decimal.zero);
+
+      expect(resAvec['liberatoire'], resSans['liberatoire']);
+    });
+
+    test('ACRE devrait réduire la sous-répartition (maladie, retraite, etc.)',
+        () {
+      final configSans = UrssafConfig(userId: 'u1', accreActive: false);
+      final configAvec = UrssafConfig(userId: 'u1', accreActive: true);
+
+      final ca = Decimal.parse('60000');
+
+      final repSans =
+          configSans.calculerRepartition(Decimal.zero, ca, Decimal.zero);
+      final repAvec =
+          configAvec.calculerRepartition(Decimal.zero, ca, Decimal.zero);
+
+      expect(repAvec['maladie'], repSans['maladie']! * Decimal.parse('0.5'));
+      expect(repAvec['retraite_base'],
+          repSans['retraite_base']! * Decimal.parse('0.5'));
+    });
+
+    test('ACRE désactivé ne change rien aux calculs', () {
+      final config = UrssafConfig(userId: 'u1', accreActive: false);
+
+      final ca = Decimal.parse('80000');
+      final result = config.calculerCotisations(ca, Decimal.zero, Decimal.zero);
+
+      // Social = 80000 * 12.3% = 9840
+      expect(result['social'], Decimal.parse('9840'));
+    });
+
+    test('ACRE avec activité mixte réduit vente ET prestation', () {
+      final config = UrssafConfig(userId: 'u1', accreActive: true);
+
+      final caVente = Decimal.parse('30000');
+      final caBIC = Decimal.parse('50000');
+
+      final result = config.calculerCotisations(caVente, caBIC, Decimal.zero);
+
+      // Sans ACRE : social = 30000*12.3% + 50000*21.2% = 3690 + 10600 = 14290
+      // Avec ACRE : 14290 * 0.5 = 7145
+      expect(result['social'], Decimal.parse('7145'));
     });
   });
 }

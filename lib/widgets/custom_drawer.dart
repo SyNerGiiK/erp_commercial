@@ -224,7 +224,7 @@ class CustomDrawer extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textLight,
                       fontSize: 12,
                     ),

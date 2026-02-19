@@ -335,59 +335,59 @@ void main() {
         return captured;
       }
 
-      test('\"Pose carrelage\" → main d\'œuvre', () async {
+      test('"Pose carrelage" → main d\'œuvre', () async {
         final c = await autoInitLigneAvecDescription('Pose carrelage sol');
         expect(c, isNotNull);
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
         expect(c.prixAchatUnitaire, Decimal.zero);
       });
 
-      test('\"Main d\'oeuvre électricité\" → main d\'œuvre', () async {
+      test('"Main d\'oeuvre électricité" → main d\'œuvre', () async {
         final c =
             await autoInitLigneAvecDescription("Main d'oeuvre électricité");
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });
 
-      test('\"Installation climatisation\" → main d\'œuvre', () async {
+      test('"Installation climatisation" → main d\'œuvre', () async {
         final c =
             await autoInitLigneAvecDescription('Installation climatisation');
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });
 
-      test('\"8 heures de soudure\" → main d\'œuvre', () async {
+      test('"8 heures de soudure" → main d\'œuvre', () async {
         final c = await autoInitLigneAvecDescription('8 heures de soudure');
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });
 
-      test('\"Peinture murs et plafonds\" → main d\'œuvre', () async {
+      test('"Peinture murs et plafonds" → main d\'œuvre', () async {
         final c =
             await autoInitLigneAvecDescription('Peinture murs et plafonds');
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });
 
-      test('\"Câble RJ45 Cat6 50m\" → matériel', () async {
+      test('"Câble RJ45 Cat6 50m" → matériel', () async {
         final c = await autoInitLigneAvecDescription('Câble RJ45 Cat6 50m');
         expect(c!.typeChiffrage, TypeChiffrage.materiel);
       });
 
-      test('\"Lot de vis inox 200 pièces\" → matériel', () async {
+      test('"Lot de vis inox 200 pièces" → matériel', () async {
         final c =
             await autoInitLigneAvecDescription('Lot de vis inox 200 pièces');
         expect(c!.typeChiffrage, TypeChiffrage.materiel);
       });
 
-      test('\"Tableau électrique 2 rangées\" → matériel', () async {
+      test('"Tableau électrique 2 rangées" → matériel', () async {
         final c =
             await autoInitLigneAvecDescription('Tableau électrique 2 rangées');
         expect(c!.typeChiffrage, TypeChiffrage.materiel);
       });
 
-      test('\"Forfait MO plomberie\" → main d\'œuvre', () async {
+      test('"Forfait MO plomberie" → main d\'œuvre', () async {
         final c = await autoInitLigneAvecDescription('Forfait MO plomberie');
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });
 
-      test('\"Intervention dépannage\" → main d\'œuvre', () async {
+      test('"Intervention dépannage" → main d\'œuvre', () async {
         final c = await autoInitLigneAvecDescription('Intervention dépannage');
         expect(c!.typeChiffrage, TypeChiffrage.mainDoeuvre);
       });

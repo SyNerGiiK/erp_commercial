@@ -548,7 +548,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textLight,

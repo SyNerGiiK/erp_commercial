@@ -299,6 +299,73 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     }
   }
 
+  Future<void> _sauvegarderEtFinaliser() async {
+    // Sauvegarde d'abord, puis finalise
+    final savedId = await _sauvegarderEtRetournerId();
+    if (savedId == null || !mounted) return;
+
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+    final factureToFinalize = _buildFactureFromState().copyWith(id: savedId);
+    final success = await vm.finaliserFacture(factureToFinalize);
+
+    if (!mounted) return;
+
+    if (success) {
+      await vm.clearFactureDraft(widget.id);
+      if (mounted) {
+        context.go('/app/factures');
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Facture validée !")));
+      }
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Erreur validation")));
+    }
+  }
+
+  /// Sauvegarde la facture et retourne l'ID (null si erreur)
+  Future<String?> _sauvegarderEtRetournerId() async {
+    if (_formKey.currentState?.validate() == false) {
+      return null;
+    }
+
+    if (_selectedClient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Veuillez sélectionner un client")));
+      return null;
+    }
+
+    setState(() => _isLoading = true);
+    final vm = Provider.of<FactureViewModel>(context, listen: false);
+    final factureToSave = _buildFactureFromState();
+
+    bool success;
+    if (widget.id == null) {
+      success = await vm.addFacture(factureToSave);
+    } else {
+      success = await vm.updateFacture(factureToSave);
+    }
+
+    if (!mounted) {
+      return null;
+    }
+    setState(() => _isLoading = false);
+
+    if (success) {
+      // Récupérer l'ID de la facture sauvegardée
+      // Si c'est un update, on a déjà l'ID; si c'est un add, il faut le retrouver
+      if (widget.id != null) {
+        return widget.id;
+      }
+      // Pour un ajout, la dernière facture ajoutée est la première de la liste
+      final factures = vm.factures;
+      if (factures.isNotEmpty) {
+        return factures.first.id;
+      }
+    }
+    return null;
+  }
+
   Future<void> _sauvegarder() async {
     if (_formKey.currentState?.validate() == false) {
       return;
@@ -437,6 +504,7 @@ class _FactureStepperViewState extends State<FactureStepperView> {
             title: const Text('Validation'),
             content: Step4Validation(
               facture: draftData,
+              onFinalise: _sauvegarderEtFinaliser,
             ),
             isActive: _currentStep >= 3,
             state: _currentStep == 3 ? StepState.complete : StepState.indexed,

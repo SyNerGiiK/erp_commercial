@@ -17,10 +17,12 @@ import '../../../../widgets/app_card.dart';
 
 class Step4Validation extends StatefulWidget {
   final Facture facture;
+  final Future<void> Function()? onFinalise;
 
   const Step4Validation({
     super.key,
     required this.facture,
+    this.onFinalise,
   });
 
   @override
@@ -69,7 +71,7 @@ class _Step4ValidationState extends State<Step4Validation> {
       builder: (ctx) => AlertDialog(
         title: const Text("Valider définitivement ?"),
         content: const Text(
-            "La facture sera verrouillée et numérotée officiellement. Cette action est irréversible."),
+            "La facture sera enregistrée, verrouillée et numérotée officiellement. Cette action est irréversible."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -84,6 +86,15 @@ class _Step4ValidationState extends State<Step4Validation> {
     if (confirm != true) return;
     if (!mounted) return;
 
+    // Déléguer au parent (stepper) qui gère sauvegarde + finalisation
+    if (widget.onFinalise != null) {
+      setState(() => _isLoading = true);
+      await widget.onFinalise!();
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    // Fallback si pas de callback (ne devrait pas arriver)
     setState(() => _isLoading = true);
     final vm = Provider.of<FactureViewModel>(context, listen: false);
 
@@ -93,7 +104,7 @@ class _Step4ValidationState extends State<Step4Validation> {
 
     if (success) {
       if (mounted) {
-        context.go('/app/factures'); // Exit on success
+        context.go('/app/factures');
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("Facture validée !")));
       }

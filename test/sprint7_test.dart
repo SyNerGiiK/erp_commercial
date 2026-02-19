@@ -261,6 +261,7 @@ void main() {
       expect(
           TypeEntreprise.microEntrepreneurService.isMicroEntrepreneur, isTrue);
       expect(TypeEntreprise.microEntrepreneurVente.isMicroEntrepreneur, isTrue);
+      expect(TypeEntreprise.microEntrepreneurMixte.isMicroEntrepreneur, isTrue);
       expect(TypeEntreprise.sasu.isMicroEntrepreneur, isFalse);
       expect(TypeEntreprise.eurl.isMicroEntrepreneur, isFalse);
       expect(TypeEntreprise.autre.isMicroEntrepreneur, isFalse);

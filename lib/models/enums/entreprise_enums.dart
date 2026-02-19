@@ -1,6 +1,7 @@
 enum TypeEntreprise {
   microEntrepreneurVente,
   microEntrepreneurService,
+  microEntrepreneurMixte, // Vente + Service (artisan fourniture + pose)
   entrepriseIndividuelle, // TNS
   sasu, // Assimilé Salarié
   eurl, // TNS
@@ -11,7 +12,8 @@ enum TypeEntreprise {
 extension TypeEntrepriseExtension on TypeEntreprise {
   bool get isMicroEntrepreneur =>
       this == TypeEntreprise.microEntrepreneurVente ||
-      this == TypeEntreprise.microEntrepreneurService;
+      this == TypeEntreprise.microEntrepreneurService ||
+      this == TypeEntreprise.microEntrepreneurMixte;
 
   bool get isTNS =>
       this == TypeEntreprise.entrepriseIndividuelle ||
@@ -26,6 +28,8 @@ extension TypeEntrepriseExtension on TypeEntreprise {
         return "Micro-Entrepreneur (Vente)";
       case TypeEntreprise.microEntrepreneurService:
         return "Micro-Entrepreneur (Service)";
+      case TypeEntreprise.microEntrepreneurMixte:
+        return "Micro-Entrepreneur (Mixte)";
       case TypeEntreprise.entrepriseIndividuelle:
         return "Entreprise Individuelle";
       case TypeEntreprise.sasu:

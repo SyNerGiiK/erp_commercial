@@ -335,7 +335,10 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
         final ligne = lignes[index].ligne;
         if (ligne.id == null) return const SizedBox.shrink();
 
-        final ratioMateriel = vm.getVentilationMaterielRatio(ligne.id!);
+        // Correction : getVentilationMaterielRatio attend un Devis, pas un String
+        final devis = vm.selectedDevis;
+        if (devis == null) return const SizedBox.shrink();
+        final ratioMateriel = vm.getVentilationMaterielRatio(devis);
         final ratioMo = Decimal.fromInt(100) - ratioMateriel;
         final montantMateriel =
             ((ligne.totalLigne * ratioMateriel) / Decimal.fromInt(100))

@@ -6,9 +6,11 @@ import '../core/base_viewmodel.dart';
 import '../models/devis_model.dart';
 import '../models/chiffrage_model.dart';
 import '../models/depense_model.dart';
+import '../models/facture_model.dart';
 import '../repositories/chiffrage_repository.dart';
 import '../repositories/devis_repository.dart';
 import '../repositories/depense_repository.dart';
+import '../repositories/facture_repository.dart';
 import '../utils/calculations_utils.dart';
 
 /// État d'avancement calculé pour une ligne de devis
@@ -40,17 +42,20 @@ class RentabiliteViewModel extends BaseViewModel {
   final IChiffrageRepository _chiffrageRepo;
   final IDevisRepository _devisRepo;
   final IDepenseRepository _depenseRepo;
+  final IFactureRepository _factureRepo;
 
   RentabiliteViewModel({
     IChiffrageRepository? chiffrageRepository,
     IDevisRepository? devisRepository,
     IDepenseRepository? depenseRepository,
+    IFactureRepository? factureRepository,
   })  : _chiffrageRepo = chiffrageRepository ?? ChiffrageRepository(),
         _devisRepo = devisRepository ?? DevisRepository(),
         _depenseRepo = depenseRepository ??
             ((chiffrageRepository != null || devisRepository != null)
                 ? _MemoryDepenseRepository()
-                : DepenseRepository());
+                : DepenseRepository()),
+        _factureRepo = factureRepository ?? FactureRepository();
 
   // ============ ÉTAT ============
 
@@ -67,6 +72,10 @@ class RentabiliteViewModel extends BaseViewModel {
   List<LigneChiffrage> _chiffrages = [];
   List<LigneChiffrage> get chiffrages => _chiffrages;
 
+  /// Factures liées au devis sélectionné
+  List<Facture> _facturesLiees = [];
+  List<Facture> get facturesLiees => _facturesLiees;
+
   /// Dépenses (Réelles) du devis sélectionné
   List<Depense> _depenses = [];
   List<Depense> get depenses => _depenses;
@@ -74,6 +83,9 @@ class RentabiliteViewModel extends BaseViewModel {
   /// Cache des dépenses par chantier (devisId)
   Map<String, List<Depense>> _depensesByDevis = {};
   Map<String, List<Depense>> get depensesByDevis => _depensesByDevis;
+
+  /// Cache des factures liées par chantier (devisId)
+  Map<String, List<Facture>> _facturesByDevis = {};
 
   /// Map ligneDevisId → avancement calculé
   Map<String, Decimal> _avancements = {};
@@ -94,12 +106,31 @@ class RentabiliteViewModel extends BaseViewModel {
     return _selectedDevis!.totalHt - totalDepenses;
   }
 
-  /// Facturation = Total encaissements
+  /// Facturation = Total encaissements (somme des paiements de TOUTES les factures liées)
+  /// Reprend la logique de calculateHistoriqueReglements du FactureViewModel :
+  /// - Somme des paiements effectifs
+  /// - Somme des montants nets facturés (pour les factures finalisées)
+  /// - Retourne le MAX des deux (pour ne jamais sous-déduire)
   Decimal get facturationEncaissee {
     if (_selectedDevis == null) return Decimal.zero;
-    // Note: Devis -> Transformé en Facture. Pour le MVP Cockpit on utilise l'acompte
-    // Mais l'idéal serait de récupérer la facture liée pour sommer les vrais paiements
-    return _selectedDevis!.acompteMontant;
+
+    Decimal totalPaiements = Decimal.zero;
+    Decimal totalFacture = Decimal.zero;
+
+    for (final facture in _facturesLiees) {
+      // Somme des paiements enregistrés
+      for (final paiement in facture.paiements) {
+        totalPaiements += paiement.montant;
+      }
+
+      // Somme des montants net facturés (factures finalisées uniquement)
+      if (facture.statut != 'brouillon' && facture.statut != 'annulee') {
+        totalFacture += facture.montantNetFacture;
+      }
+    }
+
+    // Retourner le max pour ne jamais sous-déduire
+    return totalPaiements > totalFacture ? totalPaiements : totalFacture;
   }
 
   Decimal get margePrevue {
@@ -138,16 +169,25 @@ class RentabiliteViewModel extends BaseViewModel {
     await execute(() async {
       _devisList = await _devisRepo.getChantiersActifs();
 
-      final depensesEntries = await Future.wait(
+      final results = await Future.wait(
         _devisList.where((d) => d.id != null).map((devis) async {
           final id = devis.id!;
-          final list = await _depenseRepo.getDepensesByChantier(id);
-          return MapEntry(id, list);
+          final depenses = await _depenseRepo.getDepensesByChantier(id);
+          List<Facture> factures;
+          try {
+            factures = await _factureRepo.getLinkedFactures(id);
+          } catch (_) {
+            factures = [];
+          }
+          return MapEntry(id, (depenses, factures));
         }),
       );
 
       _depensesByDevis = {
-        for (final entry in depensesEntries) entry.key: entry.value
+        for (final entry in results) entry.key: entry.value.$1
+      };
+      _facturesByDevis = {
+        for (final entry in results) entry.key: entry.value.$2
       };
     });
   }
@@ -161,6 +201,7 @@ class RentabiliteViewModel extends BaseViewModel {
     await Future.wait([
       _loadChiffrages(devis.id!),
       _loadDepenses(devis.id!),
+      _loadFacturesLiees(devis.id!),
     ]);
   }
 
@@ -171,6 +212,19 @@ class RentabiliteViewModel extends BaseViewModel {
       _depenses = loaded;
       _depensesByDevis[devisId] = loaded;
     });
+  }
+
+  /// Charge les factures liées à un devis (fail-safe : ne bloque pas le chargement)
+  Future<void> _loadFacturesLiees(String devisId) async {
+    try {
+      await execute(() async {
+        _facturesLiees = await _factureRepo.getLinkedFactures(devisId);
+        _facturesByDevis[devisId] = _facturesLiees;
+      });
+    } catch (e) {
+      developer.log('⚠️ Impossible de charger les factures liées: $e');
+      _facturesLiees = [];
+    }
   }
 
   /// Toggle l'expansion d'un devis dans le panneau gauche
@@ -299,8 +353,25 @@ class RentabiliteViewModel extends BaseViewModel {
 
   Decimal getTauxEncaissementForDevis(Devis devis) {
     if (devis.totalTtc <= Decimal.zero) return Decimal.zero;
-    return ((devis.acompteMontant * Decimal.fromInt(100)) / devis.totalTtc)
-        .toDecimal();
+
+    final factures = _facturesByDevis[devis.id] ?? const <Facture>[];
+    if (factures.isEmpty) return Decimal.zero;
+
+    Decimal totalPaiements = Decimal.zero;
+    Decimal totalFacture = Decimal.zero;
+
+    for (final facture in factures) {
+      for (final paiement in facture.paiements) {
+        totalPaiements += paiement.montant;
+      }
+      if (facture.statut != 'brouillon' && facture.statut != 'annulee') {
+        totalFacture += facture.montantNetFacture;
+      }
+    }
+
+    final encaisse =
+        totalPaiements > totalFacture ? totalPaiements : totalFacture;
+    return ((encaisse * Decimal.fromInt(100)) / devis.totalTtc).toDecimal();
   }
 
   Decimal getMargePrevueForDevis(Devis devis) {

@@ -4,6 +4,7 @@ import '../core/base_repository.dart';
 
 abstract class IDepenseRepository {
   Future<List<Depense>> getDepenses();
+  Future<List<Depense>> getDepensesByChantier(String devisId);
   Future<void> createDepense(Depense depense);
   Future<void> updateDepense(Depense depense);
   Future<void> deleteDepense(String id);
@@ -28,6 +29,23 @@ class DepenseRepository extends BaseRepository implements IDepenseRepository {
       return (response as List).map((e) => Depense.fromMap(e)).toList();
     } catch (e) {
       throw handleError(e, 'getDepenses');
+    }
+  }
+
+  @override
+  Future<List<Depense>> getDepensesByChantier(String devisId) async {
+    try {
+      final response = await client
+          .from('depenses')
+          .select()
+          .eq('user_id', userId)
+          .eq('devis_id', devisId)
+          .isFilter('deleted_at', null)
+          .order('date', ascending: false);
+
+      return (response as List).map((e) => Depense.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getDepensesByChantier');
     }
   }
 

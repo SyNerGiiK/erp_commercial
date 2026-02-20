@@ -5,6 +5,7 @@ import '../core/document_repository.dart';
 
 abstract class IDevisRepository {
   Future<List<Devis>> getDevis({bool archives = false});
+  Future<List<Devis>> getChantiersActifs();
   Future<Devis> createDevis(Devis devis);
   Future<void> updateDevis(Devis devis);
   Future<void> deleteDevis(String id);
@@ -48,6 +49,25 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
       return (response as List).map((e) => Devis.fromMap(e)).toList();
     } catch (e) {
       throw handleError(e, 'getDevis');
+    }
+  }
+
+  @override
+  Future<List<Devis>> getChantiersActifs() async {
+    try {
+      final response = await client
+          .from('devis')
+          .select('*, lignes_devis(*), lignes_chiffrages(*)')
+          .eq('user_id', userId)
+          .eq('est_archive', false)
+          .inFilter('statut', ['accepte', 'facture'])
+          .isFilter('deleted_at', null)
+          .order('created_at', ascending: false)
+          .order('ordre', referencedTable: 'lignes_devis', ascending: true);
+
+      return (response as List).map((e) => Devis.fromMap(e)).toList();
+    } catch (e) {
+      throw handleError(e, 'getChantiersActifs');
     }
   }
 

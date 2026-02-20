@@ -1,6 +1,6 @@
 # Guide du contributeur — ERP Artisan
 
-> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 19/02/2026
+> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 20/02/2026
 
 ---
 

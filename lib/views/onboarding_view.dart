@@ -138,6 +138,7 @@ class _OnboardingViewState extends State<OnboardingView> {
         email: _emailController.text.trim(),
       );
       await vm.saveProfil(tempProfil);
+      if (!mounted) return;
     }
 
     final success = await vm.uploadImage(image, 'logo');

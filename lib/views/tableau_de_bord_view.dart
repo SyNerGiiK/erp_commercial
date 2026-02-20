@@ -100,7 +100,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                     final kpiCards = [
                       GradientKpiCard(
                         title: "Chiffre d'Affaires",
-                        value: "${ca.toStringAsFixed(2)} €",
+                        value: "${ca.toDouble().toStringAsFixed(2)} €",
                         subtitle:
                             "${vm.caVariation >= 0 ? '+' : ''}${vm.caVariation.toStringAsFixed(1)}% vs N-1",
                         variation: vm.caVariation,
@@ -112,7 +112,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ),
                       GradientKpiCard(
                         title: "Bénéfice Net",
-                        value: "${benef.toStringAsFixed(2)} €",
+                        value: "${benef.toDouble().toStringAsFixed(2)} €",
                         subtitle:
                             "${vm.beneficeVariation >= 0 ? '+' : ''}${vm.beneficeVariation.toStringAsFixed(1)}% vs N-1",
                         variation: vm.beneficeVariation,
@@ -124,7 +124,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ),
                       GradientKpiCard(
                         title: "Cotisations 2026",
-                        value: "${cotis.toStringAsFixed(2)} €",
+                        value: "${cotis.toDouble().toStringAsFixed(2)} €",
                         subtitle: "Estimé selon statut",
                         icon: Icons.account_balance_outlined,
                         gradientColors: const [
@@ -134,7 +134,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ),
                       GradientKpiCard(
                         title: "Dépenses",
-                        value: "${dep.toStringAsFixed(2)} €",
+                        value: "${dep.toDouble().toStringAsFixed(2)} €",
                         subtitle: "Charges déductibles",
                         variation: vm.depensesVariation,
                         icon: Icons.shopping_bag_outlined,
@@ -199,7 +199,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                     icon: Icons.trending_up_rounded,
                                     title: 'Taux de conversion',
                                     value:
-                                        '${vm.tauxConversion.toStringAsFixed(1)}%',
+                                        '${vm.tauxConversion.toDouble().toStringAsFixed(1)}%',
                                     subtitle:
                                         '${vm.totalDevisYear} devis cette année',
                                     color: vm.tauxConversion.toDouble() >= 50
@@ -229,7 +229,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                     icon: Icons.account_balance_wallet_outlined,
                                     title: 'Montant pipeline',
                                     value:
-                                        '${vm.montantPipeline.toStringAsFixed(2)} €',
+                                        '${vm.montantPipeline.toDouble().toStringAsFixed(2)} €',
                                     subtitle: 'CA potentiel en attente',
                                     color: const Color(0xFFA8BFFF),
                                   ),

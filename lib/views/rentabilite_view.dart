@@ -796,6 +796,7 @@ class _RightPanel extends StatelessWidget {
         prixTotalLigne: ligne.quantite * ligne.prixUnitaire,
       ),
     );
+    if (!context.mounted) return;
     if (result != null) {
       vm.ajouterChiffrage(result);
     }

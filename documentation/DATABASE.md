@@ -1,6 +1,6 @@
 # Base de données — ERP Artisan
 
-> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 19/02/2026
+> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 20/02/2026
 
 ---
 

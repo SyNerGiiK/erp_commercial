@@ -347,7 +347,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
     try {
       final qte = Decimal.parse(_quantiteCtrl.text.replaceAll(',', '.'));
       final prix = Decimal.parse(_prixAchatCtrl.text.replaceAll(',', '.'));
-      return "${(qte * prix).toStringAsFixed(2)} €";
+      return "${(qte * prix).toDouble().toStringAsFixed(2)} €";
     } catch (_) {
       return "-- €";
     }
@@ -378,7 +378,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
                       return ListTile(
                         title: Text(art.designation),
                         subtitle: Text(
-                            "${art.prixAchat.toStringAsFixed(2)}€ / ${art.unite}"),
+                            "${art.prixAchat.toDouble().toStringAsFixed(2)}€ / ${art.unite}"),
                         onTap: () => Navigator.pop(ctx, art),
                       );
                     },
@@ -393,10 +393,13 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
         ),
       );
 
+      if (!mounted) return;
+
       if (selected != null) {
         setState(() {
           _designationCtrl.text = selected.designation;
-          _prixAchatCtrl.text = selected.prixAchat.toStringAsFixed(2);
+          _prixAchatCtrl.text =
+              selected.prixAchat.toDouble().toStringAsFixed(2);
           if (_unites.contains(selected.unite)) {
             _unite = selected.unite;
           } else {

@@ -74,7 +74,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    "Total: ${widget.total.toStringAsFixed(2)} €",
+                    "Total: ${widget.total.toDouble().toStringAsFixed(2)} €",
                     style: const TextStyle(
                       color: Colors.blue,
                       fontWeight: FontWeight.bold,
@@ -134,7 +134,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text("${entry.value.toStringAsFixed(2)} €",
+                          Text("${entry.value.toDouble().toStringAsFixed(2)} €",
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           Text("$percentage%",
@@ -222,7 +222,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                 ),
                 const Spacer(),
                 Text(
-                  '${totalRepartition.toStringAsFixed(2)} €',
+                  '${totalRepartition.toDouble().toStringAsFixed(2)} €',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -283,7 +283,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                       SizedBox(
                         width: 75,
                         child: Text(
-                          '${entry.value.toStringAsFixed(2)} €',
+                          '${entry.value.toDouble().toStringAsFixed(2)} €',
                           textAlign: TextAlign.end,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,

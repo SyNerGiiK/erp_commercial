@@ -125,7 +125,7 @@ class SuiviSeuilTvaCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
             ),
             Text(
-              '${analyse.caActuel.toStringAsFixed(0)}€',
+              '${analyse.caActuel.toDouble().toStringAsFixed(0)}€',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
@@ -149,7 +149,7 @@ class SuiviSeuilTvaCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${analyse.seuilBase.toStringAsFixed(0)}€',
+              '${analyse.seuilBase.toDouble().toStringAsFixed(0)}€',
               style: const TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],
@@ -169,7 +169,7 @@ class SuiviSeuilTvaCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              '${analyse.seuilMajore.toStringAsFixed(0)}€',
+              '${analyse.seuilMajore.toDouble().toStringAsFixed(0)}€',
               style: const TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],
@@ -180,7 +180,7 @@ class SuiviSeuilTvaCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 45),
             child: Text(
-              'Marge base : ${analyse.margeBase.toStringAsFixed(0)}€',
+              'Marge base : ${analyse.margeBase.toDouble().toStringAsFixed(0)}€',
               style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
             ),
           ),

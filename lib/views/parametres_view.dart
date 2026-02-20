@@ -72,6 +72,7 @@ class _ParametresViewState extends State<ParametresView> {
   Future<void> _loadData() async {
     final vm = Provider.of<UrssafViewModel>(context, listen: false);
     await vm.loadConfig();
+    if (!mounted) return;
     if (vm.config != null) {
       _populateFields(vm.config!);
     }
@@ -442,39 +443,40 @@ class _ParametresViewState extends State<ParametresView> {
   }
 
   Widget _buildStatutSelector() {
-    return Column(
-      children: StatutEntrepreneur.values.map((s) {
-        String label = "";
-        String desc = "";
-        switch (s) {
-          case StatutEntrepreneur.artisan:
-            label = "Artisan";
-            desc = "Métiers manuels, fabrication... (CFP 0.3%)";
-            break;
-          case StatutEntrepreneur.commercant:
-            label = "Commerçant";
-            desc = "Achat/Revente... (CFP 0.1%)";
-            break;
-          case StatutEntrepreneur.liberal:
-            label = "Libéral";
-            desc = "Consultant, développeur... (CFP 0.2%)";
-            break;
+    return RadioGroup<StatutEntrepreneur>(
+      groupValue: _statut,
+      onChanged: (v) {
+        if (v != null) {
+          setState(() => _statut = v);
+          _applyStatutDefaults(v);
         }
-        return RadioListTile<StatutEntrepreneur>(
-          title: Text(label),
-          subtitle: Text(desc),
-          value: s,
-          // ignore: deprecated_member_use
-          groupValue: _statut,
-          // ignore: deprecated_member_use
-          onChanged: (v) {
-            if (v != null) {
-              setState(() => _statut = v);
-              _applyStatutDefaults(v);
-            }
-          },
-        );
-      }).toList(),
+      },
+      child: Column(
+        children: StatutEntrepreneur.values.map((s) {
+          String label = "";
+          String desc = "";
+          switch (s) {
+            case StatutEntrepreneur.artisan:
+              label = "Artisan";
+              desc = "Métiers manuels, fabrication... (CFP 0.3%)";
+              break;
+            case StatutEntrepreneur.commercant:
+              label = "Commerçant";
+              desc = "Achat/Revente... (CFP 0.1%)";
+              break;
+            case StatutEntrepreneur.liberal:
+              label = "Libéral";
+              desc = "Consultant, développeur... (CFP 0.2%)";
+              break;
+          }
+          return RadioListTile<StatutEntrepreneur>(
+            title: Text(label),
+            subtitle: Text(desc),
+            value: s,
+            activeColor: AppTheme.primary,
+          );
+        }).toList(),
+      ),
     );
   }
 

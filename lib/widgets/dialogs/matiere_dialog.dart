@@ -184,7 +184,7 @@ class _MatiereDialogState extends State<MatiereDialog> {
       final qte = Decimal.parse(_quantiteCtrl.text.replaceAll(',', '.'));
       final prix = Decimal.parse(_prixAchatCtrl.text.replaceAll(',', '.'));
       final total = qte * prix;
-      return "${total.toStringAsFixed(2)} €";
+      return "${total.toDouble().toStringAsFixed(2)} €";
     } catch (e) {
       return "-- €";
     }
@@ -218,7 +218,7 @@ class _MatiereDialogState extends State<MatiereDialog> {
                       return ListTile(
                         title: Text(art.designation),
                         subtitle: Text(
-                            "${art.prixAchat.toStringAsFixed(2)}€ / ${art.unite}"),
+                            "${art.prixAchat.toDouble().toStringAsFixed(2)}€ / ${art.unite}"),
                         onTap: () => Navigator.pop(ctx, art),
                       );
                     },
@@ -233,11 +233,14 @@ class _MatiereDialogState extends State<MatiereDialog> {
         ),
       );
 
+      if (!mounted) return;
+
       // 3. Remplir les champs
       if (selected != null) {
         setState(() {
           _designationCtrl.text = selected.designation;
-          _prixAchatCtrl.text = selected.prixAchat.toStringAsFixed(2);
+          _prixAchatCtrl.text =
+              selected.prixAchat.toDouble().toStringAsFixed(2);
 
           // Vérifier si l'unité existe dans la liste, sinon défaut 'u'
           if (_unites.contains(selected.unite)) {

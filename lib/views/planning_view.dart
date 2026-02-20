@@ -92,6 +92,7 @@ class _PlanningViewState extends State<PlanningView> {
     if (confirm == true && mounted && event.id != null) {
       await Provider.of<PlanningViewModel>(context, listen: false)
           .deleteEvent(event.id!);
+      if (!mounted) return;
       _loadData();
     }
   }

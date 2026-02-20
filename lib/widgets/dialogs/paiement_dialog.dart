@@ -75,6 +75,7 @@ class _PaiementDialogState extends State<PaiementDialog> {
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2030),
                   );
+                  if (!mounted) return;
                   if (d != null) setState(() => _datePaiement = d);
                 },
                 child: InputDecorator(

@@ -150,7 +150,8 @@ class VlVsIrCard extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           TextSpan(
-                            text: '(${absDiff.toStringAsFixed(0)} €/an)',
+                            text:
+                                '(${absDiff.toDouble().toStringAsFixed(0)} €/an)',
                           ),
                         ],
                       ),
@@ -163,8 +164,8 @@ class VlVsIrCard extends StatelessWidget {
             // Note plafond
             const SizedBox(height: AppTheme.spacing8),
             Text(
-              'Plafond RFR : ${simulation.plafondVlRfr.toStringAsFixed(0)} €/part '
-              '• CA simulé : ${simulation.caTotal.toStringAsFixed(0)} €',
+              'Plafond RFR : ${simulation.plafondVlRfr.toDouble().toStringAsFixed(0)} €/part '
+              '• CA simulé : ${simulation.caTotal.toDouble().toStringAsFixed(0)} €',
               style: const TextStyle(
                 fontSize: 10,
                 color: AppTheme.textLight,
@@ -216,7 +217,7 @@ class VlVsIrCard extends StatelessWidget {
           ),
           const SizedBox(height: AppTheme.spacing8),
           Text(
-            '${revenuNet.toStringAsFixed(0)} €',
+            '${revenuNet.toDouble().toStringAsFixed(0)} €',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -225,7 +226,7 @@ class VlVsIrCard extends StatelessWidget {
           ),
           const SizedBox(height: AppTheme.spacing4),
           Text(
-            'Taux effectif ${tauxEffectif.toStringAsFixed(1)}%',
+            'Taux effectif ${tauxEffectif.toDouble().toStringAsFixed(1)}%',
             style: const TextStyle(
               fontSize: 10,
               color: AppTheme.textLight,

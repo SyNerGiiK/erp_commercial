@@ -63,5 +63,9 @@ dev_dependencies:
   flutter_lints: ^3.0.1 # Suffisant, la v6 est très agressive
   mocktail: ^1.0.0      # Mocking pour tests unitaires
 
+dependency_overrides:
+  flutter_secure_storage_windows:
+    path: third_party/flutter_secure_storage_windows
+
 flutter:
   uses-material-design: true

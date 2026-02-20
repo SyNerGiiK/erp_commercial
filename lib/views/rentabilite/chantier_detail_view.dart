@@ -29,14 +29,14 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
 
   Future<void> _init() async {
     final vm = context.read<RentabiliteViewModel>();
-    if (vm.devisList.isEmpty) {
-      await vm.loadDevis();
-    }
     try {
+      if (vm.devisList.isEmpty) {
+        await vm.loadDevis();
+      }
       final devis = vm.devisList.firstWhere((d) => d.id == widget.devisId);
       await vm.selectDevis(devis);
     } catch (e) {
-      // Introuvable
+      // Devis introuvable ou erreur de chargement
     }
   }
 

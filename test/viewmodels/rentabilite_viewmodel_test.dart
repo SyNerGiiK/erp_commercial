@@ -3,6 +3,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:decimal/decimal.dart';
 import 'package:erp_commercial/models/devis_model.dart';
 import 'package:erp_commercial/models/chiffrage_model.dart';
+import 'package:erp_commercial/models/facture_model.dart';
+import 'package:erp_commercial/models/paiement_model.dart';
 import 'package:erp_commercial/viewmodels/rentabilite_viewmodel.dart';
 import '../mocks/repository_mocks.dart';
 
@@ -15,6 +17,7 @@ void main() {
   group('RentabiliteViewModel', () {
     late MockChiffrageRepository mockChiffrageRepo;
     late MockDevisRepository mockDevisRepo;
+    late MockFactureRepository mockFactureRepo;
     late RentabiliteViewModel viewModel;
 
     setUpAll(() {
@@ -25,9 +28,11 @@ void main() {
     setUp(() {
       mockChiffrageRepo = MockChiffrageRepository();
       mockDevisRepo = MockDevisRepository();
+      mockFactureRepo = MockFactureRepository();
       viewModel = RentabiliteViewModel(
         chiffrageRepository: mockChiffrageRepo,
         devisRepository: mockDevisRepo,
+        factureRepository: mockFactureRepo,
       );
     });
 
@@ -38,6 +43,10 @@ void main() {
       late LigneDevis ligneTitre;
 
       setUp(() {
+        // Configurer les mocks pour retourner des listes vides par défaut
+        when(() => mockFactureRepo.getLinkedFactures(any()))
+            .thenAnswer((_) async => []);
+
         ligneArticle = LigneDevis(
           id: 'ligne-1',
           description: 'Fourniture matériel',
@@ -283,14 +292,19 @@ void main() {
     group('Détection textuelle type chiffrage (MO vs Matériel)', () {
       late MockChiffrageRepository localChiffrageRepo;
       late MockDevisRepository localDevisRepo;
+      late MockFactureRepository localFactureRepo;
       late RentabiliteViewModel localVm;
 
       setUp(() {
         localChiffrageRepo = MockChiffrageRepository();
         localDevisRepo = MockDevisRepository();
+        localFactureRepo = MockFactureRepository();
+        when(() => localFactureRepo.getLinkedFactures(any()))
+            .thenAnswer((_) async => []);
         localVm = RentabiliteViewModel(
           chiffrageRepository: localChiffrageRepo,
           devisRepository: localDevisRepo,
+          factureRepository: localFactureRepo,
         );
       });
 
@@ -397,6 +411,191 @@ void main() {
         final c = await autoInitLigneAvecDescription('Fourniture PVC 100mm');
         expect(c!.prixAchatUnitaire, Decimal.zero);
         expect(c.prixVenteInterne, Decimal.parse('100'));
+      });
+    });
+
+    group('getTauxEncaissementForDevis — toutes factures liées', () {
+      late MockChiffrageRepository localChiffrageRepo;
+      late MockDevisRepository localDevisRepo;
+      late MockFactureRepository localFactureRepo;
+      late RentabiliteViewModel localVm;
+
+      late Devis testDevis;
+
+      setUp(() {
+        localChiffrageRepo = MockChiffrageRepository();
+        localDevisRepo = MockDevisRepository();
+        localFactureRepo = MockFactureRepository();
+
+        localVm = RentabiliteViewModel(
+          chiffrageRepository: localChiffrageRepo,
+          devisRepository: localDevisRepo,
+          factureRepository: localFactureRepo,
+        );
+
+        testDevis = Devis(
+          id: 'devis-enc',
+          userId: 'u1',
+          numeroDevis: 'D-ENC',
+          objet: 'Test Encaissement',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('1000'),
+          totalTtc: Decimal.parse('1200'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.parse('360'),
+          statut: 'signe',
+        );
+      });
+
+      test(
+          'devrait calculer l\'encaissement à partir des paiements des factures liées',
+          () async {
+        // ARRANGE — 2 factures liées avec des paiements
+        final facture1 = Facture(
+          id: 'f1',
+          objet: 'Acompte',
+          clientId: 'c1',
+          devisSourceId: 'devis-enc',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('300'),
+          totalTtc: Decimal.parse('360'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'payee',
+          paiements: [
+            Paiement(
+              factureId: 'f1',
+              montant: Decimal.parse('360'),
+              datePaiement: DateTime.now(),
+              isAcompte: true,
+            ),
+          ],
+        );
+
+        final facture2 = Facture(
+          id: 'f2',
+          objet: 'Situation 1',
+          clientId: 'c1',
+          devisSourceId: 'devis-enc',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('500'),
+          totalTtc: Decimal.parse('600'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.parse('360'),
+          statut: 'payee',
+          paiements: [
+            Paiement(
+              factureId: 'f2',
+              montant: Decimal.parse('240'),
+              datePaiement: DateTime.now(),
+            ),
+          ],
+        );
+
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localFactureRepo.getLinkedFactures('devis-enc'))
+            .thenAnswer((_) async => [facture1, facture2]);
+
+        await localVm.loadDevis();
+
+        // ACT
+        final taux = localVm.getTauxEncaissementForDevis(testDevis);
+
+        // ASSERT — total paiements = 360 + 240 = 600, totalTtc = 1200 → 50%
+        expect(taux, Decimal.fromInt(50));
+      });
+
+      test('devrait retourner 0 si aucune facture liée', () async {
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localFactureRepo.getLinkedFactures('devis-enc'))
+            .thenAnswer((_) async => []);
+
+        await localVm.loadDevis();
+
+        final taux = localVm.getTauxEncaissementForDevis(testDevis);
+        expect(taux, Decimal.zero);
+      });
+
+      test(
+          'devrait utiliser montantNetFacture si supérieur aux paiements enregistrés',
+          () async {
+        // Facture validée sans paiement enregistré mais avec statut envoyé
+        final facture = Facture(
+          id: 'f3',
+          objet: 'Facture finale',
+          clientId: 'c1',
+          devisSourceId: 'devis-enc',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('1000'),
+          totalTtc: Decimal.parse('1200'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'validee',
+          paiements: [],
+        );
+
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localFactureRepo.getLinkedFactures('devis-enc'))
+            .thenAnswer((_) async => [facture]);
+
+        await localVm.loadDevis();
+
+        final taux = localVm.getTauxEncaissementForDevis(testDevis);
+
+        // montantNetFacture = totalTtc - acompteDejaRegle = 1200 - 0 = 1200
+        // 1200 / 1200 * 100 = 100%
+        expect(taux, Decimal.fromInt(100));
+      });
+
+      test('devrait ignorer les factures brouillon et annulées', () async {
+        final factureBrouillon = Facture(
+          id: 'f-brouillon',
+          objet: 'Brouillon',
+          clientId: 'c1',
+          devisSourceId: 'devis-enc',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('1000'),
+          totalTtc: Decimal.parse('1200'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'brouillon',
+          paiements: [],
+        );
+
+        final factureAnnulee = Facture(
+          id: 'f-annulee',
+          objet: 'Annulée',
+          clientId: 'c1',
+          devisSourceId: 'devis-enc',
+          dateEmission: DateTime.now(),
+          dateEcheance: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('500'),
+          totalTtc: Decimal.parse('600'),
+          remiseTaux: Decimal.zero,
+          acompteDejaRegle: Decimal.zero,
+          statut: 'annulee',
+          paiements: [],
+        );
+
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localFactureRepo.getLinkedFactures('devis-enc'))
+            .thenAnswer((_) async => [factureBrouillon, factureAnnulee]);
+
+        await localVm.loadDevis();
+
+        final taux = localVm.getTauxEncaissementForDevis(testDevis);
+        // Brouillon et annulée sont ignorés → 0 paiements, 0 factures nettes
+        expect(taux, Decimal.zero);
       });
     });
   });

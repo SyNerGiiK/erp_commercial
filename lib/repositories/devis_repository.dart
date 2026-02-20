@@ -60,7 +60,7 @@ class DevisRepository extends DocumentRepository implements IDevisRepository {
           .select('*, lignes_devis(*), lignes_chiffrages(*)')
           .eq('user_id', userId)
           .eq('est_archive', false)
-          .inFilter('statut', ['accepte', 'facture'])
+          .inFilter('statut', ['accepte', 'facture', 'signe', 'valide', 'validee'])
           .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
           .order('ordre', referencedTable: 'lignes_devis', ascending: true);

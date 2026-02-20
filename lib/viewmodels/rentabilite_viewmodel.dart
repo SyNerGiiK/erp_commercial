@@ -3,6 +3,8 @@ import 'dart:developer' as developer;
 import 'package:decimal/decimal.dart';
 
 import '../core/base_viewmodel.dart';
+import '../models/urssaf_model.dart';
+import '../models/enums/entreprise_enums.dart';
 import '../models/devis_model.dart';
 import '../models/chiffrage_model.dart';
 import '../models/depense_model.dart';
@@ -11,6 +13,7 @@ import '../repositories/chiffrage_repository.dart';
 import '../repositories/devis_repository.dart';
 import '../repositories/depense_repository.dart';
 import '../repositories/facture_repository.dart';
+import '../repositories/urssaf_repository.dart';
 import '../utils/calculations_utils.dart';
 
 /// État d'avancement calculé pour une ligne de devis
@@ -43,19 +46,31 @@ class RentabiliteViewModel extends BaseViewModel {
   final IDevisRepository _devisRepo;
   final IDepenseRepository _depenseRepo;
   final IFactureRepository _factureRepo;
+  final IUrssafRepository _urssafRepo;
+
+  /// Configuration URSSAF avec les vrais taux micro-entrepreneur
+  UrssafConfig _urssafConfig;
+  UrssafConfig get urssafConfig => _urssafConfig;
 
   RentabiliteViewModel({
     IChiffrageRepository? chiffrageRepository,
     IDevisRepository? devisRepository,
     IDepenseRepository? depenseRepository,
     IFactureRepository? factureRepository,
+    IUrssafRepository? urssafRepository,
+    UrssafConfig? urssafConfig,
   })  : _chiffrageRepo = chiffrageRepository ?? ChiffrageRepository(),
         _devisRepo = devisRepository ?? DevisRepository(),
         _depenseRepo = depenseRepository ??
             ((chiffrageRepository != null || devisRepository != null)
                 ? _MemoryDepenseRepository()
                 : DepenseRepository()),
-        _factureRepo = factureRepository ?? FactureRepository();
+        _factureRepo = factureRepository ?? FactureRepository(),
+        _urssafRepo = urssafRepository ??
+            ((chiffrageRepository != null || devisRepository != null)
+                ? _MemoryUrssafRepository()
+                : UrssafRepository()),
+        _urssafConfig = urssafConfig ?? UrssafConfig(userId: '');
 
   // ============ ÉTAT ============
 
@@ -151,6 +166,75 @@ class RentabiliteViewModel extends BaseViewModel {
         .toDecimal(scaleOnInfinitePrecision: 2);
   }
 
+  // ============ RÉSULTAT NET (avec cotisations micro-entrepreneur) ============
+
+  /// Total des coûts prévus (chiffrages)
+  Decimal get totalAchats {
+    return _chiffrages.fold<Decimal>(
+      Decimal.zero,
+      (sum, c) => sum + c.totalAchat,
+    );
+  }
+
+  /// Total des dépenses réelles
+  Decimal get totalDepenses {
+    return _depenses.fold<Decimal>(
+      Decimal.zero,
+      (sum, d) => sum + d.montant,
+    );
+  }
+
+  /// Ventile le CA net commercial (après remise) entre vente et prestation
+  /// en respectant la proportion des lignes du devis
+  (Decimal, Decimal, Decimal) _ventilerCA() {
+    if (_selectedDevis == null) {
+      return (Decimal.zero, Decimal.zero, Decimal.zero);
+    }
+
+    final net = _selectedDevis!.netCommercial;
+    final totalBrut = _selectedDevis!.caVente + _selectedDevis!.caPrestation;
+
+    if (totalBrut <= Decimal.zero) {
+      // Pas de lignes → tout en prestation BIC par défaut
+      return (Decimal.zero, net, Decimal.zero);
+    }
+
+    final ratioVente = (_selectedDevis!.caVente / totalBrut)
+        .toDecimal(scaleOnInfinitePrecision: 10);
+    final caVenteNet = net * ratioVente;
+    final caPrestationNet = net - caVenteNet;
+
+    // BIC vs BNC selon la config URSSAF de l'utilisateur
+    if (_urssafConfig.typeActivite == TypeActiviteMicro.bncPrestation) {
+      return (caVenteNet, Decimal.zero, caPrestationNet);
+    }
+    return (caVenteNet, caPrestationNet, Decimal.zero);
+  }
+
+  /// Détail des cotisations sociales (social, cfp, tfc, liberatoire, total)
+  Map<String, Decimal> get detailCotisations {
+    if (_selectedDevis == null) {
+      return {
+        'social': Decimal.zero,
+        'cfp': Decimal.zero,
+        'tfc': Decimal.zero,
+        'liberatoire': Decimal.zero,
+        'total': Decimal.zero,
+      };
+    }
+    final (caV, caBIC, caBNC) = _ventilerCA();
+    return _urssafConfig.calculerCotisations(caV, caBIC, caBNC);
+  }
+
+  /// Total des charges sociales
+  Decimal get chargesSociales => detailCotisations['total'] ?? Decimal.zero;
+
+  /// Résultat prévisionnel = Marge brute prévue - Charges sociales
+  Decimal get resultatPrevisionnel => margePrevue - chargesSociales;
+
+  /// Résultat réel = Marge brute réelle - Charges sociales
+  Decimal get resultatReel => margeReelle - chargesSociales;
+
   /// Devis expandus dans le panneau gauche (déconseillé dans le dashboard mais gardé pour compat')
   final Set<String> _expandedDevisIds = {};
   Set<String> get expandedDevisIds => _expandedDevisIds;
@@ -167,6 +251,11 @@ class RentabiliteViewModel extends BaseViewModel {
   /// Charge tous les chantiers actifs (Devis Validés/Acceptés)
   Future<void> loadDevis() async {
     await execute(() async {
+      // Charger la config URSSAF (sauf si injectée via constructeur pour les tests)
+      if (_urssafConfig.userId.isEmpty) {
+        _urssafConfig = await _urssafRepo.getConfig();
+      }
+
       _devisList = await _devisRepo.getChantiersActifs();
 
       final results = await Future.wait(
@@ -757,4 +846,12 @@ class _MemoryDepenseRepository implements IDepenseRepository {
 
   @override
   Future<void> updateDepense(Depense depense) async {}
+}
+
+class _MemoryUrssafRepository implements IUrssafRepository {
+  @override
+  Future<UrssafConfig> getConfig() async => UrssafConfig(userId: 'test');
+
+  @override
+  Future<void> saveConfig(UrssafConfig config) async {}
 }

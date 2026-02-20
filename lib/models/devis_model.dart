@@ -173,6 +173,20 @@ class Devis {
     return ((margeBrute * Decimal.fromInt(100)) / totalHt).toDecimal();
   }
 
+  /// CA des lignes de vente (typeActivite == 'commerce')
+  Decimal get caVente => lignes
+      .where((l) =>
+          l.typeActivite == 'commerce' &&
+          !['titre', 'sous-titre', 'texte', 'saut_page'].contains(l.type))
+      .fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
+
+  /// CA des lignes de prestation (typeActivite == 'service', défaut)
+  Decimal get caPrestation => lignes
+      .where((l) =>
+          l.typeActivite == 'service' &&
+          !['titre', 'sous-titre', 'texte', 'saut_page'].contains(l.type))
+      .fold(Decimal.zero, (sum, l) => sum + l.totalLigne);
+
   /// Net commercial (HT - Remise)
   Decimal get netCommercial {
     final remiseMontant =

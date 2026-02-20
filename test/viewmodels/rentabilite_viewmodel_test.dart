@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:decimal/decimal.dart';
+import 'package:erp_commercial/models/urssaf_model.dart';
 import 'package:erp_commercial/models/devis_model.dart';
 import 'package:erp_commercial/models/chiffrage_model.dart';
+import 'package:erp_commercial/models/depense_model.dart';
 import 'package:erp_commercial/models/facture_model.dart';
 import 'package:erp_commercial/models/paiement_model.dart';
 import 'package:erp_commercial/viewmodels/rentabilite_viewmodel.dart';
@@ -596,6 +598,269 @@ void main() {
         final taux = localVm.getTauxEncaissementForDevis(testDevis);
         // Brouillon et annulée sont ignorés → 0 paiements, 0 factures nettes
         expect(taux, Decimal.zero);
+      });
+    });
+
+    group('Résultat avec cotisations micro-entrepreneur (UrssafConfig)', () {
+      late MockChiffrageRepository localChiffrageRepo;
+      late MockDevisRepository localDevisRepo;
+      late MockDepenseRepository localDepenseRepo;
+      late MockFactureRepository localFactureRepo;
+      late MockUrssafRepository localUrssafRepo;
+      late RentabiliteViewModel localVm;
+
+      late Devis testDevis;
+      late LigneChiffrage chiffrage1;
+      late Depense depense1;
+
+      setUp(() {
+        localChiffrageRepo = MockChiffrageRepository();
+        localDevisRepo = MockDevisRepository();
+        localDepenseRepo = MockDepenseRepository();
+        localFactureRepo = MockFactureRepository();
+        localUrssafRepo = MockUrssafRepository();
+
+        // Config micro artisan BIC par défaut : 21.2% social + 0.3% CFP + 0.48% TFC
+        final config = UrssafConfig(userId: 'test');
+
+        localVm = RentabiliteViewModel(
+          chiffrageRepository: localChiffrageRepo,
+          devisRepository: localDevisRepo,
+          depenseRepository: localDepenseRepo,
+          factureRepository: localFactureRepo,
+          urssafRepository: localUrssafRepo,
+          urssafConfig: config,
+        );
+
+        testDevis = Devis(
+          id: 'devis-charges',
+          userId: 'u1',
+          numeroDevis: 'D-CHG',
+          objet: 'Test Charges',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('10000'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.zero,
+          statut: 'signe',
+          lignes: [
+            LigneDevis(
+              id: 'l1',
+              description: 'Fourniture',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('10000'),
+              totalLigne: Decimal.parse('10000'),
+              type: 'article',
+              typeActivite: 'service', // Prestation BIC
+            ),
+          ],
+        );
+
+        chiffrage1 = LigneChiffrage(
+          id: 'c-chg-1',
+          devisId: 'devis-charges',
+          linkedLigneDevisId: 'l1',
+          designation: 'Fourniture',
+          quantite: Decimal.fromInt(1),
+          prixAchatUnitaire: Decimal.parse('3000'),
+          prixVenteInterne: Decimal.parse('10000'),
+          typeChiffrage: TypeChiffrage.materiel,
+          estAchete: true,
+        );
+
+        depense1 = Depense(
+          id: 'dep-1',
+          titre: 'Achat matériel',
+          montant: Decimal.parse('2500'),
+          date: DateTime.now(),
+          categorie: 'materiaux',
+          chantierDevisId: 'devis-charges',
+        );
+      });
+
+      test(
+          'chargesSociales = social + cfp + tfc sur netCommercial (100% service BIC)',
+          () async {
+        when(() => localChiffrageRepo.getByDevisId('devis-charges'))
+            .thenAnswer((_) async => [chiffrage1]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-charges'))
+            .thenAnswer((_) async => [depense1]);
+        when(() => localFactureRepo.getLinkedFactures('devis-charges'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(testDevis);
+
+        // netCommercial = 10000, 100% service BIC
+        // social = 10000 * 21.2% = 2120
+        // cfp = 10000 * 0.3% = 30
+        // tfc = 10000 * 0.48% = 48
+        // total = 2198
+        expect(localVm.chargesSociales, Decimal.parse('2198'));
+      });
+
+      test('detailCotisations retourne la ventilation correcte', () async {
+        when(() => localChiffrageRepo.getByDevisId('devis-charges'))
+            .thenAnswer((_) async => [chiffrage1]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-charges'))
+            .thenAnswer((_) async => []);
+        when(() => localFactureRepo.getLinkedFactures('devis-charges'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(testDevis);
+
+        final detail = localVm.detailCotisations;
+        expect(detail['social'], Decimal.parse('2120')); // 21.2%
+        expect(detail['cfp'], Decimal.parse('30')); // 0.3%
+        expect(detail['tfc'], Decimal.parse('48')); // 0.48%
+        expect(detail['liberatoire'], Decimal.zero);
+        expect(detail['total'], Decimal.parse('2198'));
+      });
+
+      test('resultatPrevisionnel = margePrevue - charges', () async {
+        when(() => localChiffrageRepo.getByDevisId('devis-charges'))
+            .thenAnswer((_) async => [chiffrage1]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-charges'))
+            .thenAnswer((_) async => [depense1]);
+        when(() => localFactureRepo.getLinkedFactures('devis-charges'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(testDevis);
+
+        // margePrevue = 10000 - 3000 = 7000
+        // charges = 2198
+        // résultat = 7000 - 2198 = 4802
+        expect(localVm.margePrevue, Decimal.parse('7000'));
+        expect(localVm.resultatPrevisionnel, Decimal.parse('4802'));
+      });
+
+      test('resultatReel = margeReelle - charges', () async {
+        when(() => localChiffrageRepo.getByDevisId('devis-charges'))
+            .thenAnswer((_) async => [chiffrage1]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-charges'))
+            .thenAnswer((_) async => [depense1]);
+        when(() => localFactureRepo.getLinkedFactures('devis-charges'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(testDevis);
+
+        // margeReelle = 10000 - 2500 = 7500
+        // charges = 2198
+        // résultat = 7500 - 2198 = 5302
+        expect(localVm.margeReelle, Decimal.parse('7500'));
+        expect(localVm.resultatReel, Decimal.parse('5302'));
+      });
+
+      test('charges calculées sur netCommercial avec remise', () async {
+        final devisAvecRemise = Devis(
+          id: 'devis-remise',
+          userId: 'u1',
+          numeroDevis: 'D-REM',
+          objet: 'Test Remise',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('10000'),
+          remiseTaux: Decimal.parse('10'), // 10% remise
+          acompteMontant: Decimal.zero,
+          statut: 'signe',
+          lignes: [
+            LigneDevis(
+              id: 'lr1',
+              description: 'Prestation',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('10000'),
+              totalLigne: Decimal.parse('10000'),
+              type: 'article',
+              typeActivite: 'service',
+            ),
+          ],
+        );
+
+        when(() => localChiffrageRepo.getByDevisId('devis-remise'))
+            .thenAnswer((_) async => []);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-remise'))
+            .thenAnswer((_) async => []);
+        when(() => localFactureRepo.getLinkedFactures('devis-remise'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(devisAvecRemise);
+
+        // netCommercial = 10000 - (10000 * 10%) = 9000
+        // social = 9000 * 21.2% = 1908
+        // cfp = 9000 * 0.3% = 27
+        // tfc = 9000 * 0.48% = 43.2
+        // total = 1978.2
+        expect(localVm.chargesSociales, Decimal.parse('1978.2'));
+      });
+
+      test('ventilation mixte vente/prestation applique les bons taux',
+          () async {
+        final devisMixte = Devis(
+          id: 'devis-mixte',
+          userId: 'u1',
+          numeroDevis: 'D-MIX',
+          objet: 'Test Mixte',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('10000'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.zero,
+          statut: 'signe',
+          lignes: [
+            LigneDevis(
+              id: 'lv1',
+              description: 'Vente matériel',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('4000'),
+              totalLigne: Decimal.parse('4000'),
+              type: 'article',
+              typeActivite: 'commerce', // Vente
+            ),
+            LigneDevis(
+              id: 'ls1',
+              description: 'Prestation service',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('6000'),
+              totalLigne: Decimal.parse('6000'),
+              type: 'article',
+              typeActivite: 'service', // Service BIC
+            ),
+          ],
+        );
+
+        when(() => localChiffrageRepo.getByDevisId('devis-mixte'))
+            .thenAnswer((_) async => []);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-mixte'))
+            .thenAnswer((_) async => []);
+        when(() => localFactureRepo.getLinkedFactures('devis-mixte'))
+            .thenAnswer((_) async => []);
+
+        await localVm.selectDevis(devisMixte);
+
+        final detail = localVm.detailCotisations;
+        // caVente = 4000 (12.3%), caPrestation = 6000 (21.2%)
+        // social_vente = 4000 * 12.3% = 492
+        // social_bic = 6000 * 21.2% = 1272
+        // social = 1764
+        expect(detail['social'], Decimal.parse('1764'));
+
+        // cfp_vente = 4000 * 0.3% = 12, cfp_bic = 6000 * 0.3% = 18 → 30
+        expect(detail['cfp'], Decimal.parse('30'));
+
+        // tfc_vente = 4000 * 0.22% = 8.8, tfc_service = 6000 * 0.48% = 28.8 → 37.6
+        expect(detail['tfc'], Decimal.parse('37.6'));
+
+        // total = 1764 + 30 + 37.6 = 1831.6
+        expect(detail['total'], Decimal.parse('1831.6'));
+      });
+
+      test('retourne Decimal.zero sans devis sélectionné', () {
+        expect(localVm.chargesSociales, Decimal.zero);
+        expect(localVm.resultatPrevisionnel, Decimal.zero);
+        expect(localVm.resultatReel, Decimal.zero);
+        expect(localVm.detailCotisations['social'], Decimal.zero);
       });
     });
   });

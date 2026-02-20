@@ -12,7 +12,10 @@
 .swiftpm/
 migrate_working_dir/
 tmpclaude-*/
+tmpclaude-*-cwd/
+tmpclaude-*-log/
 nul/
+null/
 
 # IntelliJ related
 *.iml

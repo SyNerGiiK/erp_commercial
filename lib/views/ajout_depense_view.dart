@@ -233,7 +233,13 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
               items: [
                 const DropdownMenuItem(value: null, child: Text("Aucun")),
                 ...devisVM.devis
-                    .where((d) => ['accepte', 'facture', 'signe', 'valide', 'validee'].contains(d.statut))
+                    .where((d) => [
+                          'accepte',
+                          'facture',
+                          'signe',
+                          'valide',
+                          'validee'
+                        ].contains(d.statut))
                     .map((d) => DropdownMenuItem(
                         value: d.id,
                         child: Text("${d.numeroDevis} - ${d.objet}"))),

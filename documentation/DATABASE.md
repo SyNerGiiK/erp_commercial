@@ -265,6 +265,7 @@ Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`.
 | `categorie` | `TEXT` | NOT NULL | — | Catégorie |
 | `est_deductible` | `BOOLEAN` | NOT NULL | `false` | Déductible |
 | `justificatif` | `TEXT` | NULL | — | URL justificatif |
+| `chantier_devis_id` | `UUID` | NULL | — | FK → devis.id (liaison chantier pour marge réelle cockpit) |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Mise à jour |
 
@@ -443,6 +444,7 @@ factures
 devis
   ├── 1:N → lignes_devis.devis_id
   ├── 1:N → lignes_chiffrages.devis_id
+  ├── 1:N → depenses.chantier_devis_id
   ├── 1:1 → factures.devis_source_id (transformation)
   └── self → devis.devis_parent_id (avenants)
 
@@ -598,6 +600,13 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 4. **RLS policy** : `lignes_chiffrages_user_policy` (FOR ALL, user_id = auth.uid())
 5. **Commentaires SQL** : Documentation des colonnes pour les outils Supabase
 
+### Sprint 21 : Liaison Dépenses ↔ Chantiers (`migration_sprint21_chantier_depenses.sql`)
+
+1. **ALTER `depenses`** : Ajout colonne `chantier_devis_id` (FK → devis.id, `ON DELETE SET NULL`)
+2. **Index partiel** : `idx_depenses_chantier_devis_id` pour accélérer les filtres chantier
+3. **Backfill legacy** : copie `devis_id` vers `chantier_devis_id` si colonne historique présente
+4. **Commentaire SQL** : description métier de la liaison pour le cockpit rentabilité
+
 ### Ordre d'exécution
 
 ```
@@ -607,6 +616,7 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 4. migration_sprint9_pdf_custom.sql         (Sprint 9)
 5. migration_sprint14_20_features.sql       (Sprint 14-20)
 6. migration_sprint15_progress_billing.sql  (Sprint 15)
+7. migration_sprint21_chantier_depenses.sql (Sprint 21)
 ```
 
-> **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Seules les 6 migrations ci-dessus sont effectives.
+> **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Les migrations effectives sont celles listées ci-dessus.

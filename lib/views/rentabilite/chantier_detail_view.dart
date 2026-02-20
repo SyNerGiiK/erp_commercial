@@ -58,7 +58,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       menuIndex: 8,
       title: "Chantier : ${devis.objet}",
       child: DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             _buildKpiHeader(vm),
@@ -74,7 +74,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 tabs: [
                   Tab(text: 'Terrain'),
                   Tab(text: 'Dépenses'),
-                  Tab(text: 'Ventilation Secrète URSSAF'),
+                  Tab(text: 'Bilan Financier'),
+                  Tab(text: 'Ventilation URSSAF'),
                 ],
               ),
             ),
@@ -83,6 +84,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 children: [
                   _buildTerrainTab(vm),
                   _buildDepensesTab(vm),
+                  _buildBilanFinancierTab(vm),
                   _buildVentilationTab(vm),
                 ],
               ),
@@ -94,6 +96,13 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
   }
 
   Widget _buildKpiHeader(RentabiliteViewModel vm) {
+    final resultatPrev = vm.resultatPrevisionnel;
+    final resultatReel = vm.resultatReel;
+    final colorPrev =
+        resultatPrev >= Decimal.zero ? AppTheme.accent : AppTheme.error;
+    final colorReel =
+        resultatReel >= Decimal.zero ? AppTheme.accent : AppTheme.error;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
@@ -106,8 +115,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
         children: [
           _buildKpi(
               "Facturé (Acpt/Sit)", vm.facturationEncaissee, AppTheme.primary),
-          _buildKpi("Marge Prévue", vm.margePrevue, AppTheme.warning),
-          _buildKpi("Marge Réelle", vm.margeReelle, AppTheme.accent),
+          _buildKpi("Résultat Prévisionnel", resultatPrev, colorPrev),
+          _buildKpi("Résultat Réel", resultatReel, colorReel),
           _buildKpi("Avancement Global", vm.avancementGlobal, AppTheme.info,
               isPercent: true),
         ],
@@ -319,6 +328,283 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBilanFinancierTab(RentabiliteViewModel vm) {
+    final devis = vm.selectedDevis;
+    if (devis == null) {
+      return const Center(child: Text('Aucun devis sélectionné.'));
+    }
+
+    final caHt = devis.totalHt;
+    final totalAchats = vm.totalAchats;
+    final margePrevue = vm.margePrevue;
+    final totalDepenses = vm.totalDepenses;
+    final margeReelle = vm.margeReelle;
+    final detail = vm.detailCotisations;
+    final totalCharges = vm.chargesSociales;
+    final resultatPrev = vm.resultatPrevisionnel;
+    final resultatReel = vm.resultatReel;
+
+    // Déterminer le taux dominant pour l'affichage
+    final caVente = devis.caVente;
+    final caPrestation = devis.caPrestation;
+    String tauxSocialLabel;
+    if (caVente > Decimal.zero && caPrestation > Decimal.zero) {
+      tauxSocialLabel = 'mixte';
+    } else if (caVente > Decimal.zero) {
+      tauxSocialLabel =
+          '${vm.urssafConfig.tauxMicroVente.toStringAsFixed(1)}%';
+    } else {
+      tauxSocialLabel =
+          '${vm.urssafConfig.tauxMicroPrestationBIC.toStringAsFixed(1)}%';
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // CA HT
+          _buildWaterfallRow(
+            icon: Icons.receipt_long,
+            label: 'CA HT (Devis)',
+            montant: caHt,
+            color: AppTheme.primary,
+          ),
+          const Divider(height: 24),
+
+          // Coûts prévus
+          _buildWaterfallRow(
+            icon: Icons.shopping_cart_outlined,
+            label: 'Coûts prévus (Chiffrages)',
+            montant: -totalAchats,
+            color: AppTheme.warning,
+            prefix: '-',
+          ),
+          _buildWaterfallResult(
+            label: 'Marge brute prévue',
+            montant: margePrevue,
+          ),
+          const Divider(height: 24),
+
+          // Dépenses réelles
+          _buildWaterfallRow(
+            icon: Icons.account_balance_wallet_outlined,
+            label: 'Dépenses réelles',
+            montant: -totalDepenses,
+            color: AppTheme.error,
+            prefix: '-',
+          ),
+          _buildWaterfallResult(
+            label: 'Marge brute réelle',
+            montant: margeReelle,
+          ),
+          const Divider(height: 24),
+
+          // Cotisations sociales
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Cotisations Sociales',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ),
+          _buildChargeRow(
+            label: 'Sociales ($tauxSocialLabel)',
+            montant: detail['social'] ?? Decimal.zero,
+          ),
+          if ((detail['cfp'] ?? Decimal.zero) > Decimal.zero)
+            _buildChargeRow(
+              label: 'CFP',
+              montant: detail['cfp'] ?? Decimal.zero,
+            ),
+          if ((detail['tfc'] ?? Decimal.zero) > Decimal.zero)
+            _buildChargeRow(
+              label: 'TFC',
+              montant: detail['tfc'] ?? Decimal.zero,
+            ),
+          if ((detail['liberatoire'] ?? Decimal.zero) > Decimal.zero)
+            _buildChargeRow(
+              label: 'Versement Libératoire',
+              montant: detail['liberatoire'] ?? Decimal.zero,
+            ),
+          const SizedBox(height: 4),
+          _buildWaterfallRow(
+            icon: Icons.summarize_outlined,
+            label: 'Total Cotisations',
+            montant: -totalCharges,
+            color: AppTheme.textSecondary,
+            prefix: '-',
+            bold: true,
+          ),
+          const SizedBox(height: 24),
+
+          // Résultat net prévisionnel
+          _buildFinalResult(
+            label: 'Résultat net prévisionnel',
+            montant: resultatPrev,
+          ),
+          const SizedBox(height: 12),
+
+          // Résultat net réel
+          _buildFinalResult(
+            label: 'Résultat net réel',
+            montant: resultatReel,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaterfallRow({
+    required IconData icon,
+    required String label,
+    required Decimal montant,
+    required Color color,
+    String prefix = '',
+    bool bold = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ),
+          Text(
+            '${prefix.isNotEmpty && montant != Decimal.zero ? '$prefix ' : ''}${FormatUtils.currency(montant.abs())}',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaterfallResult({
+    required String label,
+    required Decimal montant,
+  }) {
+    final isPositive = montant >= Decimal.zero;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 2),
+      child: Row(
+        children: [
+          const SizedBox(width: 32),
+          Expanded(
+            child: Text(
+              '= $label',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                fontStyle: FontStyle.italic,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Text(
+            FormatUtils.currency(montant),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              fontStyle: FontStyle.italic,
+              color: isPositive ? AppTheme.accent : AppTheme.error,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChargeRow({
+    required String label,
+    required Decimal montant,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 32, top: 2, bottom: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+          Text(
+            '- ${FormatUtils.currency(montant)}',
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinalResult({
+    required String label,
+    required Decimal montant,
+  }) {
+    final isPositive = montant >= Decimal.zero;
+    final color = isPositive ? AppTheme.accent : AppTheme.error;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          Text(
+            FormatUtils.currency(montant),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

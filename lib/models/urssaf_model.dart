@@ -250,6 +250,71 @@ class UrssafConfig {
     };
   }
 
+  // --- CALCULS TNS (Travailleur Non Salarié — EI/EURL régime réel) ---
+
+  // Taux TNS 2025 provisoires (source: URSSAF.fr barème indicatif)
+  static final Decimal _tnsTauxMaladie = Decimal.parse('6.50');
+  static final Decimal _tnsTauxAllocFamiliales = Decimal.parse('3.10');
+  static final Decimal _tnsTauxRetraiteBase = Decimal.parse('17.75');
+  static final Decimal _tnsTauxRetraiteCompl = Decimal.parse('7.00');
+  static final Decimal _tnsTauxInvaliditeDeces = Decimal.parse('1.30');
+  static final Decimal _tnsTauxCsgCrds = Decimal.parse('9.70');
+  static final Decimal _tnsTauxCfp = Decimal.parse('0.25');
+
+  /// Calcule les cotisations TNS sur le bénéfice (EI/EURL régime réel).
+  /// Le bénéfice = CA HT - dépenses réelles.
+  /// Retourne une Map compatible avec le format de calculerCotisations (micro).
+  Map<String, Decimal> calculerCotisationsTNS(Decimal benefice) {
+    if (benefice <= Decimal.zero) {
+      return {
+        'social': Decimal.zero,
+        'cfp': Decimal.zero,
+        'tfc': Decimal.zero,
+        'liberatoire': Decimal.zero,
+        'total': Decimal.zero,
+        'maladie': Decimal.zero,
+        'allocations_familiales': Decimal.zero,
+        'retraite_base': Decimal.zero,
+        'retraite_complementaire': Decimal.zero,
+        'invalidite_deces': Decimal.zero,
+        'csg_crds': Decimal.zero,
+      };
+    }
+
+    final cent = Decimal.fromInt(100);
+    final maladie = (benefice * _tnsTauxMaladie / cent).toDecimal();
+    final allocFamiliales =
+        (benefice * _tnsTauxAllocFamiliales / cent).toDecimal();
+    final retraiteBase = (benefice * _tnsTauxRetraiteBase / cent).toDecimal();
+    final retraiteCompl = (benefice * _tnsTauxRetraiteCompl / cent).toDecimal();
+    final invaliditeDeces =
+        (benefice * _tnsTauxInvaliditeDeces / cent).toDecimal();
+    final csgCrds = (benefice * _tnsTauxCsgCrds / cent).toDecimal();
+    final cfp = (benefice * _tnsTauxCfp / cent).toDecimal();
+
+    final social = maladie +
+        allocFamiliales +
+        retraiteBase +
+        retraiteCompl +
+        invaliditeDeces +
+        csgCrds;
+    final total = social + cfp;
+
+    return {
+      'social': social,
+      'cfp': cfp,
+      'tfc': Decimal.zero,
+      'liberatoire': Decimal.zero,
+      'total': total,
+      'maladie': maladie,
+      'allocations_familiales': allocFamiliales,
+      'retraite_base': retraiteBase,
+      'retraite_complementaire': retraiteCompl,
+      'invalidite_deces': invaliditeDeces,
+      'csg_crds': csgCrds,
+    };
+  }
+
   // Helper pour les jauges
   Decimal getPlafondMicro(bool isService) {
     return isService ? plafondCaMicroService : plafondCaMicroVente;

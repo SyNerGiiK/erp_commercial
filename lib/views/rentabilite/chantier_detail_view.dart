@@ -5,6 +5,7 @@ import 'package:decimal/decimal.dart';
 
 import '../../config/theme.dart';
 import '../../utils/format_utils.dart';
+import '../../models/enums/entreprise_enums.dart';
 import '../../viewmodels/rentabilite_viewmodel.dart';
 import '../../widgets/base_screen.dart';
 import '../../models/chiffrage_model.dart';
@@ -58,7 +59,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       menuIndex: 8,
       title: "Chantier : ${devis.objet}",
       child: DefaultTabController(
-        length: 4,
+        length: 3,
         child: Column(
           children: [
             _buildKpiHeader(vm),
@@ -75,7 +76,6 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                   Tab(text: 'Terrain'),
                   Tab(text: 'Dépenses'),
                   Tab(text: 'Bilan Financier'),
-                  Tab(text: 'Ventilation URSSAF'),
                 ],
               ),
             ),
@@ -85,7 +85,6 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                   _buildTerrainTab(vm),
                   _buildDepensesTab(vm),
                   _buildBilanFinancierTab(vm),
-                  _buildVentilationTab(vm),
                 ],
               ),
             ),
@@ -96,10 +95,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
   }
 
   Widget _buildKpiHeader(RentabiliteViewModel vm) {
-    final resultatPrev = vm.resultatPrevisionnel;
     final resultatReel = vm.resultatReel;
-    final colorPrev =
-        resultatPrev >= Decimal.zero ? AppTheme.accent : AppTheme.error;
     final colorReel =
         resultatReel >= Decimal.zero ? AppTheme.accent : AppTheme.error;
 
@@ -115,7 +111,6 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
         children: [
           _buildKpi(
               "Facturé (Acpt/Sit)", vm.facturationEncaissee, AppTheme.primary),
-          _buildKpi("Résultat Prévisionnel", resultatPrev, colorPrev),
           _buildKpi("Résultat Réel", resultatReel, colorReel),
           _buildKpi("Avancement Global", vm.avancementGlobal, AppTheme.info,
               isPercent: true),
@@ -155,6 +150,22 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       itemBuilder: (context, index) {
         final state = lignes[index];
         final chiffrages = vm.getChiffragesForLigne(state.ligne.id ?? '');
+
+        // Calcul du ratio matériel/MO pour cette ligne
+        final totalVente = chiffrages.fold<Decimal>(
+            Decimal.zero, (sum, c) => sum + c.prixVenteInterne);
+        Decimal ratioMateriel;
+        if (totalVente <= Decimal.zero) {
+          ratioMateriel = Decimal.fromInt(50);
+        } else {
+          final materiel = chiffrages
+              .where((c) => c.typeChiffrage == TypeChiffrage.materiel)
+              .fold<Decimal>(
+                  Decimal.zero, (sum, c) => sum + c.prixVenteInterne);
+          ratioMateriel = ((materiel * Decimal.fromInt(100)) / totalVente)
+              .toDecimal(scaleOnInfinitePrecision: 2);
+        }
+        final ratioMo = Decimal.fromInt(100) - ratioMateriel;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 14),
@@ -201,7 +212,34 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 'Ligne: ${FormatUtils.currency(state.prixTotal)}',
                 style: const TextStyle(color: AppTheme.textSecondary),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+
+              // Ventilation Matériel / MO
+              if (state.ligne.id != null) ...[
+                Text(
+                  'Matériel ${ratioMateriel.toDouble().toStringAsFixed(0)}% • MO ${ratioMo.toDouble().toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                Slider(
+                  value: ratioMateriel.toDouble(),
+                  min: 0,
+                  max: 100,
+                  label:
+                      '${ratioMateriel.toDouble().toStringAsFixed(0)}%',
+                  onChanged: (value) {
+                    vm.updateVentilationForLigne(
+                      state.ligne.id!,
+                      Decimal.parse(value.toStringAsFixed(2)),
+                    );
+                  },
+                ),
+                const SizedBox(height: 4),
+              ],
+
               ...chiffrages.map((c) {
                 if (c.typeChiffrage == TypeChiffrage.materiel) {
                   return Padding(
@@ -245,7 +283,6 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                         value: c.avancementMo.toDouble(),
                         min: 0,
                         max: 100,
-                        divisions: 20,
                         label:
                             '${c.avancementMo.toDouble().toStringAsFixed(0)}%',
                         onChanged: (value) {
@@ -342,6 +379,179 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
     final margePrevue = vm.margePrevue;
     final totalDepenses = vm.totalDepenses;
     final margeReelle = vm.margeReelle;
+
+    // Partie commune : waterfall CA → Marge
+    final waterfallCommun = [
+      // CA HT
+      _buildWaterfallRow(
+        icon: Icons.receipt_long,
+        label: 'CA HT (Devis)',
+        montant: caHt,
+        color: AppTheme.primary,
+      ),
+      const Divider(height: 24),
+
+      // Coûts prévus
+      _buildWaterfallRow(
+        icon: Icons.shopping_cart_outlined,
+        label: 'Coûts prévus (Chiffrages)',
+        montant: -totalAchats,
+        color: AppTheme.warning,
+        prefix: '-',
+      ),
+      _buildWaterfallResult(
+        label: 'Marge brute prévue',
+        montant: margePrevue,
+      ),
+      const Divider(height: 24),
+
+      // Dépenses réelles
+      _buildWaterfallRow(
+        icon: Icons.account_balance_wallet_outlined,
+        label: 'Dépenses réelles',
+        montant: -totalDepenses,
+        color: AppTheme.error,
+        prefix: '-',
+      ),
+      _buildWaterfallResult(
+        label: 'Marge brute réelle',
+        montant: margeReelle,
+      ),
+    ];
+
+    // === Régime non supporté (SASU/SAS/Autre) ===
+    if (vm.isRegimeNonSupporte) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...waterfallCommun,
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.info.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.info.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline,
+                      color: AppTheme.info, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Le calcul des charges sociales n\'est pas encore disponible '
+                      'pour le régime ${vm.typeEntreprise.label}.\n'
+                      'Les résultats nets ne tiennent pas compte des cotisations sociales.',
+                      style: const TextStyle(
+                        color: AppTheme.info,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // === Régime TNS (EI/EURL) ===
+    if (vm.typeEntreprise.isTNS) {
+      final detail = vm.detailCotisations;
+      final totalCharges = vm.chargesSociales;
+      final resultatPrev = vm.resultatPrevisionnel;
+      final resultatReel = vm.resultatReel;
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...waterfallCommun,
+            const Divider(height: 24),
+
+            // Cotisations TNS
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Cotisations TNS (sur bénéfice)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            if ((detail['maladie'] ?? Decimal.zero) > Decimal.zero)
+              _buildChargeRow(
+                label: 'Maladie-maternité (6.50%)',
+                montant: detail['maladie'] ?? Decimal.zero,
+              ),
+            if ((detail['allocations_familiales'] ?? Decimal.zero) >
+                Decimal.zero)
+              _buildChargeRow(
+                label: 'Alloc. Familiales (3.10%)',
+                montant: detail['allocations_familiales'] ?? Decimal.zero,
+              ),
+            if ((detail['retraite_base'] ?? Decimal.zero) > Decimal.zero)
+              _buildChargeRow(
+                label: 'Retraite de base (17.75%)',
+                montant: detail['retraite_base'] ?? Decimal.zero,
+              ),
+            if ((detail['retraite_complementaire'] ?? Decimal.zero) >
+                Decimal.zero)
+              _buildChargeRow(
+                label: 'Retraite compl. (7.00%)',
+                montant: detail['retraite_complementaire'] ?? Decimal.zero,
+              ),
+            if ((detail['invalidite_deces'] ?? Decimal.zero) > Decimal.zero)
+              _buildChargeRow(
+                label: 'Invalidité-décès (1.30%)',
+                montant: detail['invalidite_deces'] ?? Decimal.zero,
+              ),
+            if ((detail['csg_crds'] ?? Decimal.zero) > Decimal.zero)
+              _buildChargeRow(
+                label: 'CSG/CRDS (9.70%)',
+                montant: detail['csg_crds'] ?? Decimal.zero,
+              ),
+            if ((detail['cfp'] ?? Decimal.zero) > Decimal.zero)
+              _buildChargeRow(
+                label: 'CFP (0.25%)',
+                montant: detail['cfp'] ?? Decimal.zero,
+              ),
+            const SizedBox(height: 4),
+            _buildWaterfallRow(
+              icon: Icons.summarize_outlined,
+              label: 'Total Cotisations TNS',
+              montant: -totalCharges,
+              color: AppTheme.textSecondary,
+              prefix: '-',
+              bold: true,
+            ),
+            const SizedBox(height: 24),
+
+            // Résultat net prévisionnel
+            _buildFinalResult(
+              label: 'Résultat net prévisionnel',
+              montant: resultatPrev,
+            ),
+            const SizedBox(height: 12),
+
+            // Résultat net réel
+            _buildFinalResult(
+              label: 'Résultat net réel',
+              montant: resultatReel,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // === Régime Micro-Entrepreneur (existant) ===
     final detail = vm.detailCotisations;
     final totalCharges = vm.chargesSociales;
     final resultatPrev = vm.resultatPrevisionnel;
@@ -366,44 +576,10 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // CA HT
-          _buildWaterfallRow(
-            icon: Icons.receipt_long,
-            label: 'CA HT (Devis)',
-            montant: caHt,
-            color: AppTheme.primary,
-          ),
+          ...waterfallCommun,
           const Divider(height: 24),
 
-          // Coûts prévus
-          _buildWaterfallRow(
-            icon: Icons.shopping_cart_outlined,
-            label: 'Coûts prévus (Chiffrages)',
-            montant: -totalAchats,
-            color: AppTheme.warning,
-            prefix: '-',
-          ),
-          _buildWaterfallResult(
-            label: 'Marge brute prévue',
-            montant: margePrevue,
-          ),
-          const Divider(height: 24),
-
-          // Dépenses réelles
-          _buildWaterfallRow(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Dépenses réelles',
-            montant: -totalDepenses,
-            color: AppTheme.error,
-            prefix: '-',
-          ),
-          _buildWaterfallResult(
-            label: 'Marge brute réelle',
-            montant: margeReelle,
-          ),
-          const Divider(height: 24),
-
-          // Cotisations sociales
+          // Cotisations sociales micro
           const Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text(
@@ -608,78 +784,4 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
     );
   }
 
-  Widget _buildVentilationTab(RentabiliteViewModel vm) {
-    final lignes = vm.lignesAvancement;
-    if (lignes.isEmpty) {
-      return const Center(child: Text('Aucune ligne à ventiler.'));
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: lignes.length,
-      itemBuilder: (context, index) {
-        final ligne = lignes[index].ligne;
-        if (ligne.id == null) return const SizedBox.shrink();
-
-        // Correction : getVentilationMaterielRatio attend un Devis, pas un String
-        final devis = vm.selectedDevis;
-        if (devis == null) return const SizedBox.shrink();
-        final ratioMateriel = vm.getVentilationMaterielRatio(devis);
-        final ratioMo = Decimal.fromInt(100) - ratioMateriel;
-        final montantMateriel =
-            ((ligne.totalLigne * ratioMateriel) / Decimal.fromInt(100))
-                .toDecimal();
-        final montantMo = ligne.totalLigne - montantMateriel;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceGlassLight,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.12)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                ligne.description,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Total ligne: ${FormatUtils.currency(ligne.totalLigne)}',
-                style: const TextStyle(color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Matériel ${ratioMateriel.toDouble().toStringAsFixed(0)}% • ${FormatUtils.currency(montantMateriel)}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Slider(
-                value: ratioMateriel.toDouble(),
-                min: 0,
-                max: 100,
-                divisions: 20,
-                label: '${ratioMateriel.toDouble().toStringAsFixed(0)}%',
-                onChanged: (value) {
-                  vm.updateVentilationForLigne(
-                    ligne.id!,
-                    Decimal.parse(value.toStringAsFixed(2)),
-                  );
-                },
-              ),
-              Text(
-                'Main d\'œuvre ${ratioMo.toDouble().toStringAsFixed(0)}% • ${FormatUtils.currency(montantMo)}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }

@@ -1,19 +1,14 @@
 enum TypeEntreprise {
-  microEntrepreneurVente,
-  microEntrepreneurService,
-  microEntrepreneurMixte, // Vente + Service (artisan fourniture + pose)
-  entrepriseIndividuelle, // TNS
-  sasu, // Assimilé Salarié
+  microEntrepreneur, // EI au régime micro-social
+  entrepriseIndividuelle, // TNS (régime réel)
   eurl, // TNS
+  sasu, // Assimilé Salarié
   sas, // Assimilé Salarié
   autre
 }
 
 extension TypeEntrepriseExtension on TypeEntreprise {
-  bool get isMicroEntrepreneur =>
-      this == TypeEntreprise.microEntrepreneurVente ||
-      this == TypeEntreprise.microEntrepreneurService ||
-      this == TypeEntreprise.microEntrepreneurMixte;
+  bool get isMicroEntrepreneur => this == TypeEntreprise.microEntrepreneur;
 
   bool get isTNS =>
       this == TypeEntreprise.entrepriseIndividuelle ||
@@ -24,12 +19,8 @@ extension TypeEntrepriseExtension on TypeEntreprise {
 
   String get label {
     switch (this) {
-      case TypeEntreprise.microEntrepreneurVente:
-        return "Micro-Entrepreneur (Vente)";
-      case TypeEntreprise.microEntrepreneurService:
-        return "Micro-Entrepreneur (Service)";
-      case TypeEntreprise.microEntrepreneurMixte:
-        return "Micro-Entrepreneur (Mixte)";
+      case TypeEntreprise.microEntrepreneur:
+        return "Micro-Entrepreneur";
       case TypeEntreprise.entrepriseIndividuelle:
         return "Entreprise Individuelle";
       case TypeEntreprise.sasu:

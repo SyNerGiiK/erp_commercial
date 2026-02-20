@@ -41,7 +41,7 @@ class _SettingsRootViewState extends State<SettingsRootView> {
   final _ibanController = TextEditingController();
   final _bicController = TextEditingController();
   final _mentionsController = TextEditingController();
-  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurService;
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneur;
   RegimeFiscal? _regimeFiscal;
   CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
@@ -412,6 +412,10 @@ class _SettingsRootViewState extends State<SettingsRootView> {
           onChanged: (v) {
             setState(() {
               _typeEntreprise = v!;
+              // Auto-set régime fiscal pour micro-entrepreneur
+              if (v.isMicroEntrepreneur) {
+                _regimeFiscal = RegimeFiscal.micro;
+              }
               if (_mentionsController.text.isEmpty) {
                 final vm =
                     Provider.of<EntrepriseViewModel>(context, listen: false);
@@ -419,6 +423,26 @@ class _SettingsRootViewState extends State<SettingsRootView> {
               }
             });
           },
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<RegimeFiscal?>(
+          key: ValueKey(_regimeFiscal),
+          initialValue: _regimeFiscal,
+          decoration: InputDecoration(
+            labelText: "Régime Fiscal",
+            hintText: "Déterminé automatiquement",
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          items: [
+            const DropdownMenuItem<Null>(value: null, child: Text("Auto")),
+            ...RegimeFiscal.values
+                .map((r) => DropdownMenuItem(value: r, child: Text(r.label))),
+          ],
+          onChanged: _typeEntreprise.isMicroEntrepreneur
+              ? null // Verrouillé en micro pour les micro-entrepreneurs
+              : (v) => setState(() => _regimeFiscal = v),
         ),
         const SizedBox(height: 10),
         SwitchListTile(

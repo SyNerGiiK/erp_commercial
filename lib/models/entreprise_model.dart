@@ -79,7 +79,7 @@ class ProfilEntreprise {
     this.logoUrl,
     this.signatureUrl,
     this.mentionsLegales,
-    this.typeEntreprise = TypeEntreprise.microEntrepreneurService,
+    this.typeEntreprise = TypeEntreprise.microEntrepreneur,
     this.regimeFiscal,
     this.caisseRetraite = CaisseRetraite.ssi,
     this.tvaApplicable = false,
@@ -130,14 +130,22 @@ class ProfilEntreprise {
   }
 
   static TypeEntreprise _parseTypeEntreprise(dynamic value) {
-    if (value == null) return TypeEntreprise.microEntrepreneurService;
+    if (value == null) return TypeEntreprise.microEntrepreneur;
+    // Backward compat : anciennes variantes micro → microEntrepreneur
+    if ([
+      'microEntrepreneurVente',
+      'microEntrepreneurService',
+      'microEntrepreneurMixte'
+    ].contains(value)) {
+      return TypeEntreprise.microEntrepreneur;
+    }
     try {
       return TypeEntreprise.values.firstWhere(
         (e) => e.name == value,
-        orElse: () => TypeEntreprise.microEntrepreneurService,
+        orElse: () => TypeEntreprise.microEntrepreneur,
       );
     } catch (_) {
-      return TypeEntreprise.microEntrepreneurService;
+      return TypeEntreprise.microEntrepreneur;
     }
   }
 

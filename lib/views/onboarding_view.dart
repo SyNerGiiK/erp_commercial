@@ -41,7 +41,7 @@ class _OnboardingViewState extends State<OnboardingView> {
   final _ibanController = TextEditingController();
   final _bicController = TextEditingController();
 
-  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurService;
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneur;
   bool _tvaApplicable = false;
 
   bool _isSaving = false;

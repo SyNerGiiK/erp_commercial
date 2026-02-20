@@ -42,111 +42,153 @@ class _BibliothequePrixViewState extends State<BibliothequePrixView> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isEdit ? "Modifier" : "Nouvel Article"),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomTextField(
-                  label: "Désignation",
-                  controller: designationCtrl,
-                  validator: (v) => v!.isEmpty ? "Requis" : null,
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                        child: CustomTextField(
-                            label: "Prix Vente HT",
-                            controller: prixVenteCtrl,
-                            keyboardType: TextInputType.number)),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                        width: 80,
-                        child: CustomTextField(
-                            label: "Unité", controller: uniteCtrl)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<Decimal>(
-                        initialValue: tauxTva,
-                        decoration: const InputDecoration(labelText: "TVA"),
-                        items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
-                          return DropdownMenuItem(
-                            value: Decimal.parse(t.toString()),
-                            child: Text("$t %"),
-                          );
-                        }).toList(),
-                        onChanged: (v) => tauxTva = v!,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                CustomTextField(
-                    label: "Prix Achat HT (Optionnel)",
-                    controller: prixAchatCtrl,
-                    keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  key: ValueKey(typeActivite),
-                  initialValue: typeActivite,
-                  decoration: const InputDecoration(labelText: "Type"),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'service', child: Text("Service / MO")),
-                    DropdownMenuItem(
-                        value: 'vente', child: Text("Matériau / Vente")),
-                  ],
-                  onChanged: (v) => typeActivite = v!,
-                )
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Annuler")),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                final newArticle = Article(
-                  id: article?.id,
-                  userId: article?.userId,
-                  designation: designationCtrl.text,
-                  prixUnitaire: Decimal.parse(
-                      prixVenteCtrl.text.replaceAll(',', '.') == ""
-                          ? "0"
-                          : prixVenteCtrl.text.replaceAll(',', '.')),
-                  prixAchat: Decimal.parse(
-                      prixAchatCtrl.text.replaceAll(',', '.') == ""
-                          ? "0"
-                          : prixAchatCtrl.text.replaceAll(',', '.')),
-                  unite: uniteCtrl.text,
-                  typeActivite: typeActivite,
-                  tauxTva: tauxTva,
-                );
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          void appliquerMultiplicateur(double multiplicateur) {
+            final achatText = prixAchatCtrl.text.replaceAll(',', '.');
+            final achat = double.tryParse(achatText);
+            if (achat != null && achat > 0) {
+              final vente = (achat * multiplicateur).toStringAsFixed(2);
+              prixVenteCtrl.text = vente;
+              setDialogState(() {});
+            }
+          }
 
-                final vm =
-                    Provider.of<ArticleViewModel>(context, listen: false);
-                if (isEdit) {
-                  vm.updateArticle(newArticle);
-                } else {
-                  vm.addArticle(newArticle);
-                }
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text("Enregistrer"),
-          )
-        ],
+          final achatText = prixAchatCtrl.text.replaceAll(',', '.');
+          final achatValue = double.tryParse(achatText) ?? 0.0;
+          final hasAchat = achatValue > 0;
+
+          return AlertDialog(
+            title: Text(isEdit ? "Modifier" : "Nouvel Article"),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomTextField(
+                      label: "Désignation",
+                      controller: designationCtrl,
+                      validator: (v) => v!.isEmpty ? "Requis" : null,
+                    ),
+                    const SizedBox(height: 10),
+                    CustomTextField(
+                      label: "Prix Achat HT (Optionnel)",
+                      controller: prixAchatCtrl,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [1.5, 2.0, 2.5, 3.0, 4.0].map((m) {
+                        return ActionChip(
+                          label: Text('x${m % 1 == 0 ? m.toInt() : m}'),
+                          onPressed: hasAchat
+                              ? () => appliquerMultiplicateur(m)
+                              : null,
+                          backgroundColor: hasAchat
+                              ? AppTheme.primary.withValues(alpha: 0.1)
+                              : null,
+                          labelStyle: TextStyle(
+                            color: hasAchat
+                                ? AppTheme.primary
+                                : AppTheme.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: CustomTextField(
+                                label: "Prix Vente HT",
+                                controller: prixVenteCtrl,
+                                keyboardType: TextInputType.number)),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                            width: 80,
+                            child: CustomTextField(
+                                label: "Unité", controller: uniteCtrl)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<Decimal>(
+                            initialValue: tauxTva,
+                            decoration: const InputDecoration(labelText: "TVA"),
+                            items: [20.0, 10.0, 5.5, 2.1, 0.0].map((t) {
+                              return DropdownMenuItem(
+                                value: Decimal.parse(t.toString()),
+                                child: Text("$t %"),
+                              );
+                            }).toList(),
+                            onChanged: (v) => tauxTva = v!,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(typeActivite),
+                      initialValue: typeActivite,
+                      decoration: const InputDecoration(labelText: "Type"),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'service', child: Text("Service / MO")),
+                        DropdownMenuItem(
+                            value: 'vente', child: Text("Matériau / Vente")),
+                      ],
+                      onChanged: (v) => typeActivite = v!,
+                    )
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Annuler")),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    final newArticle = Article(
+                      id: article?.id,
+                      userId: article?.userId,
+                      designation: designationCtrl.text,
+                      prixUnitaire: Decimal.parse(
+                          prixVenteCtrl.text.replaceAll(',', '.') == ""
+                              ? "0"
+                              : prixVenteCtrl.text.replaceAll(',', '.')),
+                      prixAchat: Decimal.parse(
+                          prixAchatCtrl.text.replaceAll(',', '.') == ""
+                              ? "0"
+                              : prixAchatCtrl.text.replaceAll(',', '.')),
+                      unite: uniteCtrl.text,
+                      typeActivite: typeActivite,
+                      tauxTva: tauxTva,
+                    );
+
+                    final vm =
+                        Provider.of<ArticleViewModel>(context, listen: false);
+                    if (isEdit) {
+                      vm.updateArticle(newArticle);
+                    } else {
+                      vm.addArticle(newArticle);
+                    }
+                    Navigator.pop(ctx);
+                  }
+                },
+                child: const Text("Enregistrer"),
+              )
+            ],
+          );
+        },
       ),
     );
   }

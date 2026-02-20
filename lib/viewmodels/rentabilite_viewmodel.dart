@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 import 'package:decimal/decimal.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/base_viewmodel.dart';
 import '../models/urssaf_model.dart';
@@ -9,9 +11,11 @@ import '../models/devis_model.dart';
 import '../models/chiffrage_model.dart';
 import '../models/depense_model.dart';
 import '../models/facture_model.dart';
+import '../models/entreprise_model.dart';
 import '../repositories/chiffrage_repository.dart';
 import '../repositories/devis_repository.dart';
 import '../repositories/depense_repository.dart';
+import '../repositories/entreprise_repository.dart';
 import '../repositories/facture_repository.dart';
 import '../repositories/urssaf_repository.dart';
 import '../utils/calculations_utils.dart';
@@ -47,10 +51,20 @@ class RentabiliteViewModel extends BaseViewModel {
   final IDepenseRepository _depenseRepo;
   final IFactureRepository _factureRepo;
   final IUrssafRepository _urssafRepo;
+  final IEntrepriseRepository _entrepriseRepo;
 
   /// Configuration URSSAF avec les vrais taux micro-entrepreneur
   UrssafConfig _urssafConfig;
   UrssafConfig get urssafConfig => _urssafConfig;
+
+  /// Type d'entreprise (chargé depuis le profil)
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneur;
+  TypeEntreprise get typeEntreprise => _typeEntreprise;
+
+  /// Indique si le régime de l'entreprise n'est pas encore supporté pour le calcul
+  bool get isRegimeNonSupporte =>
+      _typeEntreprise.isAssimileSalarie ||
+      _typeEntreprise == TypeEntreprise.autre;
 
   RentabiliteViewModel({
     IChiffrageRepository? chiffrageRepository,
@@ -58,6 +72,7 @@ class RentabiliteViewModel extends BaseViewModel {
     IDepenseRepository? depenseRepository,
     IFactureRepository? factureRepository,
     IUrssafRepository? urssafRepository,
+    IEntrepriseRepository? entrepriseRepository,
     UrssafConfig? urssafConfig,
   })  : _chiffrageRepo = chiffrageRepository ?? ChiffrageRepository(),
         _devisRepo = devisRepository ?? DevisRepository(),
@@ -70,6 +85,10 @@ class RentabiliteViewModel extends BaseViewModel {
             ((chiffrageRepository != null || devisRepository != null)
                 ? _MemoryUrssafRepository()
                 : UrssafRepository()),
+        _entrepriseRepo = entrepriseRepository ??
+            ((chiffrageRepository != null || devisRepository != null)
+                ? _MemoryEntrepriseRepository()
+                : EntrepriseRepository()),
         _urssafConfig = urssafConfig ?? UrssafConfig(userId: '');
 
   // ============ ÉTAT ============
@@ -211,19 +230,33 @@ class RentabiliteViewModel extends BaseViewModel {
     return (caVenteNet, caPrestationNet, Decimal.zero);
   }
 
-  /// Détail des cotisations sociales (social, cfp, tfc, liberatoire, total)
+  static final Map<String, Decimal> _zeroCotisations = {
+    'social': Decimal.zero,
+    'cfp': Decimal.zero,
+    'tfc': Decimal.zero,
+    'liberatoire': Decimal.zero,
+    'total': Decimal.zero,
+  };
+
+  /// Détail des cotisations sociales, branché selon le régime de l'entreprise.
+  /// - Micro-entrepreneur : cotisations sur CA (existant)
+  /// - TNS (EI/EURL) : cotisations sur bénéfice (marge réelle)
+  /// - SASU/SAS/Autre : pas de calcul (zéro)
   Map<String, Decimal> get detailCotisations {
-    if (_selectedDevis == null) {
-      return {
-        'social': Decimal.zero,
-        'cfp': Decimal.zero,
-        'tfc': Decimal.zero,
-        'liberatoire': Decimal.zero,
-        'total': Decimal.zero,
-      };
+    if (_selectedDevis == null) return _zeroCotisations;
+
+    if (_typeEntreprise.isMicroEntrepreneur) {
+      final (caV, caBIC, caBNC) = _ventilerCA();
+      return _urssafConfig.calculerCotisations(caV, caBIC, caBNC);
     }
-    final (caV, caBIC, caBNC) = _ventilerCA();
-    return _urssafConfig.calculerCotisations(caV, caBIC, caBNC);
+
+    if (_typeEntreprise.isTNS) {
+      final benefice = margeReelle;
+      return _urssafConfig.calculerCotisationsTNS(benefice);
+    }
+
+    // SASU/SAS/Autre : pas de calcul supporté
+    return _zeroCotisations;
   }
 
   /// Total des charges sociales
@@ -254,6 +287,16 @@ class RentabiliteViewModel extends BaseViewModel {
       // Charger la config URSSAF (sauf si injectée via constructeur pour les tests)
       if (_urssafConfig.userId.isEmpty) {
         _urssafConfig = await _urssafRepo.getConfig();
+      }
+
+      // Charger le profil entreprise pour déterminer le régime
+      try {
+        final profil = await _entrepriseRepo.getProfil();
+        if (profil != null) {
+          _typeEntreprise = profil.typeEntreprise;
+        }
+      } catch (_) {
+        // En cas d'erreur, on garde le défaut (micro-entrepreneur)
       }
 
       _devisList = await _devisRepo.getChantiersActifs();
@@ -854,4 +897,18 @@ class _MemoryUrssafRepository implements IUrssafRepository {
 
   @override
   Future<void> saveConfig(UrssafConfig config) async {}
+}
+
+class _MemoryEntrepriseRepository implements IEntrepriseRepository {
+  @override
+  Future<ProfilEntreprise?> getProfil() async => null;
+
+  @override
+  Future<void> saveProfil(ProfilEntreprise profil) async {}
+
+  @override
+  Future<String> uploadImage(XFile file, String type) async => '';
+
+  @override
+  Future<String> uploadSignatureBytes(Uint8List bytes) async => '';
 }

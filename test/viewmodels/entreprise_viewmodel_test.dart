@@ -35,7 +35,7 @@ void main() {
         siret: '12345678901234',
         email: 'contact@masociete.fr',
         telephone: '0123456789',
-        typeEntreprise: TypeEntreprise.microEntrepreneurService,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
       );
 
@@ -80,7 +80,7 @@ void main() {
         ville: 'Paris',
         siret: '12345678901234',
         email: 'nouveau@masociete.fr',
-        typeEntreprise: TypeEntreprise.microEntrepreneurService,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
       );
 
@@ -94,7 +94,7 @@ void main() {
         ville: 'Paris',
         siret: '12345678901234',
         email: 'nouveau@masociete.fr',
-        typeEntreprise: TypeEntreprise.microEntrepreneurService,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
       );
 
@@ -141,7 +141,7 @@ void main() {
     test('devrait retourner les mentions légales pour micro-entrepreneur', () {
       // ACT
       final mentions = viewModel
-          .getLegalMentionsSuggestion(TypeEntreprise.microEntrepreneurService);
+          .getLegalMentionsSuggestion(TypeEntreprise.microEntrepreneur);
 
       // ASSERT
       expect(mentions, contains('TVA non applicable'));

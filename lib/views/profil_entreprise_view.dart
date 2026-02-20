@@ -43,7 +43,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
 
   // ── État dropdowns / toggles ──
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
-  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneurService;
+  TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneur;
   RegimeFiscal? _regimeFiscal;
   CaisseRetraite _caisseRetraite = CaisseRetraite.ssi;
   bool _tvaApplicable = false;

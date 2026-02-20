@@ -111,7 +111,7 @@ void main() {
       expect(profil.tauxPenalitesRetard, 11.62);
       expect(profil.escompteApplicable, isFalse);
       expect(profil.estImmatricule, isFalse);
-      expect(profil.typeEntreprise, TypeEntreprise.microEntrepreneurService);
+      expect(profil.typeEntreprise, TypeEntreprise.microEntrepreneur);
     });
 
     test('toMap / fromMap round-trip préserve tous les champs', () {
@@ -189,7 +189,7 @@ void main() {
 
     test('micro non TVA non immatriculé → 2 mentions', () {
       final result = vm.getLegalMentionsSuggestion(
-        TypeEntreprise.microEntrepreneurService,
+        TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
         estImmatricule: false,
       );
@@ -200,7 +200,7 @@ void main() {
 
     test('micro assujetti TVA → pas de mention art. 293 B', () {
       final result = vm.getLegalMentionsSuggestion(
-        TypeEntreprise.microEntrepreneurService,
+        TypeEntreprise.microEntrepreneur,
         tvaApplicable: true,
         estImmatricule: false,
       );
@@ -210,7 +210,7 @@ void main() {
 
     test('micro immatriculé → pas de mention dispensé', () {
       final result = vm.getLegalMentionsSuggestion(
-        TypeEntreprise.microEntrepreneurService,
+        TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
         estImmatricule: true,
       );
@@ -229,7 +229,7 @@ void main() {
 
     test('micro non TVA + immatriculé → une seule mention', () {
       final result = vm.getLegalMentionsSuggestion(
-        TypeEntreprise.microEntrepreneurVente,
+        TypeEntreprise.microEntrepreneur,
         tvaApplicable: false,
         estImmatricule: true,
       );
@@ -258,10 +258,7 @@ void main() {
     });
 
     test('TypeEntreprise.isMicroEntrepreneur correct', () {
-      expect(
-          TypeEntreprise.microEntrepreneurService.isMicroEntrepreneur, isTrue);
-      expect(TypeEntreprise.microEntrepreneurVente.isMicroEntrepreneur, isTrue);
-      expect(TypeEntreprise.microEntrepreneurMixte.isMicroEntrepreneur, isTrue);
+      expect(TypeEntreprise.microEntrepreneur.isMicroEntrepreneur, isTrue);
       expect(TypeEntreprise.sasu.isMicroEntrepreneur, isFalse);
       expect(TypeEntreprise.eurl.isMicroEntrepreneur, isFalse);
       expect(TypeEntreprise.autre.isMicroEntrepreneur, isFalse);

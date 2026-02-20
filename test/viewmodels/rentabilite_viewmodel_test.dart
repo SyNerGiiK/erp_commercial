@@ -7,6 +7,8 @@ import 'package:erp_commercial/models/chiffrage_model.dart';
 import 'package:erp_commercial/models/depense_model.dart';
 import 'package:erp_commercial/models/facture_model.dart';
 import 'package:erp_commercial/models/paiement_model.dart';
+import 'package:erp_commercial/models/entreprise_model.dart';
+import 'package:erp_commercial/models/enums/entreprise_enums.dart';
 import 'package:erp_commercial/viewmodels/rentabilite_viewmodel.dart';
 import '../mocks/repository_mocks.dart';
 
@@ -861,6 +863,245 @@ void main() {
         expect(localVm.resultatPrevisionnel, Decimal.zero);
         expect(localVm.resultatReel, Decimal.zero);
         expect(localVm.detailCotisations['social'], Decimal.zero);
+      });
+    });
+
+    group('calculerCotisationsTNS — calculs TNS sur bénéfice', () {
+      late UrssafConfig config;
+
+      setUp(() {
+        config = UrssafConfig(userId: 'test');
+      });
+
+      test('bénéfice 10000 → total ~4560', () {
+        final result = config.calculerCotisationsTNS(Decimal.parse('10000'));
+
+        expect(result['maladie'], Decimal.parse('650'));
+        expect(result['allocations_familiales'], Decimal.parse('310'));
+        expect(result['retraite_base'], Decimal.parse('1775'));
+        expect(result['retraite_complementaire'], Decimal.parse('700'));
+        expect(result['invalidite_deces'], Decimal.parse('130'));
+        expect(result['csg_crds'], Decimal.parse('970'));
+        expect(result['cfp'], Decimal.parse('25'));
+
+        // social = 650 + 310 + 1775 + 700 + 130 + 970 = 4535
+        expect(result['social'], Decimal.parse('4535'));
+        // total = 4535 + 25 = 4560
+        expect(result['total'], Decimal.parse('4560'));
+      });
+
+      test('bénéfice 0 → tout à zéro', () {
+        final result = config.calculerCotisationsTNS(Decimal.zero);
+
+        expect(result['total'], Decimal.zero);
+        expect(result['social'], Decimal.zero);
+        expect(result['cfp'], Decimal.zero);
+        expect(result['maladie'], Decimal.zero);
+      });
+
+      test('bénéfice négatif → tout à zéro', () {
+        final result = config.calculerCotisationsTNS(Decimal.parse('-5000'));
+
+        expect(result['total'], Decimal.zero);
+        expect(result['social'], Decimal.zero);
+      });
+
+      test('tfc et liberatoire toujours à zéro pour TNS', () {
+        final result = config.calculerCotisationsTNS(Decimal.parse('10000'));
+
+        expect(result['tfc'], Decimal.zero);
+        expect(result['liberatoire'], Decimal.zero);
+      });
+    });
+
+    group('Branchement régime dans RentabiliteViewModel', () {
+      late MockChiffrageRepository localChiffrageRepo;
+      late MockDevisRepository localDevisRepo;
+      late MockDepenseRepository localDepenseRepo;
+      late MockFactureRepository localFactureRepo;
+      late MockEntrepriseRepository localEntrepriseRepo;
+
+      late Devis testDevis;
+      late LigneChiffrage chiffrage1;
+      late Depense depense1;
+
+      setUp(() {
+        localChiffrageRepo = MockChiffrageRepository();
+        localDevisRepo = MockDevisRepository();
+        localDepenseRepo = MockDepenseRepository();
+        localFactureRepo = MockFactureRepository();
+        localEntrepriseRepo = MockEntrepriseRepository();
+
+        testDevis = Devis(
+          id: 'devis-tns',
+          userId: 'u1',
+          numeroDevis: 'D-TNS',
+          objet: 'Test TNS',
+          clientId: 'c1',
+          dateEmission: DateTime.now(),
+          dateValidite: DateTime.now().add(const Duration(days: 30)),
+          totalHt: Decimal.parse('10000'),
+          remiseTaux: Decimal.zero,
+          acompteMontant: Decimal.zero,
+          statut: 'signe',
+          lignes: [
+            LigneDevis(
+              id: 'l1',
+              description: 'Prestation',
+              quantite: Decimal.fromInt(1),
+              prixUnitaire: Decimal.parse('10000'),
+              totalLigne: Decimal.parse('10000'),
+              type: 'article',
+              typeActivite: 'service',
+            ),
+          ],
+        );
+
+        chiffrage1 = LigneChiffrage(
+          id: 'c-tns-1',
+          devisId: 'devis-tns',
+          linkedLigneDevisId: 'l1',
+          designation: 'Prestation',
+          quantite: Decimal.fromInt(1),
+          prixAchatUnitaire: Decimal.parse('3000'),
+          prixVenteInterne: Decimal.parse('10000'),
+          typeChiffrage: TypeChiffrage.materiel,
+          estAchete: true,
+        );
+
+        depense1 = Depense(
+          id: 'dep-tns',
+          titre: 'Charges',
+          montant: Decimal.parse('2000'),
+          date: DateTime.now(),
+          categorie: 'materiaux',
+          chantierDevisId: 'devis-tns',
+        );
+      });
+
+      test('régime TNS : cotisations calculées sur bénéfice (marge réelle)',
+          () async {
+        // ARRANGE — profil EI (TNS)
+        final profilTNS = ProfilEntreprise(
+          id: 'p1',
+          userId: 'u1',
+          nomEntreprise: 'Test EI',
+          nomGerant: 'Dupont',
+          adresse: '1 rue',
+          codePostal: '75000',
+          ville: 'Paris',
+          siret: '12345678901234',
+          email: 'test@test.fr',
+          typeEntreprise: TypeEntreprise.entrepriseIndividuelle,
+        );
+
+        when(() => localEntrepriseRepo.getProfil())
+            .thenAnswer((_) async => profilTNS);
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-tns'))
+            .thenAnswer((_) async => [depense1]);
+        when(() => localFactureRepo.getLinkedFactures('devis-tns'))
+            .thenAnswer((_) async => []);
+        when(() => localChiffrageRepo.getByDevisId('devis-tns'))
+            .thenAnswer((_) async => [chiffrage1]);
+
+        final vm = RentabiliteViewModel(
+          chiffrageRepository: localChiffrageRepo,
+          devisRepository: localDevisRepo,
+          depenseRepository: localDepenseRepo,
+          factureRepository: localFactureRepo,
+          entrepriseRepository: localEntrepriseRepo,
+          urssafConfig: UrssafConfig(userId: 'test'),
+        );
+
+        await vm.loadDevis();
+        await vm.selectDevis(testDevis);
+
+        // margeReelle = 10000 - 2000 = 8000
+        // Cotisations TNS sur 8000:
+        // social = 8000 * (6.5+3.1+17.75+7+1.3+9.7)% = 8000 * 45.35% = 3628
+        // cfp = 8000 * 0.25% = 20
+        // total = 3648
+        expect(vm.typeEntreprise, TypeEntreprise.entrepriseIndividuelle);
+        expect(vm.margeReelle, Decimal.parse('8000'));
+        expect(vm.chargesSociales, Decimal.parse('3648'));
+        expect(vm.resultatReel, Decimal.parse('4352')); // 8000 - 3648
+      });
+
+      test('régime SASU : cotisations à zéro, isRegimeNonSupporte = true',
+          () async {
+        final profilSASU = ProfilEntreprise(
+          id: 'p2',
+          userId: 'u1',
+          nomEntreprise: 'Test SASU',
+          nomGerant: 'Martin',
+          adresse: '2 rue',
+          codePostal: '75001',
+          ville: 'Paris',
+          siret: '12345678901235',
+          email: 'sasu@test.fr',
+          typeEntreprise: TypeEntreprise.sasu,
+        );
+
+        when(() => localEntrepriseRepo.getProfil())
+            .thenAnswer((_) async => profilSASU);
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-tns'))
+            .thenAnswer((_) async => []);
+        when(() => localFactureRepo.getLinkedFactures('devis-tns'))
+            .thenAnswer((_) async => []);
+        when(() => localChiffrageRepo.getByDevisId('devis-tns'))
+            .thenAnswer((_) async => [chiffrage1]);
+
+        final vm = RentabiliteViewModel(
+          chiffrageRepository: localChiffrageRepo,
+          devisRepository: localDevisRepo,
+          depenseRepository: localDepenseRepo,
+          factureRepository: localFactureRepo,
+          entrepriseRepository: localEntrepriseRepo,
+          urssafConfig: UrssafConfig(userId: 'test'),
+        );
+
+        await vm.loadDevis();
+        await vm.selectDevis(testDevis);
+
+        expect(vm.typeEntreprise, TypeEntreprise.sasu);
+        expect(vm.isRegimeNonSupporte, true);
+        expect(vm.chargesSociales, Decimal.zero);
+        expect(vm.detailCotisations['total'], Decimal.zero);
+      });
+
+      test('régime micro par défaut quand profil null', () async {
+        when(() => localEntrepriseRepo.getProfil())
+            .thenAnswer((_) async => null);
+        when(() => localDevisRepo.getChantiersActifs())
+            .thenAnswer((_) async => [testDevis]);
+        when(() => localDepenseRepo.getDepensesByChantier('devis-tns'))
+            .thenAnswer((_) async => []);
+        when(() => localFactureRepo.getLinkedFactures('devis-tns'))
+            .thenAnswer((_) async => []);
+        when(() => localChiffrageRepo.getByDevisId('devis-tns'))
+            .thenAnswer((_) async => [chiffrage1]);
+
+        final vm = RentabiliteViewModel(
+          chiffrageRepository: localChiffrageRepo,
+          devisRepository: localDevisRepo,
+          depenseRepository: localDepenseRepo,
+          factureRepository: localFactureRepo,
+          entrepriseRepository: localEntrepriseRepo,
+          urssafConfig: UrssafConfig(userId: 'test'),
+        );
+
+        await vm.loadDevis();
+        await vm.selectDevis(testDevis);
+
+        // Default micro → cotisations calculées sur CA
+        expect(vm.typeEntreprise, TypeEntreprise.microEntrepreneur);
+        expect(vm.isRegimeNonSupporte, false);
+        // Charges > 0 car calcul micro sur CA
+        expect(vm.chargesSociales > Decimal.zero, true);
       });
     });
   });

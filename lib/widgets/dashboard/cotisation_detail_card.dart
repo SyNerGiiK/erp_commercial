@@ -166,6 +166,11 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
         'color': const Color(0xFF06B6D4),
         'icon': Icons.local_hospital_outlined,
       },
+      'allocations_familiales': {
+        'label': 'Allocations Familiales',
+        'color': const Color(0xFF14B8A6),
+        'icon': Icons.family_restroom_outlined,
+      },
       'retraite_base': {
         'label': 'Retraite de base',
         'color': const Color(0xFF6366F1),

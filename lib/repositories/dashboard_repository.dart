@@ -4,6 +4,9 @@ import '../models/devis_model.dart';
 import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
+import '../models/facture_recurrente_model.dart';
+import '../models/temps_activite_model.dart';
+import '../models/rappel_model.dart';
 import '../core/base_repository.dart';
 
 abstract class IDashboardRepository {
@@ -14,6 +17,18 @@ abstract class IDashboardRepository {
   Future<ProfilEntreprise?> getProfilEntreprise();
   Future<List<dynamic>> getRecentActivity();
   Future<List<Devis>> getAllDevisYear(int year);
+
+  /// Factures récurrentes actives pour le dashboard
+  Future<List<FactureRecurrente>> getFacturesRecurrentesActives();
+
+  /// Temps d'activité non facturés (facturables mais pas encore facturés)
+  Future<List<TempsActivite>> getTempsNonFactures();
+
+  /// Rappels prochains dans les N jours
+  Future<List<Rappel>> getRappelsProchains(int joursAhead);
+
+  /// Factures impayées (pour trésorerie prévisionnelle)
+  Future<List<Facture>> getFacturesImpayees();
 }
 
 class DashboardRepository extends BaseRepository
@@ -150,6 +165,82 @@ class DashboardRepository extends BaseRepository
       return (response as List).map((e) => Devis.fromMap(e)).toList();
     } catch (e) {
       developer.log("⚠️ Erreur getAllDevisYear", error: e);
+      return [];
+    }
+  }
+
+  @override
+  Future<List<FactureRecurrente>> getFacturesRecurrentesActives() async {
+    try {
+      final response = await client
+          .from('factures_recurrentes')
+          .select('*, lignes_facture_recurrente(*)')
+          .eq('user_id', userId)
+          .eq('est_active', true)
+          .order('prochaine_emission', ascending: true);
+
+      return (response as List)
+          .map((e) => FactureRecurrente.fromMap(e))
+          .toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur getFacturesRecurrentesActives", error: e);
+      return [];
+    }
+  }
+
+  @override
+  Future<List<TempsActivite>> getTempsNonFactures() async {
+    try {
+      final response = await client
+          .from('temps_activites')
+          .select()
+          .eq('user_id', userId)
+          .eq('est_facturable', true)
+          .eq('est_facture', false)
+          .order('date_activite', ascending: false);
+
+      return (response as List).map((e) => TempsActivite.fromMap(e)).toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur getTempsNonFactures", error: e);
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Rappel>> getRappelsProchains(int joursAhead) async {
+    try {
+      final now = DateTime.now();
+      final limit = now.add(Duration(days: joursAhead));
+      final response = await client
+          .from('rappels')
+          .select()
+          .eq('user_id', userId)
+          .eq('est_complete', false)
+          .lte('date_echeance', limit.toIso8601String())
+          .order('date_echeance', ascending: true);
+
+      return (response as List).map((e) => Rappel.fromMap(e)).toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur getRappelsProchains", error: e);
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Facture>> getFacturesImpayees() async {
+    try {
+      final response = await client
+          .from('factures')
+          .select('*, paiements(*), lignes_factures(*)')
+          .eq('user_id', userId)
+          .isFilter('deleted_at', null)
+          .eq('est_archive', false)
+          .inFilter('statut', ['validee', 'envoyee']).order('date_echeance',
+              ascending: true);
+
+      return (response as List).map((e) => Facture.fromMap(e)).toList();
+    } catch (e) {
+      developer.log("⚠️ Erreur getFacturesImpayees", error: e);
       return [];
     }
   }

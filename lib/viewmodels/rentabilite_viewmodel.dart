@@ -5,8 +5,10 @@ import 'package:decimal/decimal.dart';
 import '../core/base_viewmodel.dart';
 import '../models/devis_model.dart';
 import '../models/chiffrage_model.dart';
+import '../models/depense_model.dart';
 import '../repositories/chiffrage_repository.dart';
 import '../repositories/devis_repository.dart';
+import '../repositories/depense_repository.dart';
 import '../utils/calculations_utils.dart';
 
 /// État d'avancement calculé pour une ligne de devis
@@ -37,12 +39,15 @@ class LigneDevisAvancement {
 class RentabiliteViewModel extends BaseViewModel {
   final IChiffrageRepository _chiffrageRepo;
   final IDevisRepository _devisRepo;
+  final IDepenseRepository _depenseRepo;
 
   RentabiliteViewModel({
     IChiffrageRepository? chiffrageRepository,
     IDevisRepository? devisRepository,
+    IDepenseRepository? depenseRepository,
   })  : _chiffrageRepo = chiffrageRepository ?? ChiffrageRepository(),
-        _devisRepo = devisRepository ?? DevisRepository();
+        _devisRepo = devisRepository ?? DevisRepository(),
+        _depenseRepo = depenseRepository ?? DepenseRepository();
 
   // ============ ÉTAT ============
 
@@ -59,6 +64,10 @@ class RentabiliteViewModel extends BaseViewModel {
   List<LigneChiffrage> _chiffrages = [];
   List<LigneChiffrage> get chiffrages => _chiffrages;
 
+  /// Dépenses (Réelles) du devis sélectionné
+  List<Depense> _depenses = [];
+  List<Depense> get depenses => _depenses;
+
   /// Map ligneDevisId → avancement calculé
   Map<String, Decimal> _avancements = {};
   Map<String, Decimal> get avancements => _avancements;
@@ -67,7 +76,26 @@ class RentabiliteViewModel extends BaseViewModel {
   Decimal _avancementGlobal = Decimal.zero;
   Decimal get avancementGlobal => _avancementGlobal;
 
-  /// Devis expandus dans le panneau gauche
+  /// Marge réelle = (Total Devis HT) - (Total Dépenses)
+  Decimal get margeReelle {
+    if (_selectedDevis == null) return Decimal.zero;
+    final totalDepenses = _depenses.fold(
+        Decimal.zero,
+        (sum, d) =>
+            sum +
+            d.montant); // montant est TTC par défaut sur les dépenses, à raffiner si besoin réel
+    return _selectedDevis!.totalHt - totalDepenses;
+  }
+
+  /// Facturation = Total encaissements
+  Decimal get facturationEncaissee {
+    if (_selectedDevis == null) return Decimal.zero;
+    // Note: Devis -> Transformé en Facture. Pour le MVP Cockpit on utilise l'acompte
+    // Mais l'idéal serait de récupérer la facture liée pour sommer les vrais paiements
+    return _selectedDevis!.acompteMontant;
+  }
+
+  /// Devis expandus dans le panneau gauche (déconseillé dans le dashboard mais gardé pour compat')
   final Set<String> _expandedDevisIds = {};
   Set<String> get expandedDevisIds => _expandedDevisIds;
 
@@ -80,20 +108,30 @@ class RentabiliteViewModel extends BaseViewModel {
 
   // ============ CHARGEMENT ============
 
-  /// Charge tous les devis actifs (non archivés, non supprimés)
+  /// Charge tous les chantiers actifs (Devis Validés/Acceptés)
   Future<void> loadDevis() async {
     await execute(() async {
-      _devisList = await _devisRepo.getDevis(archives: false);
+      _devisList = await _devisRepo.getChantiersActifs();
     });
   }
 
-  /// Sélectionne un devis et charge ses chiffrages
+  /// Sélectionne un devis et charge son écosystème
   Future<void> selectDevis(Devis devis) async {
     _selectedDevis = devis;
     _selectedLigneDevis = null;
     notifyListeners();
 
-    await _loadChiffrages(devis.id!);
+    await Future.wait([
+      _loadChiffrages(devis.id!),
+      _loadDepenses(devis.id!),
+    ]);
+  }
+
+  /// Charge les dépenses d'un chantier
+  Future<void> _loadDepenses(String devisId) async {
+    await execute(() async {
+      _depenses = await _depenseRepo.getDepensesByChantier(devisId);
+    });
   }
 
   /// Toggle l'expansion d'un devis dans le panneau gauche

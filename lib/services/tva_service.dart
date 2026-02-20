@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 import '../models/urssaf_model.dart';
 import '../models/facture_model.dart';
+import '../models/chiffrage_model.dart';
 
 /// Statut TVA d'un micro-entrepreneur selon Art. 293 B CGI.
 ///
@@ -195,14 +196,29 @@ class TvaService {
       // Ventilation par lignes si disponibles
       if (f.lignes.isNotEmpty) {
         for (final l in f.lignes) {
-          if (_isVente(l.typeActivite)) {
-            caVente += l.totalLigne;
+          final chiffragesLigne =
+              f.chiffrage.where((c) => c.linkedLigneDevisId == l.id).toList();
+
+          if (chiffragesLigne.isNotEmpty) {
+            // Utilisation prioritaire de la Ventilation Secrète (Progress Billing)
+            for (final c in chiffragesLigne) {
+              if (c.typeChiffrage == TypeChiffrage.materiel) {
+                caVente += c.prixVenteInterne;
+              } else {
+                caService += c.prixVenteInterne;
+              }
+            }
           } else {
-            caService += l.totalLigne;
+            // Fallback s'il n'y a pas de répartition dans le Cockpit Rentabilité
+            if (isVente(l.typeActivite)) {
+              caVente += l.totalLigne;
+            } else {
+              caService += l.totalLigne;
+            }
           }
         }
       } else {
-        // Fallback : tout en service (cas micro-entrepreneur artisan par défaut)
+        // Fallback ultime : tout en service
         caService += f.totalHt;
       }
     }
@@ -232,7 +248,7 @@ class TvaService {
   }
 
   /// Détermine si un type d'activité relève de la vente de marchandises.
-  static bool _isVente(String typeActivite) {
+  static bool isVente(String typeActivite) {
     final lower = typeActivite.toLowerCase();
     return lower == 'vente' || lower == 'marchandise' || lower == 'negoce';
   }

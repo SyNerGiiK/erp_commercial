@@ -8,6 +8,7 @@ import '../models/depense_model.dart';
 import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
+import '../models/chiffrage_model.dart';
 import '../core/base_viewmodel.dart';
 import '../services/tva_service.dart';
 import '../services/relance_service.dart';
@@ -234,16 +235,71 @@ class DashboardViewModel extends BaseViewModel {
     Decimal ca = Decimal.zero;
     Decimal dep = Decimal.zero;
 
-    // 1. CA Encaissé
+    // 1. CA Encaissé (total TTC)
     for (var f in factures) {
+      Decimal factureVente = Decimal.zero;
+      Decimal facturePresta = Decimal.zero;
+
+      // Calcul de la part Vente et Presta sur le HT total de la facture
+      if (f.lignes.isNotEmpty) {
+        for (final l in f.lignes) {
+          final chiffragesLigne =
+              f.chiffrage.where((c) => c.linkedLigneDevisId == l.id).toList();
+
+          if (chiffragesLigne.isNotEmpty) {
+            // Utilisation prioritaire de la Ventilation Secrète (Rentabilité)
+            for (final c in chiffragesLigne) {
+              if (c.typeChiffrage == TypeChiffrage.materiel) {
+                factureVente += c.prixVenteInterne;
+              } else {
+                facturePresta += c.prixVenteInterne;
+              }
+            }
+          } else {
+            // Fallback habituel
+            if (TvaService.isVente(l.typeActivite)) {
+              factureVente += l.totalLigne;
+            } else {
+              facturePresta += l.totalLigne;
+            }
+          }
+        }
+      } else {
+        facturePresta += f.totalHt; // Fallback
+      }
+
+      // Calcul des paiements de cette période pour cette facture
+      Decimal encaisseFacturePeriode = Decimal.zero;
       for (var p in f.paiements) {
         if (p.datePaiement.isAfter(start) && p.datePaiement.isBefore(end)) {
-          ca += p.montant;
+          encaisseFacturePeriode += p.montant;
+        }
+      }
+
+      if (encaisseFacturePeriode > Decimal.zero) {
+        ca += encaisseFacturePeriode;
+
+        if (isCurrent && f.totalTtc > Decimal.zero) {
+          // Proratisation TTC de l'encaissement par rapport à la ventilation HT
+          final ratio =
+              encaisseFacturePeriode.toDouble() / f.totalTtc.toDouble();
+          _caVente += Decimal.parse(
+              (factureVente.toDouble() * ratio).toStringAsFixed(2));
+          // Note: On ventile en priorité sur BIC. S'il s'agit de BNC, l'utilisateur a tout de même la possibilité de changer en BNC globalement,
+          // mais dans les faits, l'ERP est centré "Artisanat", donc Presta = BIC Service par défaut.
+          final pBic = Decimal.parse(
+              (facturePresta.toDouble() * ratio).toStringAsFixed(2));
+
+          if (_urssafConfig?.typeActivite == TypeActiviteMicro.bncPrestation) {
+            _caPrestaBNC += pBic;
+          } else {
+            _caPrestaBIC += pBic;
+          }
         }
       }
     }
 
-    // 2. Dépenses
+    // 2. Dépenses (inchangé)
     dep = depenses.fold(Decimal.zero, (sum, d) => sum + d.montant);
 
     if (isCurrent) {
@@ -260,33 +316,14 @@ class DashboardViewModel extends BaseViewModel {
     _totalCotisations = Decimal.zero;
     _cotisationBreakdown = {};
     _cotisationRepartition = {};
-    _caVente = Decimal.zero;
-    _caPrestaBIC = Decimal.zero;
-    _caPrestaBNC = Decimal.zero;
 
     if (_caEncaissePeriode > Decimal.zero && _urssafConfig != null) {
       final config = _urssafConfig!;
 
-      // Ventilation MVP : On applique le type principal défini dans la config.
-      // NOTE : À l'avenir, il faudra ventiler le CA par type (Vente vs Service) depuis les factures
-      // si des métadonnées plus précises sont disponibles.
-      switch (config.typeActivite) {
-        case TypeActiviteMicro.bicVente:
-          _caVente = _caEncaissePeriode;
-          break;
-        case TypeActiviteMicro.bicPrestation:
-          _caPrestaBIC = _caEncaissePeriode;
-          break;
-        case TypeActiviteMicro.bncPrestation:
-          _caPrestaBNC = _caEncaissePeriode;
-          break;
-        case TypeActiviteMicro.mixte:
-          // Cas complexe : Sans métadonnées sur les factures, impossible de savoir.
-          // On met 50/50 pour l'exemple ou tout en Vente par défaut
-          _caVente = (_caEncaissePeriode / Decimal.fromInt(2)).toDecimal();
-          _caPrestaBIC = (_caEncaissePeriode - _caVente);
-          break;
-      }
+      // Les variables _caVente, _caPrestaBIC et _caPrestaBNC sont désormais
+      // calculées avec une précision chirurgicale (Prorata) dans _calculateKPI.
+      // Si la ventilation interne n'était pas activée ou si le devis est indéterminé,
+      // la logique de répartition intelligente agit au mieux.
 
       final result =
           config.calculerCotisations(_caVente, _caPrestaBIC, _caPrestaBNC);

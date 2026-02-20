@@ -26,7 +26,8 @@ import '../views/ajout_depense_view.dart';
 import '../views/global_search_view.dart';
 import '../views/shopping_list_view.dart';
 import '../views/archives_view.dart';
-import '../views/rentabilite_view.dart';
+import '../views/rentabilite/rentabilite_dashboard_view.dart';
+import '../views/rentabilite/chantier_detail_view.dart';
 import '../views/onboarding_view.dart';
 import '../views/relances_view.dart';
 import '../views/corbeille_view.dart';
@@ -109,7 +110,14 @@ class AppRouter {
         ),
         GoRoute(
           path: '/app/rentabilite',
-          builder: (_, __) => const RentabiliteView(),
+          builder: (_, __) => const RentabiliteDashboardView(),
+        ),
+        GoRoute(
+          path: '/app/rentabilite/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'];
+            return ChantierDetailView(devisId: id!);
+          },
         ),
         GoRoute(
           path: '/app/parametres',

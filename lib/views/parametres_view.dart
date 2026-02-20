@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
@@ -42,7 +43,7 @@ class _ParametresViewState extends State<ParametresView> {
   void initState() {
     super.initState();
     _initControllers();
-    _loadData();
+    SchedulerBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
   void _initControllers() {

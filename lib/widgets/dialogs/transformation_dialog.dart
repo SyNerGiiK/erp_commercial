@@ -42,7 +42,7 @@ class _TransformationDialogState extends State<TransformationDialog> {
     // Utilise le taux d'acompte défini sur le devis comme valeur par défaut
     final defaultPercent = widget.acomptePercentage ?? Decimal.fromInt(30);
     _valueCtrl = TextEditingController(
-      text: defaultPercent.toStringAsFixed(0),
+      text: defaultPercent.toDouble().toStringAsFixed(0),
     );
   }
 
@@ -75,7 +75,7 @@ class _TransformationDialogState extends State<TransformationDialog> {
             _buildOption(
               TransformationType.acompte,
               "Facture d'Acompte",
-              "Acompte de ${(widget.acomptePercentage ?? Decimal.fromInt(30)).toStringAsFixed(0)}% défini dans le devis.",
+              "Acompte de ${(widget.acomptePercentage ?? Decimal.fromInt(30)).toDouble().toStringAsFixed(0)}% défini dans le devis.",
               Icons.savings,
             ),
             // Acompte : affichage en lecture seule du taux du devis

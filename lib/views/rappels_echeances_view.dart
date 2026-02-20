@@ -422,6 +422,7 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
                       lastDate:
                           DateTime.now().add(const Duration(days: 365 * 3)),
                     );
+                    if (!context.mounted) return;
                     if (picked != null) {
                       setDialogState(() => selectedDate = picked);
                     }

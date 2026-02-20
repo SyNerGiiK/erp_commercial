@@ -604,6 +604,4 @@ flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```
 
----
-
-*ERP Artisan 3.0 — Dernière mise à jour : 19 février 2026*
+*ERP Artisan 3.0 — Dernière mise à jour : 20 février 2026*

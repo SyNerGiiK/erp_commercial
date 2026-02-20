@@ -112,10 +112,10 @@ class RevenueChart extends StatelessWidget {
                             // Show K units for space
                             if (value >= 1000) {
                               return Text(
-                                  "${(value / 1000).toStringAsFixed(0)}k",
+                                  "${(value / 1000).toDouble().toStringAsFixed(0)}k",
                                   style: const TextStyle(fontSize: 10));
                             }
-                            return Text(value.toStringAsFixed(0),
+                            return Text(value.toDouble().toStringAsFixed(0),
                                 style: const TextStyle(fontSize: 10));
                           },
                         ),

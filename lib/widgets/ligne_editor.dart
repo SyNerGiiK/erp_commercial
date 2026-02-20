@@ -293,6 +293,7 @@ class _LigneEditorState extends State<LigneEditor> {
             SizedBox(
               width: 50,
               child: DropdownButtonFormField<Decimal>(
+                key: ValueKey(_currentTva),
                 initialValue: _currentTva,
                 icon: const SizedBox(), // Cache l'icone pour gagner place
                 decoration: const InputDecoration(

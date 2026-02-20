@@ -71,7 +71,7 @@ class _ChiffrageEditorState extends State<ChiffrageEditor> {
     final pa =
         Decimal.tryParse(_paCtrl.text.replaceAll(',', '.')) ?? Decimal.zero;
     final pv = pa * Decimal.parse(coeff.toString());
-    _pvCtrl.text = pv.toStringAsFixed(2);
+    _pvCtrl.text = pv.toDouble().toStringAsFixed(2);
     _notify();
   }
 

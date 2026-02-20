@@ -1,6 +1,6 @@
 # Architecture — ERP Artisan
 
-> Document de référence architecture — Dernière mise à jour : 18/02/2026
+> Document de référence architecture — Dernière mise à jour : 20/02/2026
 
 ---
 

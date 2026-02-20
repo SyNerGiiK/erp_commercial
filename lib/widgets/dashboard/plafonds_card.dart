@@ -123,7 +123,7 @@ class PlafondsCard extends StatelessWidget {
                 style:
                     const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
             Text(
-              "${(percent * 100).toStringAsFixed(1)}%",
+              "${(percent * 100).toDouble().toStringAsFixed(1)}%",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: displayColor,
@@ -167,11 +167,11 @@ class PlafondsCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "${current.toStringAsFixed(0)}€",
+              "${current.toDouble().toStringAsFixed(0)}€",
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
             Text(
-              "${max.toStringAsFixed(0)}€",
+              "${max.toDouble().toStringAsFixed(0)}€",
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],

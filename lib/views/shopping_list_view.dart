@@ -148,16 +148,19 @@ class _ShoppingListViewState extends State<ShoppingListView> {
                             background: Container(color: Colors.red),
                             onDismissed: (_) => vm.deleteItem(item.id!),
                             child: Card(
-                              child: CheckboxListTile(
-                                value: item.estAchete,
-                                onChanged: (_) => vm.toggleCheck(item),
+                              child: ListTile(
+                                leading: const Icon(Icons.circle_outlined,
+                                    color: Colors.grey),
                                 title: Text(item.designation,
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 subtitle: Text(
                                     "${item.quantite} x ${FormatUtils.currency(item.prixUnitaire)}"),
-                                secondary: const Icon(Icons.circle_outlined,
-                                    color: Colors.grey),
+                                trailing: Checkbox(
+                                  value: item.estAchete,
+                                  onChanged: (_) => vm.toggleCheck(item),
+                                ),
+                                onTap: () => vm.toggleCheck(item),
                               ),
                             ),
                           )),
@@ -176,9 +179,9 @@ class _ShoppingListViewState extends State<ShoppingListView> {
                               background: Container(color: Colors.red),
                               child: Card(
                                 color: Colors.grey.shade100,
-                                child: CheckboxListTile(
-                                  value: item.estAchete,
-                                  onChanged: (_) => vm.toggleCheck(item),
+                                child: ListTile(
+                                  leading: const Icon(Icons.check_circle,
+                                      color: Colors.green),
                                   title: Text(
                                     item.designation,
                                     style: const TextStyle(
@@ -189,8 +192,11 @@ class _ShoppingListViewState extends State<ShoppingListView> {
                                       FormatUtils.currency(item.totalLigne),
                                       style:
                                           const TextStyle(color: Colors.grey)),
-                                  secondary: const Icon(Icons.check_circle,
-                                      color: Colors.green),
+                                  trailing: Checkbox(
+                                    value: item.estAchete,
+                                    onChanged: (_) => vm.toggleCheck(item),
+                                  ),
+                                  onTap: () => vm.toggleCheck(item),
                                 ),
                               ),
                             )),

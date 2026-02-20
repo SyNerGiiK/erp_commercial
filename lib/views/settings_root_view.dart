@@ -528,15 +528,17 @@ class _SettingsRootViewState extends State<SettingsRootView> {
         RadioGroup<PdfTheme>(
           groupValue: _pdfTheme,
           onChanged: (v) {
-            if (v != null) setState(() => _pdfTheme = v);
+            if (v != null) {
+              setState(() => _pdfTheme = v);
+            }
           },
           child: Column(
             children: PdfTheme.values
                 .map((theme) => RadioListTile<PdfTheme>(
                       title: Text(theme.label),
-                      subtitle: Text(theme.description,
-                          style: const TextStyle(fontSize: 12)),
+                      subtitle: Text(theme.description),
                       value: theme,
+                      activeColor: AppTheme.primary,
                     ))
                 .toList(),
           ),

@@ -46,8 +46,7 @@ class EdgeEmailService {
       subject: subject,
       body: body,
       pdfBytes: pdfBytes,
-      pdfFilename:
-          '${devis.numeroDevis.replaceAll('/', '-')}.pdf',
+      pdfFilename: '${devis.numeroDevis.replaceAll('/', '-')}.pdf',
       documentType: 'devis',
       documentId: devis.id,
       documentNumero: devis.numeroDevis,
@@ -85,8 +84,7 @@ class EdgeEmailService {
       subject: subject,
       body: body,
       pdfBytes: pdfBytes,
-      pdfFilename:
-          '${facture.numeroFacture.replaceAll('/', '-')}.pdf',
+      pdfFilename: '${facture.numeroFacture.replaceAll('/', '-')}.pdf',
       documentType: 'facture',
       documentId: facture.id,
       documentNumero: facture.numeroFacture,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Edge Function Blueprint — Supabase Edge Function pour envoi d'emails transactionnels
 // Déployer via : supabase functions deploy send-email
 //

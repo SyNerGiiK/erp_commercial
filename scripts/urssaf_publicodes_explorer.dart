@@ -1,4 +1,5 @@
 #!/usr/bin/env dart
+// ignore_for_file: avoid_print
 // ==========================================================================
 // PHASE 1 — Script d'exploration de l'API URSSAF Publicodes
 // ==========================================================================

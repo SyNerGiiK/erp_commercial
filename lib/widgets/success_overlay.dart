@@ -149,7 +149,8 @@ class _SuccessOverlayWidgetState extends State<_SuccessOverlayWidget> {
       ),
     )
         .animate()
-        .scaleXY(begin: 0.8, end: 1.0, duration: 500.ms, curve: Curves.elasticOut)
+        .scaleXY(
+            begin: 0.8, end: 1.0, duration: 500.ms, curve: Curves.elasticOut)
         .fadeIn(duration: 300.ms);
   }
 

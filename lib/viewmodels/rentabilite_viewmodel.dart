@@ -148,7 +148,7 @@ class RentabiliteViewModel extends BaseViewModel {
     }
     return ((facturationEncaissee * Decimal.fromInt(100)) /
             _selectedDevis!.totalTtc)
-        .toDecimal();
+        .toDecimal(scaleOnInfinitePrecision: 2);
   }
 
   /// Devis expandus dans le panneau gauche (déconseillé dans le dashboard mais gardé pour compat')
@@ -371,7 +371,8 @@ class RentabiliteViewModel extends BaseViewModel {
 
     final encaisse =
         totalPaiements > totalFacture ? totalPaiements : totalFacture;
-    return ((encaisse * Decimal.fromInt(100)) / devis.totalTtc).toDecimal();
+    return ((encaisse * Decimal.fromInt(100)) / devis.totalTtc)
+        .toDecimal(scaleOnInfinitePrecision: 2);
   }
 
   Decimal getMargePrevueForDevis(Devis devis) {
@@ -399,7 +400,8 @@ class RentabiliteViewModel extends BaseViewModel {
     if (margePrevue <= Decimal.zero) return Decimal.zero;
 
     final margeReelle = getMargeReelleForDevis(devis);
-    return ((margeReelle * Decimal.fromInt(100)) / margePrevue).toDecimal();
+    return ((margeReelle * Decimal.fromInt(100)) / margePrevue)
+        .toDecimal(scaleOnInfinitePrecision: 2);
   }
 
   Decimal getVentilationMaterielRatio(Devis devis) {
@@ -414,7 +416,8 @@ class RentabiliteViewModel extends BaseViewModel {
         .where((c) => c.typeChiffrage == TypeChiffrage.materiel)
         .fold<Decimal>(Decimal.zero, (sum, c) => sum + c.prixVenteInterne);
 
-    return ((materiel * Decimal.fromInt(100)) / totalVente).toDecimal();
+    return ((materiel * Decimal.fromInt(100)) / totalVente)
+        .toDecimal(scaleOnInfinitePrecision: 2);
   }
 
   /// Retourne les avancements détaillés pour chaque ligne du devis sélectionné
@@ -638,7 +641,7 @@ class RentabiliteViewModel extends BaseViewModel {
 
     if (sommeActuelle <= Decimal.zero) {
       final taille = Decimal.fromInt(lignes.length);
-      final unitaire = (totalType / taille).toDecimal();
+      final unitaire = (totalType / taille).toDecimal(scaleOnInfinitePrecision: 2);
       return lignes.map((c) => c.copyWith(prixVenteInterne: unitaire)).toList();
     }
 
@@ -652,7 +655,8 @@ class RentabiliteViewModel extends BaseViewModel {
       }
 
       final part =
-          ((totalType * current.prixVenteInterne) / sommeActuelle).toDecimal();
+          ((totalType * current.prixVenteInterne) / sommeActuelle)
+              .toDecimal(scaleOnInfinitePrecision: 2);
       cumul += part;
       result.add(current.copyWith(prixVenteInterne: part));
     }

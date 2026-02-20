@@ -35,10 +35,13 @@ class UrssafViewModel extends BaseViewModel {
   }
 
   Future<void> saveConfig(UrssafConfig newConfig) async {
-    await executeOperation(() async {
+    final success = await executeOperation(() async {
       await _repository.saveConfig(newConfig);
       await loadConfig();
     });
+    if (!success) {
+      throw Exception('Erreur lors de la sauvegarde de la configuration');
+    }
   }
 
   /// Synchronise les taux depuis l'API URSSAF Publicodes.

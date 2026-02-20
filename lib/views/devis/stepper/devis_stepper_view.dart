@@ -371,7 +371,11 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             )
                 .animate(key: ValueKey('step0_$_currentStep'))
                 .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                .slideX(
+                    begin: 0.05,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic),
             isActive: _currentStep >= 0,
             state: _currentStep > 0 ? StepState.complete : StepState.indexed,
           ),
@@ -394,7 +398,11 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             )
                 .animate(key: ValueKey('step1_$_currentStep'))
                 .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                .slideX(
+                    begin: 0.05,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic),
             isActive: _currentStep >= 1,
             state: _currentStep > 1 ? StepState.complete : StepState.indexed,
           ),
@@ -413,7 +421,11 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             )
                 .animate(key: ValueKey('step2_$_currentStep'))
                 .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                .slideX(
+                    begin: 0.05,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic),
             isActive: _currentStep >= 2,
             state: _currentStep > 2 ? StepState.complete : StepState.indexed,
           ),
@@ -432,7 +444,11 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             )
                 .animate(key: ValueKey('step3_$_currentStep'))
                 .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+                .slideX(
+                    begin: 0.05,
+                    end: 0,
+                    duration: 400.ms,
+                    curve: Curves.easeOutCubic),
             isActive: _currentStep >= 3,
             state: _currentStep == 3 ? StepState.complete : StepState.indexed,
           ),

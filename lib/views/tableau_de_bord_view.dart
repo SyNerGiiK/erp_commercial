@@ -241,8 +241,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ),
                     )
                         .animate()
-                        .fadeIn(duration: 600.ms, delay: 300.ms, curve: Curves.easeOutCubic)
-                        .slideY(begin: 0.1, end: 0, duration: 600.ms, delay: 300.ms, curve: Curves.easeOutCubic),
+                        .fadeIn(
+                            duration: 600.ms,
+                            delay: 300.ms,
+                            curve: Curves.easeOutCubic)
+                        .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            duration: 600.ms,
+                            delay: 300.ms,
+                            curve: Curves.easeOutCubic),
 
                   // --- FACTURES EN RETARD ---
                   if (vm.relances.isNotEmpty)
@@ -255,8 +263,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ),
                     )
                         .animate()
-                        .fadeIn(duration: 600.ms, delay: 400.ms, curve: Curves.easeOutCubic)
-                        .slideY(begin: 0.1, end: 0, duration: 600.ms, delay: 400.ms, curve: Curves.easeOutCubic),
+                        .fadeIn(
+                            duration: 600.ms,
+                            delay: 400.ms,
+                            curve: Curves.easeOutCubic)
+                        .slideY(
+                            begin: 0.1,
+                            end: 0,
+                            duration: 600.ms,
+                            delay: 400.ms,
+                            curve: Curves.easeOutCubic),
 
                   // --- ARCHIVAGE AUTOMATIQUE ---
                   if (vm.showArchivageSuggestion)
@@ -293,9 +309,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                         },
                         onDismiss: vm.dismissArchivageSuggestion,
                       ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 600.ms, delay: 450.ms, curve: Curves.easeOutCubic),
+                    ).animate().fadeIn(
+                        duration: 600.ms,
+                        delay: 450.ms,
+                        curve: Curves.easeOutCubic),
 
                   // --- GRAPHIQUES & DETAILS ---
                   LayoutBuilder(builder: (context, constraints) {
@@ -408,8 +425,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                     }
                   })
                       .animate()
-                      .fadeIn(duration: 700.ms, delay: 500.ms, curve: Curves.easeOutCubic)
-                      .slideY(begin: 0.08, end: 0, duration: 700.ms, delay: 500.ms, curve: Curves.easeOutCubic),
+                      .fadeIn(
+                          duration: 700.ms,
+                          delay: 500.ms,
+                          curve: Curves.easeOutCubic)
+                      .slideY(
+                          begin: 0.08,
+                          end: 0,
+                          duration: 700.ms,
+                          delay: 500.ms,
+                          curve: Curves.easeOutCubic),
 
                   const SizedBox(height: AppTheme.spacing32),
 

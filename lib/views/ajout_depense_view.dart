@@ -67,7 +67,7 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
       _fournisseurController.text = d.fournisseur ?? "";
       _date = d.date;
       _categorie = d.categorie;
-      _selectedDevisId = d.devisId;
+      _selectedDevisId = d.chantierDevisId;
     }
     if (mounted) setState(() => _isLoading = false);
   }
@@ -109,7 +109,7 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
       date: _date,
       categorie: _categorie,
       fournisseur: _fournisseurController.text,
-      devisId: _selectedDevisId,
+      chantierDevisId: _selectedDevisId,
     );
 
     setState(() => _isLoading = true); // Indicateur de chargement
@@ -225,15 +225,18 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
               key: ValueKey(_selectedDevisId),
               initialValue: _selectedDevisId,
               decoration: InputDecoration(
-                  labelText: "Lier à un devis",
+                  labelText: "Rattacher à un chantier",
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: Colors.white),
               items: [
                 const DropdownMenuItem(value: null, child: Text("Aucun")),
-                ...devisVM.devis.map((d) => DropdownMenuItem(
-                    value: d.id, child: Text("${d.numeroDevis} - ${d.objet}"))),
+                ...devisVM.devis
+                    .where((d) => ['accepte', 'facture'].contains(d.statut))
+                    .map((d) => DropdownMenuItem(
+                        value: d.id,
+                        child: Text("${d.numeroDevis} - ${d.objet}"))),
               ],
               onChanged: (v) => setState(() => _selectedDevisId = v),
             ),

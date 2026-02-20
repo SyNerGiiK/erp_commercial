@@ -39,7 +39,7 @@ class DepenseRepository extends BaseRepository implements IDepenseRepository {
           .from('depenses')
           .select()
           .eq('user_id', userId)
-          .eq('devis_id', devisId)
+          .eq('chantier_devis_id', devisId)
           .isFilter('deleted_at', null)
           .order('date', ascending: false);
 

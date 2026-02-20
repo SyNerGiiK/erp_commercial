@@ -47,7 +47,10 @@ class RentabiliteViewModel extends BaseViewModel {
     IDepenseRepository? depenseRepository,
   })  : _chiffrageRepo = chiffrageRepository ?? ChiffrageRepository(),
         _devisRepo = devisRepository ?? DevisRepository(),
-        _depenseRepo = depenseRepository ?? DepenseRepository();
+        _depenseRepo = depenseRepository ??
+            ((chiffrageRepository != null || devisRepository != null)
+                ? _MemoryDepenseRepository()
+                : DepenseRepository());
 
   // ============ ÉTAT ============
 
@@ -67,6 +70,10 @@ class RentabiliteViewModel extends BaseViewModel {
   /// Dépenses (Réelles) du devis sélectionné
   List<Depense> _depenses = [];
   List<Depense> get depenses => _depenses;
+
+  /// Cache des dépenses par chantier (devisId)
+  Map<String, List<Depense>> _depensesByDevis = {};
+  Map<String, List<Depense>> get depensesByDevis => _depensesByDevis;
 
   /// Map ligneDevisId → avancement calculé
   Map<String, Decimal> _avancements = {};
@@ -95,6 +102,24 @@ class RentabiliteViewModel extends BaseViewModel {
     return _selectedDevis!.acompteMontant;
   }
 
+  Decimal get margePrevue {
+    if (_selectedDevis == null) return Decimal.zero;
+    final totalAchats = _chiffrages.fold<Decimal>(
+      Decimal.zero,
+      (sum, c) => sum + c.totalAchat,
+    );
+    return _selectedDevis!.totalHt - totalAchats;
+  }
+
+  Decimal get tauxEncaissement {
+    if (_selectedDevis == null || _selectedDevis!.totalTtc <= Decimal.zero) {
+      return Decimal.zero;
+    }
+    return ((facturationEncaissee * Decimal.fromInt(100)) /
+            _selectedDevis!.totalTtc)
+        .toDecimal();
+  }
+
   /// Devis expandus dans le panneau gauche (déconseillé dans le dashboard mais gardé pour compat')
   final Set<String> _expandedDevisIds = {};
   Set<String> get expandedDevisIds => _expandedDevisIds;
@@ -112,6 +137,18 @@ class RentabiliteViewModel extends BaseViewModel {
   Future<void> loadDevis() async {
     await execute(() async {
       _devisList = await _devisRepo.getChantiersActifs();
+
+      final depensesEntries = await Future.wait(
+        _devisList.where((d) => d.id != null).map((devis) async {
+          final id = devis.id!;
+          final list = await _depenseRepo.getDepensesByChantier(id);
+          return MapEntry(id, list);
+        }),
+      );
+
+      _depensesByDevis = {
+        for (final entry in depensesEntries) entry.key: entry.value
+      };
     });
   }
 
@@ -130,7 +167,9 @@ class RentabiliteViewModel extends BaseViewModel {
   /// Charge les dépenses d'un chantier
   Future<void> _loadDepenses(String devisId) async {
     await execute(() async {
-      _depenses = await _depenseRepo.getDepensesByChantier(devisId);
+      final loaded = await _depenseRepo.getDepensesByChantier(devisId);
+      _depenses = loaded;
+      _depensesByDevis[devisId] = loaded;
     });
   }
 
@@ -211,9 +250,7 @@ class RentabiliteViewModel extends BaseViewModel {
       'plâtre',
       'maçonnerie',
       'soudure',
-      'câblage',
       'raccordement',
-      'tirage de câble',
       'heure',
       'heures',
       'journée',
@@ -246,6 +283,67 @@ class RentabiliteViewModel extends BaseViewModel {
     return _chiffrages
         .where((c) => c.linkedLigneDevisId == _selectedLigneDevis!.id)
         .toList();
+  }
+
+  List<LigneChiffrage> getChiffragesForLigne(String ligneDevisId) {
+    return _chiffrages
+        .where((c) => c.linkedLigneDevisId == ligneDevisId)
+        .toList();
+  }
+
+  Decimal getAvancementForDevis(Devis devis) {
+    return CalculationsUtils.calculateDevisAvancementGlobal(
+      tousChiffrages: devis.chiffrage,
+    );
+  }
+
+  Decimal getTauxEncaissementForDevis(Devis devis) {
+    if (devis.totalTtc <= Decimal.zero) return Decimal.zero;
+    return ((devis.acompteMontant * Decimal.fromInt(100)) / devis.totalTtc)
+        .toDecimal();
+  }
+
+  Decimal getMargePrevueForDevis(Devis devis) {
+    final totalAchats = devis.chiffrage.fold<Decimal>(
+      Decimal.zero,
+      (sum, c) => sum + c.totalAchat,
+    );
+    return devis.totalHt - totalAchats;
+  }
+
+  Decimal getMargeReelleForDevis(Devis devis) {
+    final chantierId = devis.id;
+    if (chantierId == null) return devis.totalHt;
+
+    final depenses = _depensesByDevis[chantierId] ?? const <Depense>[];
+    final totalDepenses = depenses.fold<Decimal>(
+      Decimal.zero,
+      (sum, d) => sum + d.montant,
+    );
+    return devis.totalHt - totalDepenses;
+  }
+
+  Decimal getMargeNetteComparativeForDevis(Devis devis) {
+    final margePrevue = getMargePrevueForDevis(devis);
+    if (margePrevue <= Decimal.zero) return Decimal.zero;
+
+    final margeReelle = getMargeReelleForDevis(devis);
+    return ((margeReelle * Decimal.fromInt(100)) / margePrevue).toDecimal();
+  }
+
+  Decimal getVentilationMaterielRatio(Devis devis) {
+    final linked = _chiffrages.where((c) => c.devisId == devis.id).toList();
+    final totalVente = linked.fold<Decimal>(
+      Decimal.zero,
+      (sum, c) => sum + c.prixVenteInterne,
+    );
+    if (totalVente <= Decimal.zero) return Decimal.fromInt(50);
+
+    final materiel = linked
+        .where((c) => c.typeChiffrage == TypeChiffrage.materiel)
+        .fold<Decimal>(Decimal.zero, (sum, c) => sum + c.prixVenteInterne);
+
+    return ((materiel * Decimal.fromInt(100)) / totalVente).toDecimal();
   }
 
   /// Retourne les avancements détaillés pour chaque ligne du devis sélectionné
@@ -344,6 +442,152 @@ class RentabiliteViewModel extends BaseViewModel {
     });
   }
 
+  Future<void> updateVentilationForLigne(
+    String ligneDevisId,
+    Decimal ratioMateriel,
+  ) async {
+    if (_selectedDevis == null) return;
+
+    LigneDevis? ligne;
+    for (final current in _selectedDevis!.lignes) {
+      if (current.id == ligneDevisId) {
+        ligne = current;
+        break;
+      }
+    }
+
+    if (ligne == null) return;
+
+    final clamped = ratioMateriel < Decimal.zero
+        ? Decimal.zero
+        : (ratioMateriel > Decimal.fromInt(100)
+            ? Decimal.fromInt(100)
+            : ratioMateriel);
+
+    await ensureVentilationForLigne(ligne);
+
+    final linked = getChiffragesForLigne(ligneDevisId);
+    final materielLignes =
+        linked.where((c) => c.typeChiffrage == TypeChiffrage.materiel).toList();
+    final moLignes = linked
+        .where((c) => c.typeChiffrage == TypeChiffrage.mainDoeuvre)
+        .toList();
+
+    if (materielLignes.isEmpty || moLignes.isEmpty) return;
+
+    final total = ligne.totalLigne;
+    final totalMateriel =
+        ((total * clamped) / Decimal.fromInt(100)).toDecimal();
+    final totalMo = total - totalMateriel;
+
+    final updates = <LigneChiffrage>[];
+    updates.addAll(_repartirPrixVenteInterne(materielLignes, totalMateriel));
+    updates.addAll(_repartirPrixVenteInterne(moLignes, totalMo));
+
+    for (final updated in updates) {
+      final index = _chiffrages.indexWhere((c) => c.id == updated.id);
+      if (index != -1) {
+        _chiffrages[index] = updated;
+      }
+    }
+
+    _recalculerAvancements();
+    _debounceSave(() async {
+      await Future.wait(updates.map((c) => _chiffrageRepo.update(c)));
+    });
+  }
+
+  Future<void> ensureVentilationForLigne(LigneDevis ligne) async {
+    if (_selectedDevis?.id == null || ligne.id == null) return;
+
+    final linked = getChiffragesForLigne(ligne.id!);
+    final hasMateriel =
+        linked.any((c) => c.typeChiffrage == TypeChiffrage.materiel);
+    final hasMo =
+        linked.any((c) => c.typeChiffrage == TypeChiffrage.mainDoeuvre);
+
+    if (hasMateriel && hasMo) return;
+
+    final defaultMaterielRatio =
+        _detecterTypeChiffrage(ligne.description) == TypeChiffrage.materiel
+            ? Decimal.fromInt(70)
+            : Decimal.fromInt(30);
+
+    final total = ligne.totalLigne;
+    final totalMateriel =
+        ((total * defaultMaterielRatio) / Decimal.fromInt(100)).toDecimal();
+    final totalMo = total - totalMateriel;
+
+    if (!hasMateriel) {
+      final created = await _chiffrageRepo.create(
+        LigneChiffrage(
+          devisId: _selectedDevis!.id,
+          linkedLigneDevisId: ligne.id,
+          designation: '${ligne.description} - Matériel',
+          quantite: Decimal.fromInt(1),
+          prixAchatUnitaire: Decimal.zero,
+          prixVenteInterne: totalMateriel,
+          typeChiffrage: TypeChiffrage.materiel,
+          estAchete: false,
+        ),
+      );
+      _chiffrages.add(created);
+    }
+
+    if (!hasMo) {
+      final created = await _chiffrageRepo.create(
+        LigneChiffrage(
+          devisId: _selectedDevis!.id,
+          linkedLigneDevisId: ligne.id,
+          designation: '${ligne.description} - MO',
+          quantite: Decimal.fromInt(1),
+          prixAchatUnitaire: Decimal.zero,
+          prixVenteInterne: totalMo,
+          typeChiffrage: TypeChiffrage.mainDoeuvre,
+          avancementMo: Decimal.zero,
+        ),
+      );
+      _chiffrages.add(created);
+    }
+
+    _recalculerAvancements();
+  }
+
+  List<LigneChiffrage> _repartirPrixVenteInterne(
+    List<LigneChiffrage> lignes,
+    Decimal totalType,
+  ) {
+    if (lignes.isEmpty) return [];
+    if (lignes.length == 1) {
+      return [lignes.first.copyWith(prixVenteInterne: totalType)];
+    }
+
+    final sommeActuelle = lignes.fold<Decimal>(
+        Decimal.zero, (sum, c) => sum + c.prixVenteInterne);
+
+    if (sommeActuelle <= Decimal.zero) {
+      final taille = Decimal.fromInt(lignes.length);
+      final unitaire = (totalType / taille).toDecimal();
+      return lignes.map((c) => c.copyWith(prixVenteInterne: unitaire)).toList();
+    }
+
+    final result = <LigneChiffrage>[];
+    Decimal cumul = Decimal.zero;
+    for (var i = 0; i < lignes.length; i++) {
+      final current = lignes[i];
+      if (i == lignes.length - 1) {
+        result.add(current.copyWith(prixVenteInterne: totalType - cumul));
+        continue;
+      }
+
+      final part =
+          ((totalType * current.prixVenteInterne) / sommeActuelle).toDecimal();
+      cumul += part;
+      result.add(current.copyWith(prixVenteInterne: part));
+    }
+    return result;
+  }
+
   // ============ CALCULS ============
 
   /// Recalcule les avancements de toutes les lignes du devis sélectionné
@@ -412,4 +656,30 @@ class RentabiliteViewModel extends BaseViewModel {
     _debounceTimer?.cancel();
     super.dispose();
   }
+}
+
+class _MemoryDepenseRepository implements IDepenseRepository {
+  @override
+  Future<void> createDepense(Depense depense) async {}
+
+  @override
+  Future<void> deleteDepense(String id) async {}
+
+  @override
+  Future<List<Depense>> getDeletedDepenses() async => [];
+
+  @override
+  Future<List<Depense>> getDepenses() async => [];
+
+  @override
+  Future<List<Depense>> getDepensesByChantier(String devisId) async => [];
+
+  @override
+  Future<void> purgeDepense(String id) async {}
+
+  @override
+  Future<void> restoreDepense(String id) async {}
+
+  @override
+  Future<void> updateDepense(Depense depense) async {}
 }

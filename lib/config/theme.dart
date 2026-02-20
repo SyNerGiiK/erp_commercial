@@ -51,6 +51,18 @@ class AppTheme {
   static Color get surfaceGlassBright => Colors.white.withValues(alpha: 0.85);
   static Color get surfaceGlassSubtle => Colors.white.withValues(alpha: 0.50);
 
+  /// Surface glass claire (alias pour compatibilité vues rentabilité)
+  static Color get surfaceGlassLight => surfaceGlassBright;
+
+  /// Texte principal (alias pour compatibilité vues rentabilité)
+  static const Color textPrimary = textDark;
+
+  /// Texte secondaire (alias pour compatibilité vues rentabilité)
+  static const Color textSecondary = textLight;
+
+  /// Bordure standard (alias pour compatibilité vues rentabilité)
+  static const Color border = divider;
+
   /// Encre & Texte
   static const Color textDark = Color(0xFF0F172A);
   static const Color textMedium = Color(0xFF475569);

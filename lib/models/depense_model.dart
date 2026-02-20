@@ -8,7 +8,9 @@ class Depense {
   final DateTime date;
   final String categorie;
   final String? fournisseur;
-  final String? devisId;
+  final String? chantierDevisId;
+
+  String? get devisId => chantierDevisId;
 
   Depense({
     this.id,
@@ -18,7 +20,7 @@ class Depense {
     required this.date,
     this.categorie = 'autre',
     this.fournisseur,
-    this.devisId,
+    this.chantierDevisId,
   });
 
   factory Depense.fromMap(Map<String, dynamic> map) {
@@ -30,7 +32,7 @@ class Depense {
       date: DateTime.parse(map['date']),
       categorie: map['categorie'] ?? 'autre',
       fournisseur: map['fournisseur'],
-      devisId: map['devis_id'],
+      chantierDevisId: map['chantier_devis_id'] ?? map['devis_id'],
     );
   }
 
@@ -43,7 +45,7 @@ class Depense {
       'date': date.toIso8601String(),
       'categorie': categorie,
       'fournisseur': fournisseur,
-      'devis_id': devisId,
+      'chantier_devis_id': chantierDevisId,
     };
   }
 
@@ -55,7 +57,7 @@ class Depense {
     DateTime? date,
     String? categorie,
     String? fournisseur,
-    String? devisId,
+    String? chantierDevisId,
   }) {
     return Depense(
       id: id ?? this.id,
@@ -65,7 +67,7 @@ class Depense {
       date: date ?? this.date,
       categorie: categorie ?? this.categorie,
       fournisseur: fournisseur ?? this.fournisseur,
-      devisId: devisId ?? this.devisId,
+      chantierDevisId: chantierDevisId ?? this.chantierDevisId,
     );
   }
 }

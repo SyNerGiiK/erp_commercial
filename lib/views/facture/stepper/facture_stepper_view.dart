@@ -13,6 +13,7 @@ import '../../../viewmodels/entreprise_viewmodel.dart';
 import '../../../viewmodels/devis_viewmodel.dart';
 import '../../../config/supabase_config.dart';
 import '../../../widgets/split_editor_scaffold.dart';
+import '../../../widgets/success_overlay.dart';
 import '../../../utils/calculations_utils.dart';
 import '../../../utils/format_utils.dart';
 
@@ -329,9 +330,14 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     if (success) {
       await vm.clearFactureDraft(widget.id);
       if (mounted) {
-        context.go('/app/factures');
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Facture validée !")));
+        SuccessOverlay.show(
+          context: context,
+          title: 'Facture validée !',
+          subtitle: 'La facture a été finalisée avec succès.',
+          onDismissed: () {
+            if (mounted) context.go('/app/factures');
+          },
+        );
       }
     } else {
       ScaffoldMessenger.of(context)
@@ -412,9 +418,14 @@ class _FactureStepperViewState extends State<FactureStepperView> {
     if (success) {
       await vm.clearFactureDraft(widget.id);
       if (mounted) {
-        context.go('/app/factures');
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Facture enregistrée !")));
+        SuccessOverlay.show(
+          context: context,
+          title: 'Facture enregistrée !',
+          subtitle: 'Le brouillon a été sauvegardé.',
+          onDismissed: () {
+            if (mounted) context.go('/app/factures');
+          },
+        );
       }
     } else {
       if (mounted) {

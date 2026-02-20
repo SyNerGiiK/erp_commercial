@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:decimal/decimal.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../config/theme.dart';
 import '../widgets/base_screen.dart';
@@ -93,75 +94,78 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                   // --- KPI GRID (Cards Premium) ---
                   LayoutBuilder(builder: (context, constraints) {
                     final isWide = constraints.maxWidth > 900;
+                    final cardWidth = isWide
+                        ? (constraints.maxWidth - 60) / 4
+                        : (constraints.maxWidth - 20) / 2;
+                    final kpiCards = [
+                      GradientKpiCard(
+                        title: "Chiffre d'Affaires",
+                        value: "${ca.toStringAsFixed(2)} €",
+                        subtitle:
+                            "${vm.caVariation >= 0 ? '+' : ''}${vm.caVariation.toStringAsFixed(1)}% vs N-1",
+                        variation: vm.caVariation,
+                        icon: Icons.monetization_on_outlined,
+                        gradientColors: const [
+                          Color(0xFF6366F1),
+                          Color(0xFF8B5CF6)
+                        ],
+                      ),
+                      GradientKpiCard(
+                        title: "Bénéfice Net",
+                        value: "${benef.toStringAsFixed(2)} €",
+                        subtitle:
+                            "${vm.beneficeVariation >= 0 ? '+' : ''}${vm.beneficeVariation.toStringAsFixed(1)}% vs N-1",
+                        variation: vm.beneficeVariation,
+                        icon: Icons.savings_outlined,
+                        gradientColors: const [
+                          Color(0xFF10B981),
+                          Color(0xFF06B6D4)
+                        ],
+                      ),
+                      GradientKpiCard(
+                        title: "Cotisations 2026",
+                        value: "${cotis.toStringAsFixed(2)} €",
+                        subtitle: "Estimé selon statut",
+                        icon: Icons.account_balance_outlined,
+                        gradientColors: const [
+                          Color(0xFFF43F5E),
+                          Color(0xFFF59E0B)
+                        ],
+                      ),
+                      GradientKpiCard(
+                        title: "Dépenses",
+                        value: "${dep.toStringAsFixed(2)} €",
+                        subtitle: "Charges déductibles",
+                        variation: vm.depensesVariation,
+                        icon: Icons.shopping_bag_outlined,
+                        gradientColors: const [
+                          Color(0xFF818CF8),
+                          Color(0xFF475569)
+                        ],
+                      ),
+                    ];
                     return Wrap(
                       spacing: 20,
                       runSpacing: 20,
                       children: [
-                        SizedBox(
-                          width: isWide
-                              ? (constraints.maxWidth - 60) / 4
-                              : (constraints.maxWidth - 20) / 2,
-                          child: GradientKpiCard(
-                            title: "Chiffre d'Affaires",
-                            value: "${ca.toStringAsFixed(2)} €",
-                            subtitle:
-                                "${vm.caVariation >= 0 ? '+' : ''}${vm.caVariation.toStringAsFixed(1)}% vs N-1",
-                            variation: vm.caVariation,
-                            icon: Icons.monetization_on_outlined,
-                            gradientColors: const [
-                              Color(0xFF6366F1),
-                              Color(0xFF8B5CF6)
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: isWide
-                              ? (constraints.maxWidth - 60) / 4
-                              : (constraints.maxWidth - 20) / 2,
-                          child: GradientKpiCard(
-                            title: "Bénéfice Net",
-                            value: "${benef.toStringAsFixed(2)} €",
-                            subtitle:
-                                "${vm.beneficeVariation >= 0 ? '+' : ''}${vm.beneficeVariation.toStringAsFixed(1)}% vs N-1",
-                            variation: vm.beneficeVariation,
-                            icon: Icons.savings_outlined,
-                            gradientColors: const [
-                              Color(0xFF10B981),
-                              Color(0xFF06B6D4)
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: isWide
-                              ? (constraints.maxWidth - 60) / 4
-                              : (constraints.maxWidth - 20) / 2,
-                          child: GradientKpiCard(
-                            title: "Cotisations 2026",
-                            value: "${cotis.toStringAsFixed(2)} €",
-                            subtitle: "Estimé selon statut",
-                            icon: Icons.account_balance_outlined,
-                            gradientColors: const [
-                              Color(0xFFF43F5E),
-                              Color(0xFFF59E0B)
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: isWide
-                              ? (constraints.maxWidth - 60) / 4
-                              : (constraints.maxWidth - 20) / 2,
-                          child: GradientKpiCard(
-                            title: "Dépenses",
-                            value: "${dep.toStringAsFixed(2)} €",
-                            subtitle: "Charges déductibles",
-                            variation: vm.depensesVariation,
-                            icon: Icons.shopping_bag_outlined,
-                            gradientColors: const [
-                              Color(0xFF818CF8),
-                              Color(0xFF475569)
-                            ],
-                          ),
-                        ),
+                        for (int i = 0; i < kpiCards.length; i++)
+                          SizedBox(
+                            width: cardWidth,
+                            child: kpiCards[i],
+                          )
+                              .animate()
+                              .fadeIn(
+                                duration: 500.ms,
+                                delay: (100 * i).ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .slideY(
+                                begin: 0.15,
+                                end: 0,
+                                duration: 500.ms,
+                                delay: (100 * i).ms,
+                                curve: Curves.easeOutCubic,
+                              ),
                       ],
                     );
                   }),
@@ -235,7 +239,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                           }),
                         ],
                       ),
-                    ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 600.ms, delay: 300.ms, curve: Curves.easeOutCubic)
+                        .slideY(begin: 0.1, end: 0, duration: 600.ms, delay: 300.ms, curve: Curves.easeOutCubic),
 
                   // --- FACTURES EN RETARD ---
                   if (vm.relances.isNotEmpty)
@@ -246,7 +253,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                         relances: vm.relances,
                         onTap: () => context.go('/app/relances'),
                       ),
-                    ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 600.ms, delay: 400.ms, curve: Curves.easeOutCubic)
+                        .slideY(begin: 0.1, end: 0, duration: 600.ms, delay: 400.ms, curve: Curves.easeOutCubic),
 
                   // --- ARCHIVAGE AUTOMATIQUE ---
                   if (vm.showArchivageSuggestion)
@@ -283,7 +293,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                         },
                         onDismiss: vm.dismissArchivageSuggestion,
                       ),
-                    ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 600.ms, delay: 450.ms, curve: Curves.easeOutCubic),
 
                   // --- GRAPHIQUES & DETAILS ---
                   LayoutBuilder(builder: (context, constraints) {
@@ -394,7 +406,10 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                         ],
                       );
                     }
-                  }),
+                  })
+                      .animate()
+                      .fadeIn(duration: 700.ms, delay: 500.ms, curve: Curves.easeOutCubic)
+                      .slideY(begin: 0.08, end: 0, duration: 700.ms, delay: 500.ms, curve: Curves.easeOutCubic),
 
                   const SizedBox(height: AppTheme.spacing32),
 

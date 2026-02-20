@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:decimal/decimal.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../models/devis_model.dart';
 import '../../../models/client_model.dart';
@@ -11,6 +12,7 @@ import '../../../viewmodels/client_viewmodel.dart';
 import '../../../viewmodels/entreprise_viewmodel.dart';
 import '../../../config/supabase_config.dart';
 import '../../../widgets/split_editor_scaffold.dart';
+import '../../../widgets/success_overlay.dart';
 import '../../../utils/calculations_utils.dart';
 import '../../../utils/format_utils.dart';
 import '../../../services/email_service.dart';
@@ -226,9 +228,14 @@ class _DevisStepperViewState extends State<DevisStepperView> {
       final vm = Provider.of<DevisViewModel>(context, listen: false);
       await vm.clearDevisDraft(widget.id);
       if (mounted) {
-        context.go('/app/devis');
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Devis enregistré !")));
+        SuccessOverlay.show(
+          context: context,
+          title: 'Devis enregistré !',
+          subtitle: 'Le brouillon a été sauvegardé.',
+          onDismissed: () {
+            if (mounted) context.go('/app/devis');
+          },
+        );
       }
     } else {
       if (mounted) {
@@ -290,9 +297,14 @@ class _DevisStepperViewState extends State<DevisStepperView> {
 
     await vm.clearDevisDraft(widget.id);
     if (mounted) {
-      context.go('/app/devis');
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Devis finalisé et envoyé !")));
+      SuccessOverlay.show(
+        context: context,
+        title: 'Devis finalisé et envoyé !',
+        subtitle: 'Le devis a été envoyé au client.',
+        onDismissed: () {
+          if (mounted) context.go('/app/devis');
+        },
+      );
     }
   }
 
@@ -356,7 +368,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
             content: DevisStep1Client(
               selectedClient: _selectedClient,
               onClientChanged: (c) => setState(() => _selectedClient = c),
-            ),
+            )
+                .animate(key: ValueKey('step0_$_currentStep'))
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             isActive: _currentStep >= 0,
             state: _currentStep > 0 ? StepState.complete : StepState.indexed,
           ),
@@ -376,7 +391,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
               acompteMontant: _buildDevisFromState().acompteMontant,
               onAcompteChanged: (val) =>
                   setState(() => _acomptePercentage = val),
-            ),
+            )
+                .animate(key: ValueKey('step1_$_currentStep'))
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             isActive: _currentStep >= 1,
             state: _currentStep > 1 ? StepState.complete : StepState.indexed,
           ),
@@ -392,7 +410,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
                   _statut == 'annule' ||
                   _statut == 'refuse' ||
                   _statut == 'expire',
-            ),
+            )
+                .animate(key: ValueKey('step2_$_currentStep'))
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             isActive: _currentStep >= 2,
             state: _currentStep > 2 ? StepState.complete : StepState.indexed,
           ),
@@ -408,7 +429,10 @@ class _DevisStepperViewState extends State<DevisStepperView> {
                 });
               },
               onFinalise: _finaliserEtEnvoyer,
-            ),
+            )
+                .animate(key: ValueKey('step3_$_currentStep'))
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                .slideX(begin: 0.05, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
             isActive: _currentStep >= 3,
             state: _currentStep == 3 ? StepState.complete : StepState.indexed,
           ),

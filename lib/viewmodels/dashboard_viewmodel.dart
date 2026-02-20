@@ -9,6 +9,9 @@ import '../models/urssaf_model.dart';
 import '../models/entreprise_model.dart';
 import '../models/enums/entreprise_enums.dart';
 import '../models/chiffrage_model.dart';
+import '../models/facture_recurrente_model.dart';
+import '../models/temps_activite_model.dart';
+import '../models/rappel_model.dart';
 import '../core/base_viewmodel.dart';
 import '../services/tva_service.dart';
 import '../services/relance_service.dart';
@@ -107,6 +110,14 @@ class DashboardViewModel extends BaseViewModel {
   ProfilEntreprise? get profilEntreprise => _profilEntreprise;
   UrssafConfig? get urssafConfig => _urssafConfig;
 
+  // Helpers type d'entreprise (pour adaptation conditionnelle de l'UI)
+  bool get isMicro =>
+      _profilEntreprise?.typeEntreprise.isMicroEntrepreneur ?? true;
+  bool get isTNS => _profilEntreprise?.typeEntreprise.isTNS ?? false;
+  bool get isAssimileSalarie =>
+      _profilEntreprise?.typeEntreprise.isAssimileSalarie ?? false;
+  bool get tvaApplicable => _profilEntreprise?.tvaApplicable ?? false;
+
   // Analyse TVA
   BilanTva? _bilanTva;
   BilanTva? get bilanTva => _bilanTva;
@@ -135,6 +146,85 @@ class DashboardViewModel extends BaseViewModel {
   int get devisEnCours => _devisEnCours;
   Decimal get montantPipeline => _montantPipeline;
   int get totalDevisYear => _totalDevisYear;
+
+  // === NOUVELLES DONNÉES DASHBOARD ===
+
+  // Factures récurrentes actives
+  List<FactureRecurrente> _facturesRecurrentes = [];
+  List<FactureRecurrente> get facturesRecurrentes => _facturesRecurrentes;
+
+  // Temps non facturés
+  List<TempsActivite> _tempsNonFactures = [];
+  List<TempsActivite> get tempsNonFactures => _tempsNonFactures;
+  int get totalMinutesNonFacturees =>
+      _tempsNonFactures.fold(0, (sum, t) => sum + t.dureeMinutes);
+  Decimal get montantNonFacture =>
+      _tempsNonFactures.fold(Decimal.zero, (sum, t) => sum + t.montant);
+  String get dureeNonFactureeFormatee {
+    final h = totalMinutesNonFacturees ~/ 60;
+    final m = totalMinutesNonFacturees % 60;
+    return '${h}h${m.toString().padLeft(2, '0')}';
+  }
+
+  // Rappels / échéances
+  List<Rappel> _prochainRappels = [];
+  List<Rappel> get prochainRappels => _prochainRappels;
+  int get nbRappelsEnRetard =>
+      _prochainRappels.where((r) => r.estEnRetard).length;
+  int get nbRappelsProches => _prochainRappels.where((r) => r.estProche).length;
+
+  // Trésorerie prévisionnelle
+  List<Facture> _facturesImpayees = [];
+  List<Facture> get facturesImpayees => _facturesImpayees;
+  Decimal get tresoreriePrev =>
+      _facturesImpayees.fold(Decimal.zero, (sum, f) => sum + _resteAPayer(f));
+
+  /// Encaissements attendus par mois (3 prochains mois)
+  Map<String, Decimal> get encaissementsParMois {
+    final now = DateTime.now();
+    final result = <String, Decimal>{};
+    for (int i = 0; i < 3; i++) {
+      final month = DateTime(now.year, now.month + i, 1);
+      final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+      result[key] = Decimal.zero;
+    }
+    // Répartir factures impayées par mois d'échéance
+    for (final f in _facturesImpayees) {
+      final key =
+          '${f.dateEcheance.year}-${f.dateEcheance.month.toString().padLeft(2, '0')}';
+      if (result.containsKey(key)) {
+        result[key] = result[key]! + _resteAPayer(f);
+      } else {
+        // Échéance passée → ajouter au mois courant
+        final nowKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+        if (result.containsKey(nowKey)) {
+          result[nowKey] = result[nowKey]! + _resteAPayer(f);
+        }
+      }
+    }
+    // Ajouter projections récurrentes
+    for (final fr in _facturesRecurrentes) {
+      final key =
+          '${fr.prochaineEmission.year}-${fr.prochaineEmission.month.toString().padLeft(2, '0')}';
+      if (result.containsKey(key)) {
+        result[key] = result[key]! + fr.totalTtc;
+      }
+    }
+    return result;
+  }
+
+  /// Taux de marge (bénéfice / CA)
+  double get tauxMarge {
+    if (_caEncaissePeriode == Decimal.zero) return 0.0;
+    return beneficeNetPeriode.toDouble() / _caEncaissePeriode.toDouble() * 100;
+  }
+
+  Decimal _resteAPayer(Facture f) {
+    final totalPaiements =
+        f.paiements.fold(Decimal.zero, (sum, p) => sum + p.montant);
+    final reste = f.totalTtc - f.acompteDejaRegle - totalPaiements;
+    return reste > Decimal.zero ? reste : Decimal.zero;
+  }
 
   void dismissArchivageSuggestion() {
     _archivageDismissed = true;
@@ -183,6 +273,10 @@ class DashboardViewModel extends BaseViewModel {
         _repository
             .getAllFacturesYear(now.year), // 7: Pour le graphe annuel complet
         _repository.getAllDevisYear(now.year), // 8: Statistiques devis
+        _repository.getFacturesRecurrentesActives(), // 9: Factures récurrentes
+        _repository.getTempsNonFactures(), // 10: Temps non facturés
+        _repository.getRappelsProchains(30), // 11: Rappels 30 jours
+        _repository.getFacturesImpayees(), // 12: Trésorerie prévisionnelle
       ]);
 
       final factures = results[0] as List<Facture>;
@@ -194,6 +288,10 @@ class DashboardViewModel extends BaseViewModel {
       _recentActivity = results[6] as List<dynamic>;
       final allFacturesYear = results[7] as List<Facture>;
       final allDevisYear = results[8] as List<Devis>;
+      _facturesRecurrentes = results[9] as List<FactureRecurrente>;
+      _tempsNonFactures = results[10] as List<TempsActivite>;
+      _prochainRappels = results[11] as List<Rappel>;
+      _facturesImpayees = results[12] as List<Facture>;
 
       // --- CALCULS ---
       _calculateKPI(factures, depenses, dates, isCurrent: true);
@@ -203,14 +301,16 @@ class DashboardViewModel extends BaseViewModel {
       _generateTopClients(factures);
       _generateExpenseBreakdown(depenses);
 
-      // Analyse TVA YTD
-      if (_urssafConfig != null) {
+      // Analyse TVA YTD — uniquement si l'entreprise n'est pas déjà assujettie
+      if (_urssafConfig != null && _profilEntreprise?.tvaApplicable != true) {
         final caYtd = TvaService.calculerCaYtd(allFacturesYear);
         _bilanTva = TvaService.analyser(
           caVenteYtd: caYtd.caVente,
           caServiceYtd: caYtd.caService,
           config: _urssafConfig!,
         );
+      } else {
+        _bilanTva = null;
       }
 
       // Relances — factures en retard
@@ -317,30 +417,50 @@ class DashboardViewModel extends BaseViewModel {
     _cotisationBreakdown = {};
     _cotisationRepartition = {};
 
-    if (_caEncaissePeriode > Decimal.zero && _urssafConfig != null) {
-      final config = _urssafConfig!;
+    if (_urssafConfig == null) return;
+    final config = _urssafConfig!;
+    final type =
+        _profilEntreprise?.typeEntreprise ?? TypeEntreprise.microEntrepreneur;
 
-      // Les variables _caVente, _caPrestaBIC et _caPrestaBNC sont désormais
-      // calculées avec une précision chirurgicale (Prorata) dans _calculateKPI.
-      // Si la ventilation interne n'était pas activée ou si le devis est indéterminé,
-      // la logique de répartition intelligente agit au mieux.
-
-      final result =
-          config.calculerCotisations(_caVente, _caPrestaBIC, _caPrestaBNC);
-
-      _totalCotisations = result['total'] ?? Decimal.zero;
-      _cotisationBreakdown = result;
-
-      // Sous-répartition détaillée (P5)
-      _cotisationRepartition =
-          config.calculerRepartition(_caVente, _caPrestaBIC, _caPrestaBNC);
+    if (type.isMicroEntrepreneur) {
+      // Micro-entrepreneur : cotisations sur le CA encaissé
+      if (_caEncaissePeriode > Decimal.zero) {
+        final result =
+            config.calculerCotisations(_caVente, _caPrestaBIC, _caPrestaBNC);
+        _totalCotisations = result['total'] ?? Decimal.zero;
+        _cotisationBreakdown = result;
+        _cotisationRepartition =
+            config.calculerRepartition(_caVente, _caPrestaBIC, _caPrestaBNC);
+      }
+    } else if (type.isTNS) {
+      // TNS (EI / EURL) : cotisations sur le bénéfice (CA - dépenses)
+      final benefice = _caEncaissePeriode - _depensesPeriode;
+      if (benefice > Decimal.zero) {
+        final result = config.calculerCotisationsTNS(benefice);
+        _totalCotisations = result['total'] ?? Decimal.zero;
+        _cotisationBreakdown = result;
+        _cotisationRepartition = {
+          'maladie': result['maladie'] ?? Decimal.zero,
+          'allocations_familiales':
+              result['allocations_familiales'] ?? Decimal.zero,
+          'retraite_base': result['retraite_base'] ?? Decimal.zero,
+          'retraite_complementaire':
+              result['retraite_complementaire'] ?? Decimal.zero,
+          'invalidite_deces': result['invalidite_deces'] ?? Decimal.zero,
+          'csg_crds': result['csg_crds'] ?? Decimal.zero,
+        };
+      }
     }
+    // SASU / SAS (assimilé salarié) : cotisations via fiches de paie,
+    // pas d'estimation possible ici → _totalCotisations reste à zéro.
   }
 
   /// Lance la simulation VL vs IR via l'API Publicodes.
   /// À appeler après le chargement initial si le CA > 0.
+  /// Uniquement pour les micro-entrepreneurs (le VL n'existe pas pour les autres).
   Future<void> simulerVlVsIr() async {
     if (_urssafConfig == null || _caEncaissePeriode == Decimal.zero) return;
+    if (!isMicro) return;
 
     try {
       final syncService = UrssafSyncService();

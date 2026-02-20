@@ -83,6 +83,14 @@ void main() {
           .thenAnswer((_) async => []);
       when(() => mockRepository.getAllDevisYear(any()))
           .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
+          .thenAnswer((_) async => []);
 
       // ACT
       await viewModel.refreshData();
@@ -113,6 +121,14 @@ void main() {
           .thenAnswer((_) async => []);
       when(() => mockRepository.getAllDevisYear(any()))
           .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
+          .thenAnswer((_) async => []);
 
       // ACT
       await viewModel.refreshData();
@@ -141,6 +157,14 @@ void main() {
       when(() => mockRepository.getRecentActivity())
           .thenAnswer((_) async => []);
       when(() => mockRepository.getAllDevisYear(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
           .thenAnswer((_) async => []);
 
       await viewModel.refreshData();
@@ -236,6 +260,14 @@ void main() {
           .thenAnswer((_) async => []);
       when(() => mockRepository.getAllDevisYear(any()))
           .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
+          .thenAnswer((_) async => []);
 
       await viewModel.refreshData();
     });
@@ -285,6 +317,14 @@ void main() {
           .thenAnswer((_) async => []);
       when(() => mockRepository.getAllDevisYear(any()))
           .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
+          .thenAnswer((_) async => []);
 
       // ACT & ASSERT
       expect(viewModel.isLoading, false);
@@ -310,6 +350,14 @@ void main() {
       when(() => mockRepository.getProfilEntreprise())
           .thenAnswer((_) async => null);
       when(() => mockRepository.getRecentActivity())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesRecurrentesActives())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getTempsNonFactures())
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getRappelsProchains(any()))
+          .thenAnswer((_) async => []);
+      when(() => mockRepository.getFacturesImpayees())
           .thenAnswer((_) async => []);
     }
 

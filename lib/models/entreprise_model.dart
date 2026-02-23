@@ -62,6 +62,9 @@ class ProfilEntreprise {
   /// Si false ET micro-entrepreneur → mention "Dispensé d'immatriculation" sur PDF
   final bool estImmatricule;
 
+  /// Utilisateur Administrateur (God Mode)
+  final bool isAdmin;
+
   ProfilEntreprise({
     this.id,
     this.userId,
@@ -92,6 +95,7 @@ class ProfilEntreprise {
     this.tauxPenalitesRetard = 11.62,
     this.escompteApplicable = false,
     this.estImmatricule = false,
+    this.isAdmin = false,
   });
 
   factory ProfilEntreprise.fromMap(Map<String, dynamic> map) {
@@ -126,6 +130,7 @@ class ProfilEntreprise {
       tauxPenalitesRetard: (map['taux_penalites_retard'] ?? 11.62).toDouble(),
       escompteApplicable: map['escompte_applicable'] ?? false,
       estImmatricule: map['est_immatricule'] ?? false,
+      isAdmin: map['is_admin'] ?? false,
     );
   }
 
@@ -225,6 +230,7 @@ class ProfilEntreprise {
       'taux_penalites_retard': tauxPenalitesRetard,
       'escompte_applicable': escompteApplicable,
       'est_immatricule': estImmatricule,
+      'is_admin': isAdmin,
     };
   }
 
@@ -258,6 +264,7 @@ class ProfilEntreprise {
     double? tauxPenalitesRetard,
     bool? escompteApplicable,
     bool? estImmatricule,
+    bool? isAdmin,
   }) {
     return ProfilEntreprise(
       id: id ?? this.id,
@@ -289,6 +296,7 @@ class ProfilEntreprise {
       tauxPenalitesRetard: tauxPenalitesRetard ?? this.tauxPenalitesRetard,
       escompteApplicable: escompteApplicable ?? this.escompteApplicable,
       estImmatricule: estImmatricule ?? this.estImmatricule,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }

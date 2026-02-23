@@ -5,7 +5,7 @@
     <div class="logo">CraftOS</div>
     <div>
       <a href="#features" style="margin-right: 2.5rem; color: var(--text-secondary); transition: color 0.2s; font-weight: 500;">Fonctionnalités</a>
-      <a href="app-craftos.vercel.app/signup#/login" class="cta-button" style="padding: 0.6rem 1.5rem;">Connexion</a>
+      <a href="https://app-craftos.vercel.app/signup#/login" class="cta-button" style="padding: 0.6rem 1.5rem;">Connexion</a>
     </div>
   </nav>
 

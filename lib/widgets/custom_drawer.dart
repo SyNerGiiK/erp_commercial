@@ -117,6 +117,12 @@ class CustomDrawer extends StatelessWidget {
                           Icons.tune_rounded, '/app/parametres'),
                       _buildItem(context, 12, "Corbeille",
                           Icons.delete_outline_rounded, '/app/corbeille'),
+                      if (profil?.isAdmin == true) ...[
+                        const SizedBox(height: 12),
+                        _buildSectionLabel("ADMINISTRATION"),
+                        _buildItem(context, 99, "Super-Cockpit",
+                            Icons.admin_panel_settings_rounded, '/admin-panel'),
+                      ],
                     ],
                   ),
                 ),

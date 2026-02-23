@@ -22,35 +22,37 @@ class RecentActivityList extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Activité Récente",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E5572),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Activité Récente",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E5572),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            if (items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text("Aucune activité récente."),
-              )
-            else
-              ListView.separated(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: items.length,
-                separatorBuilder: (ctx, i) => const Divider(),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _buildListItem(item);
-                },
-              ),
-          ],
+              const SizedBox(height: 16),
+              if (items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text("Aucune activité récente."),
+                )
+              else
+                ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  separatorBuilder: (ctx, i) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return _buildListItem(item);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );

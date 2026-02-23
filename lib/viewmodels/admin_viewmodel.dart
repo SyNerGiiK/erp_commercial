@@ -39,7 +39,7 @@ class AdminViewModel extends BaseViewModel {
     try {
       final response = await SupabaseConfig.client
           .from('support_tickets')
-          .select('*, auth.users(email)')
+          .select('*')
           .order('created_at', ascending: false);
       _tickets = List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -64,11 +64,25 @@ class AdminViewModel extends BaseViewModel {
     try {
       await SupabaseConfig.client
           .from('support_tickets')
-          .update({'statut': status}).eq('id', id);
+          .update({'status': status}).eq('id', id);
       await _fetchTickets();
       notifyListeners();
     } catch (e) {
       developer.log('Erreur update ticket statut : $e');
+    }
+  }
+
+  Future<void> resolveTicketWithResponse(String id, String response) async {
+    try {
+      await SupabaseConfig.client.from('support_tickets').update({
+        'status': 'resolved',
+        'ai_resolution':
+            response // We use the existing field to store the human answer
+      }).eq('id', id);
+      await _fetchTickets();
+      notifyListeners();
+    } catch (e) {
+      developer.log('Erreur resolve ticket: $e');
     }
   }
 

@@ -4,8 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:developer' as developer;
 
 class WeatherService {
-  // Optionnel : la clé API peut être définie dans le .env (ex: OWM_API_KEY)
-  static String get apiKey => dotenv.env['OWM_API_KEY'] ?? '';
+  // Optionnel : la clé API peut être définie dans le .env
+  static String get apiKey => dotenv.env['OPENWEATHER_API_KEY'] ?? '';
 
   /// Récupère la météo actuelle pour une ville donnée via OpenWeatherMap
   static Future<Map<String, dynamic>?> getCurrentWeather(

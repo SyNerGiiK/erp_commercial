@@ -138,9 +138,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView>
           child: Text("Aucun ticket", style: TextStyle(color: Colors.white)));
     }
 
-    final ouvert = tickets.where((t) => t['statut'] == 'ouvert').toList();
-    final encours = tickets.where((t) => t['statut'] == 'en_cours').toList();
-    final resolu = tickets.where((t) => t['statut'] == 'resolu').toList();
+    final ouvert = tickets.where((t) => t['status'] == 'open').toList();
+    final encours = tickets.where((t) => t['status'] == 'in_progress').toList();
+    final resolu = tickets.where((t) => t['status'] == 'resolved').toList();
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,12 +310,12 @@ class _KanbanColumn extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(t['sujet'] ?? 'Sans Sujet',
+                        Text(t['subject'] ?? 'Sans Sujet',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
-                        Text(t['message'] ?? '',
+                        Text(t['description'] ?? '',
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -324,21 +324,33 @@ class _KanbanColumn extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text((t['auth.users']?['email']) ?? 'Inconnu',
+                            Text(
+                                t['user_id']?.toString().substring(0, 8) ??
+                                    'Inconnu',
                                 style: const TextStyle(
                                     color: Colors.grey, fontSize: 10)),
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert,
                                   color: Colors.white, size: 16),
-                              onSelected: (val) =>
-                                  vm.updateTicketStatus(t['id'], val),
+                              onSelected: (val) {
+                                if (val == 'custom_resolve') {
+                                  _showResolveDialog(context, vm, t['id']);
+                                } else {
+                                  vm.updateTicketStatus(t['id'], val);
+                                }
+                              },
                               itemBuilder: (context) => [
                                 const PopupMenuItem(
-                                    value: 'ouvert', child: Text('Ouvert')),
+                                    value: 'open', child: Text('Ouvert')),
                                 const PopupMenuItem(
-                                    value: 'en_cours', child: Text('En Cours')),
+                                    value: 'in_progress',
+                                    child: Text('En Cours')),
                                 const PopupMenuItem(
-                                    value: 'resolu', child: Text('Résolu')),
+                                    value: 'resolved',
+                                    child: Text('Résolu (sans rps)')),
+                                const PopupMenuItem(
+                                    value: 'custom_resolve',
+                                    child: Text('💬 Répondre & Résoudre')),
                               ],
                             )
                           ],
@@ -350,6 +362,45 @@ class _KanbanColumn extends StatelessWidget {
               },
             ),
           )
+        ],
+      ),
+    );
+  }
+
+  void _showResolveDialog(
+      BuildContext context, AdminViewModel vm, String ticketId) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Répondre au ticket',
+            style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Saisissez la réponse à envoyer au client...',
+            hintStyle: TextStyle(color: Colors.grey),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                vm.resolveTicketWithResponse(ticketId, controller.text);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Envoyer & Résoudre'),
+          ),
         ],
       ),
     );

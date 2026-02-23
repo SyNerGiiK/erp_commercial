@@ -550,6 +550,40 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                                   side: BorderSide(color: Colors.grey.shade400),
                                 ),
                               ),
+                              const SizedBox(height: 24),
+                              const Divider(),
+                              const SizedBox(height: 12),
+                              // Badge RGE / Footer
+                              Text("Badge de certification (RGE, Qualibat...)",
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade700)),
+                              const SizedBox(height: 8),
+                              if (profil?.logoFooterUrl != null)
+                                Container(
+                                  height: 60,
+                                  width: 150,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    border:
+                                        Border.all(color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.white,
+                                  ),
+                                  child: Image.network(profil!.logoFooterUrl!,
+                                      fit: BoxFit.contain),
+                                ),
+                              ElevatedButton.icon(
+                                onPressed: () => _pickAndUpload('badge'),
+                                icon: const Icon(Icons.upload_file, size: 20),
+                                label:
+                                    const Text("Charger un badge (Footer PDF)"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppTheme.textDark,
+                                  side: BorderSide(color: Colors.grey.shade400),
+                                ),
+                              ),
                             ],
                           ),
                         ),

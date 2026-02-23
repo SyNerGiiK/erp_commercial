@@ -1,12 +1,14 @@
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 import '../models/rappel_model.dart';
+import '../models/enums/entreprise_enums.dart';
 
 /// Service de calcul automatique des échéances fiscales et documentaires
 class EcheanceService {
   /// Génère tous les rappels automatiques pour l'année
   static List<Rappel> genererTousRappels({
     required int annee,
+    required TypeEntreprise typeEntreprise,
     required bool urssafTrimestriel,
     required bool tvaApplicable,
     List<Facture>? factures,
@@ -15,66 +17,83 @@ class EcheanceService {
     final rappels = <Rappel>[];
 
     // 1. URSSAF
-    rappels.addAll(_genererRappelsUrssaf(annee, urssafTrimestriel));
+    rappels
+        .addAll(genererRappelsUrssaf(annee, typeEntreprise, urssafTrimestriel));
 
     // 2. CFE
-    rappels.add(_genererRappelCFE(annee));
+    rappels.add(genererRappelCFE(annee));
 
-    // 3. Impôts sur le revenu
-    rappels.add(_genererRappelImpots(annee));
+    // 3. Impôts sur le revenu/IS
+    rappels.add(genererRappelImpots(annee, typeEntreprise));
 
     // 4. TVA (si applicable)
     if (tvaApplicable) {
-      rappels.addAll(_genererRappelsTVA(annee));
+      rappels.addAll(genererRappelsTVA(annee));
     }
 
     // 5. Échéances factures
     if (factures != null) {
-      rappels.addAll(_genererRappelsFactures(factures));
+      rappels.addAll(genererRappelsFactures(factures));
     }
 
     // 6. Fin de validité devis
     if (devis != null) {
-      rappels.addAll(_genererRappelsDevis(devis));
+      rappels.addAll(genererRappelsDevis(devis));
     }
 
     return rappels;
   }
 
   /// Rappels URSSAF (mensuel ou trimestriel)
-  static List<Rappel> _genererRappelsUrssaf(int annee, bool trimestriel) {
+  static List<Rappel> genererRappelsUrssaf(
+      int annee, TypeEntreprise typeEntreprise, bool trimestriel) {
     final rappels = <Rappel>[];
+    final isMicro = typeEntreprise == TypeEntreprise.microEntrepreneur;
+    final urlDecl = isMicro ? 'autoentrepreneur.urssaf.fr' : 'urssaf.fr';
+    final titrePrefix = isMicro ? 'URSSAF Micro' : 'URSSAF Indépendant';
 
     if (trimestriel) {
-      final trimestres = [
-        (label: 'T4 ${annee - 1}', mois: 1, jour: 31),
-        (label: 'T1 $annee', mois: 4, jour: 30),
-        (label: 'T2 $annee', mois: 7, jour: 31),
-        (label: 'T3 $annee', mois: 10, jour: 31),
+      // Pour les TNS hors micro, l'échéancier peut être différent, mais on simplifie ici
+      // avec les dates standards trimestrielles URSSAF.
+      final dates = [
+        DateTime(annee, 2, 1), // T4 année précédente → 31 janv
+        DateTime(annee, 5, 1), // T1 → 30 avril
+        DateTime(annee, 8, 1), // T2 → 31 juillet
+        DateTime(annee, 11, 1), // T3 → 31 octobre
+      ];
+      final labels = [
+        'T4 ${annee - 1}',
+        'T1 $annee',
+        'T2 $annee',
+        'T3 $annee',
       ];
 
-      for (final t in trimestres) {
+      for (int i = 0; i < dates.length; i++) {
+        final echeance = dates[i].subtract(const Duration(days: 1));
         rappels.add(Rappel(
-          titre: 'URSSAF — Déclaration ${t.label}',
+          titre: '$titrePrefix — Déclaration ${labels[i]}',
           description:
-              'Déclarer le CA du trimestre sur autoentrepreneur.urssaf.fr',
+              'Déclarer sur $urlDecl avant le ${echeance.day}/${echeance.month}/$annee',
           typeRappel: TypeRappel.urssaf,
-          dateEcheance: DateTime(annee, t.mois, t.jour),
+          dateEcheance: echeance,
           priorite: PrioriteRappel.haute,
           estRecurrent: true,
           frequenceRecurrence: 'trimestrielle',
         ));
       }
     } else {
+      // Mensuel : M+1
       for (int mois = 1; mois <= 12; mois++) {
         final dernierJour = DateTime(annee, mois + 1, 0).day;
+        final limiteAjustee = isMicro
+            ? (dernierJour > 28 ? 28 : dernierJour)
+            : 5; // TNS paient souvent le 5 ou 20
+        final echeance = DateTime(annee, mois + 1, limiteAjustee);
         rappels.add(Rappel(
-          titre: 'URSSAF — ${_nomMois(mois)} $annee',
-          description:
-              'Déclarer le CA de ${_nomMois(mois)} sur autoentrepreneur.urssaf.fr',
+          titre: '$titrePrefix — ${_nomMois(mois)} $annee',
+          description: 'Déclarer/Payer pour ${_nomMois(mois)} sur $urlDecl',
           typeRappel: TypeRappel.urssaf,
-          dateEcheance:
-              DateTime(annee, mois + 1, dernierJour > 28 ? 28 : dernierJour),
+          dateEcheance: echeance,
           priorite: PrioriteRappel.haute,
           estRecurrent: true,
           frequenceRecurrence: 'mensuelle',
@@ -86,11 +105,11 @@ class EcheanceService {
   }
 
   /// Rappel CFE — 15 décembre
-  static Rappel _genererRappelCFE(int annee) {
+  static Rappel genererRappelCFE(int annee) {
     return Rappel(
       titre: 'CFE $annee — Paiement',
       description:
-          'Date limite de paiement de la Cotisation Foncière des Entreprises sur impots.gouv.fr',
+          'Date limite de paiement CFE (Cotisation Foncière des Entreprises) sur impots.gouv.fr',
       typeRappel: TypeRappel.cfe,
       dateEcheance: DateTime(annee, 12, 15),
       priorite: PrioriteRappel.haute,
@@ -99,24 +118,41 @@ class EcheanceService {
     );
   }
 
-  /// Rappel Impôts — début juin
-  static Rappel _genererRappelImpots(int annee) {
-    return Rappel(
-      titre: 'Impôts $annee — Déclaration 2042-C-PRO',
-      description:
-          'Déclarer les revenus micro-entrepreneur sur impots.gouv.fr (2042-C-PRO)',
-      typeRappel: TypeRappel.impots,
-      dateEcheance: DateTime(annee, 6, 8),
-      priorite: PrioriteRappel.urgente,
-      estRecurrent: true,
-      frequenceRecurrence: 'annuelle',
-    );
+  /// Rappel Impôts — variable selon type entreprise
+  static Rappel genererRappelImpots(int annee, TypeEntreprise typeEntreprise) {
+    final isIS = typeEntreprise == TypeEntreprise.sas ||
+        typeEntreprise == TypeEntreprise.sasu;
+    final isMicro = typeEntreprise == TypeEntreprise.microEntrepreneur;
+
+    if (isIS) {
+      return Rappel(
+        titre: 'Solde IS $annee (Impôt Sociétés)',
+        description:
+            'Paiement du solde de l\'Impôt sur les Sociétés sur impots.gouv.fr',
+        typeRappel: TypeRappel.impots,
+        dateEcheance: DateTime(annee, 5, 15),
+        priorite: PrioriteRappel.urgente,
+        estRecurrent: true,
+        frequenceRecurrence: 'annuelle',
+      );
+    } else {
+      return Rappel(
+        titre: 'Impôts IR $annee — Déclaration',
+        description: isMicro
+            ? 'Déclarer les revenus micro-entrepreneur (2042-C-PRO) sur impots.gouv.fr'
+            : 'Déclaration de revenus professionnels sur impots.gouv.fr',
+        typeRappel: TypeRappel.impots,
+        dateEcheance: DateTime(annee, 6, 8),
+        priorite: PrioriteRappel.urgente,
+        estRecurrent: true,
+        frequenceRecurrence: 'annuelle',
+      );
+    }
   }
 
-  /// Rappels TVA (mensuel ou trimestriel selon régime)
-  static List<Rappel> _genererRappelsTVA(int annee) {
+  /// Rappels TVA (trimestrielle)
+  static List<Rappel> genererRappelsTVA(int annee) {
     final rappels = <Rappel>[];
-    // TVA trimestrielle : CA3 chaque trimestre
     final trimestres = [
       {'label': 'T1', 'mois': 4, 'jour': 24},
       {'label': 'T2', 'mois': 7, 'jour': 24},
@@ -142,7 +178,7 @@ class EcheanceService {
   }
 
   /// Rappels pour les factures en attente de paiement
-  static List<Rappel> _genererRappelsFactures(List<Facture> factures) {
+  static List<Rappel> genererRappelsFactures(List<Facture> factures) {
     final rappels = <Rappel>[];
 
     for (final f in factures) {
@@ -167,7 +203,7 @@ class EcheanceService {
   }
 
   /// Rappels pour les devis arrivant à expiration
-  static List<Rappel> _genererRappelsDevis(List<Devis> devisList) {
+  static List<Rappel> genererRappelsDevis(List<Devis> devisList) {
     final rappels = <Rappel>[];
 
     for (final d in devisList) {

@@ -1,6 +1,6 @@
-# Architecture — ERP Artisan
+# Architecture — CraftOS
 
-> Document de référence architecture — Dernière mise à jour : 20/02/2026
+> Document de référence architecture — Dernière mise à jour : 23/02/2026
 
 ---
 
@@ -25,25 +25,17 @@
 
 ## Vue d'ensemble
 
-**ERP Artisan** est un SaaS Flutter Web de gestion commerciale destiné aux micro-entrepreneurs français. Il couvre :
+**CraftOS** est un SaaS Flutter Web de gestion commerciale destiné aux artisans du BTP. Il intègre 8 modules de nouvelle génération :
 
-- Création et gestion de **devis** (stepper 4 étapes)
-- Création et gestion de **factures** (stepper 4 étapes, cycle de vie complet)
-- Gestion des **avoirs** (correctifs sur factures validées)
-- **Paiements** partiels et multiples
-- **Relances** automatiques multi-niveaux
-- Suivi **URSSAF** (cotisations, plafonds micro-entreprise)
-- Suivi **TVA** (seuils franchise, simulation)
-- **Archivage** automatique des factures soldées > 12 mois
-- **Export** comptable (CSV)
-- Génération **PDF** avec 3 thèmes personnalisables
-- **Audit trail** (loi anti-fraude 2018)
-- **Dashboard** avec KPI, graphiques, et alertes
-- **Factures récurrentes** (hebdomadaire, mensuel, trimestriel, annuel)
-- **Suivi du temps** (saisie, taux horaire, facturation)
-- **Rappels & échéances** fiscales et commerciales (URSSAF, CFE, TVA, Impôts)
-- **Multi-devises** (EUR, USD, GBP, CHF) avec taux de change
-- **Corbeille** soft-delete avec restauration (factures, devis, clients, dépenses)
+- **Module 0** : Écosystème Web d'Acquisition (craftos.fr)
+- **Module 1** : Support Client (SAV) Autonome par I.A. via Gemini Flash et Supabase Edge Functions
+- **Module 2** : CRM Magique & OCR (Auto-complétion B2B Pappers/BAN, OCR Dépenses)
+- **Module 3** : Le Cycle de Vente "Aitise ton Devis" (Génération contextuelle RAG par Speech-to-Text, Bouclier de marge, Signature tactile)
+- **Module 4** : Le Cockpit Chantier (Progress Billing avec split Vente/Pose et optimisation comptable URSSAF)
+- **Module 5** : Moteur Légal & Fiscal (Régime Fiscal Multi, Assistant d'échéances)
+- **Module 6** : Génération PDF & Encaissement Premium (QR Code SEPA EPC, Badges RGE/Décennale)
+- **Module 7** : Infrastructure, Envois (Marque blanche Resend) et Mode Hors-Ligne (flutter_secure_storage)
+- **Module 8** : Super-Cockpit Admin "God Mode" (Route /admin-panel, RPC Métriques DB, Kanban Tickets, Crashlytics sur mesure)
 
 ---
 
@@ -155,15 +147,17 @@ lib/
 │   ├── temps_repository.dart          # ITempsRepository + TempsRepository
 │   ├── rappel_repository.dart         # IRappelRepository + RappelRepository
 │   └── shopping_repository.dart       # IShoppingRepository + ShoppingRepository
-├── services/                          # 10 services + sous-dossier PDF themes
+├── services/                          # Services métier + thèmes PDF
+│   ├── gemini_service.dart            # Intégration Gemini 2.0 Flash (OCR, AI Quotes)
+│   ├── ai_support_service.dart        # Liaison Edge Functions pour le SAV
 │   ├── tva_service.dart               # Analyse TVA, seuils franchise
 │   ├── relance_service.dart           # Analyse relances multi-niveaux
 │   ├── archivage_service.dart         # Détection factures archivables
-│   ├── email_service.dart             # Envoi email via mailto:
+│   ├── email_service.dart             # Envoi via mailto: ou API Resend
 │   ├── audit_service.dart             # Logs audit (loi anti-fraude)
 │   ├── export_service.dart            # Export CSV comptabilité
-│   ├── pdf_service.dart               # Génération PDF isolate-ready
-│   ├── local_storage_service.dart     # Brouillons SharedPreferences
+│   ├── pdf_service.dart               # Génération PDF isolate-ready + QR Code SEPA
+│   ├── local_storage_service.dart     # Brouillons SharedPreferences / Mode Offline
 │   ├── preferences_service.dart       # Préférences charges sociales
 │   ├── echeance_service.dart          # Rappels fiscaux auto (URSSAF, CFE, TVA, Impôts)
 │   └── pdf_themes/

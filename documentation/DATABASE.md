@@ -1,6 +1,6 @@
-# Base de données — ERP Artisan
+# Base de données — CraftOS
 
-> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 20/02/2026
+> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 23/02/2026
 
 ---
 
@@ -65,9 +65,9 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 │   articles   │     │  cotisations │     │    events    │
 └──────────────┘     └──────────────┘     └──────────────┘
 
-┌──────────────┐
-│   rappels    │
-└──────────────┘
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   rappels    │     │support_tickets│    │  crash_logs  │
+└──────────────┘     └──────────────┘     └──────────────┘
 ```
 
 ---
@@ -81,7 +81,7 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 | `lignes_facture` | Lignes de facture | ✅ | ❌ | ❌ |
 | `paiements` | Paiements sur factures | ✅ | ✅ | ✅ |
 | `devis` | Devis commerciaux | ✅ | ✅ | ✅ |
-| `lignes_devis` | Lignes de devis | ✅ | ❌ | ❌ |
+| `lignes_devis` | Lignes de devis (inclus `is_ai_estimated`) | ✅ | ❌ | ❌ |
 | `entreprises` | Profil entreprise (1 par user) | ✅ | ❌ | ❌ |
 | `depenses` | Dépenses comptables | ✅ | ❌ | ✅ |
 | `articles` | Bibliothèque de prix | ✅ | ❌ | ❌ |
@@ -94,6 +94,8 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 | `temps_activites` | Suivi du temps | ✅ | ❌ | ✅ |
 | `rappels` | Rappels & échéances | ✅ | ❌ | ✅ |
 | `lignes_chiffrages` | Chiffrage détaillé (progress billing) | ✅ | ❌ | ✅ |
+| `support_tickets` | Tickets SAV I.A. (Module 1) | ✅ | ❌ | ✅ |
+| `crash_logs` | Journal des erreurs God Mode | ✅ | ❌ | ❌ |
 
 ---
 
@@ -216,7 +218,8 @@ Structure très similaire à `factures`, avec colonnes spécifiques :
 
 ### lignes_devis
 
-Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`.
+Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`, incluant un champ additionnel :
+- `is_ai_estimated` (BOOLEAN, DEFAULT false) : Indique si la ligne de chiffrage/devis a été estimée par le module d'IA (AITISE TON DEVIS).
 
 ### entreprises
 

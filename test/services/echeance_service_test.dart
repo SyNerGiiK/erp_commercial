@@ -3,6 +3,7 @@ import 'package:erp_commercial/services/echeance_service.dart';
 import 'package:erp_commercial/models/rappel_model.dart';
 import 'package:erp_commercial/models/facture_model.dart';
 import 'package:erp_commercial/models/devis_model.dart';
+import 'package:erp_commercial/models/enums/entreprise_enums.dart';
 import 'package:decimal/decimal.dart';
 
 void main() {
@@ -10,6 +11,7 @@ void main() {
     test('devrait générer des rappels sans factures ni devis', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,
@@ -23,6 +25,7 @@ void main() {
     test('devrait générer des rappels URSSAF mensuels par défaut', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,
@@ -37,6 +40,7 @@ void main() {
     test('devrait générer des rappels URSSAF trimestriels si spécifié', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: true,
@@ -51,6 +55,7 @@ void main() {
     test('devrait inclure un rappel CFE au 15 décembre', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,
@@ -66,6 +71,7 @@ void main() {
     test('devrait inclure un rappel impôts au 8 juin', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,
@@ -82,6 +88,7 @@ void main() {
     test('devrait inclure 4 rappels TVA trimestriels', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,
@@ -113,6 +120,7 @@ void main() {
 
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: factures,
         devis: [],
         urssafTrimestriel: false,
@@ -145,6 +153,7 @@ void main() {
 
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: factures,
         devis: [],
         urssafTrimestriel: false,
@@ -177,6 +186,7 @@ void main() {
 
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: devis,
         urssafTrimestriel: false,
@@ -206,6 +216,7 @@ void main() {
 
       final rappels = EcheanceService.genererTousRappels(
         annee: 2026,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: devis,
         urssafTrimestriel: false,
@@ -222,6 +233,7 @@ void main() {
     test('devrait générer pour l\'année spécifiée', () {
       final rappels = EcheanceService.genererTousRappels(
         annee: 2027,
+        typeEntreprise: TypeEntreprise.microEntrepreneur,
         factures: [],
         devis: [],
         urssafTrimestriel: false,

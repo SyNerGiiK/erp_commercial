@@ -1,4 +1,4 @@
-# ERP Artisan 3.0 — SaaS de Gestion Commerciale
+# CraftOS (Ex-ERP Artisan 3.0) — Le SaaS BTP Ultime
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
@@ -6,9 +6,9 @@
 [![Tests](https://img.shields.io/badge/Tests-662%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
-**ERP Artisan** est une solution SaaS moderne développée en **Flutter Web**, conçue pour simplifier la gestion quotidienne des **artisans, micro-entrepreneurs et TPE du bâtiment**.
+**CraftOS** est la source de vérité absolue pour la gestion des artisans, avec un design "Apple", une automatisation "Tesla", et une infrastructure "Zéro" (Full Free Tiers).
 
-L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factures, Acomptes, Avoirs, Paiements, Dépenses, Planning, Relances, Factures récurrentes, Suivi du temps, Rappels & Échéances fiscales, Suivi d'avancement / Progress Billing, Tableaux de bord financiers, Suivi URSSAF, Suivi TVA et Multi-devises.
+L'application couvre 8 modules fondamentaux allant de l'acquisition web au CRM intelligent (OCR, Pappers), la vente "Magique" assistée par l'I.A. Gemini 2.0 Flash, l'encaissement via QR Code SEPA, le pilotage chantier (Progress Billing), jusqu'à l'automatisation intégrale du SAV et de l'infrastructure via Supabase Edge Functions.
 
 ---
 
@@ -28,142 +28,44 @@ L'application couvre l'intégralité du cycle commercial : Clients, Devis, Factu
 
 ---
 
-## 🚀 Fonctionnalités
+## 🚀 Les 8 Modules Fondamentaux (Édition 2026)
 
-### 📄 Gestion Commerciale Complète
+### 🌐 MODULE 0 : L'Écosystème Web (Acquisition)
+- Site vitrine **craftos.fr** (Cloudflare Pages / Vercel en Free Tier).
+- UX/UI au design System Aurora (Glassmorphism), animations Lottie.
 
-| Module | Description |
-|--------|-------------|
-| **Clients** | Fichier client complet (particulier/professionnel), SIRET avec validation Luhn, TVA intra, notes privées |
-| **Devis** | Création par stepper 4 étapes, calculs automatiques HT/TVA/TTC, remises, acomptes, rentabilité |
-| **Factures** | Cycle complet brouillon → validée → envoyée → payée, paiements partiels, historique, immutabilité |
-| **Acomptes** | Gestion native déduite automatiquement du solde facture |
-| **Avoirs** | Création d'avoir depuis une facture validée, montants positifs, référence source dans le PDF |
-| **Duplication** | Duplication en 1 clic de devis et factures (copie brouillon avec nouvelles dates) |
-| **Dépenses** | Suivi des dépenses professionnelles par catégorie |
-| **Articles** | Bibliothèque de produits/services réutilisables pour saisie rapide |
-| **Liste de courses** | Gestion des achats matériaux avec calcul des quantités |
-| **Rentabilité** | Analyse de rentabilité et suivi d'avancement (Progress Billing) par devis |
+### 🤖 MODULE 1 : Support Client (SAV) Autonome par I.A.
+- Support 24/7 in-app via **Gemini 2.0 Flash**.
+- **Edge Function Supabase** pour le tri et l'auto-résolution des tickets.
+- Escalade vers le God Mode pour les cas complexes.
 
-### 🎨 Éditeur de Documents & PDF
+### 🏗️ MODULE 2 : CRM Magique & OCR
+- **Auto-complétion B2B / B2C** : Intégration Pappers (SIRET), Base Adresse Nationale (BAN) et API VIES (TVA Euro).
+- **OCR Intelligent** : Scan de tickets compressé, extrait (Marchand, TTC, TVA) via Gemini Flash.
 
-- **Mise en page avancée** : Titres, sous-titres, textes libres, sauts de page, lignes de chiffrage
-- **Formatage** : Gras, italique, souligné par ligne
-- **Calculs temps réel** : Aperçu immédiat des totaux, TVA multi-taux, net commercial
-- **3 thèmes PDF** : Classique, Moderne, Minimaliste (Strategy Pattern)
-- **Personnalisation** : Couleur primaire custom (10 presets + défaut), logo header/footer
-- **Mentions légales** : Pénalités de retard, indemnité 40€, escompte, conditions de paiement
-- **Signature électronique** : Signature directe à l'écran (tablette/souris)
-- **Auto-save** : Sauvegarde automatique des brouillons en local (`SharedPreferences`)
+### 💰 MODULE 3 : Le Cycle de Vente (AITISE TON DEVIS)
+- **Speech-To-Text** : Création de devis par reconnaissance vocale.
+- **IA RAG** : Génération structurelle logique de devis (Titres, Vente, Pose) basée sur le catalogue de l'artisan. Lignes estimées flaguées `is_ai_estimated` avec icône orange (⚠️).
+- **Bouclier de Marge** : Alerte si marge nette < 30%.
+- **Signature Électronique** : Tactile in-app, stockée sur Supabase Storage.
 
-### 📊 Pilotage & Tableau de Bord
+### 📊 MODULE 4 : Le Cockpit Chantier (Progress Billing)
+- **Tableau de bord financier** : Cartes animées (`flutter_animate`), widgets Météo (OpenWeather).
+- **Progress Billing** : Arborescence Devis → Lignes → Chiffrage (Split interne Vente / Pose avec curseurs) pour l'optimisation légale des cotisations URSSAF.
 
-- **KPIs Financiers** : CA réalisé, CA en attente, trésorerie, impayés, volume facturation
-- **Top Clients** : Classement des meilleurs clients par chiffre d'affaires
-- **Graphiques** : Évolution CA mensuel/annuel (`fl_chart`)
-- **Répartition dépenses** : Camembert par catégorie
-- **Activité récente** : Dernières factures, devis et paiements
-- **Suivi seuil TVA** : Jauges vente/service (base + majoré), chip statut, alertes
-- **Factures en retard** : Badge, montant total, retard max, répartition par niveau
-- **Archivage automatique** : Détection factures soldées > 12 mois, suggestion d'archivage lot
+### 🏛️ MODULE 5 : Le Moteur Légal & Fiscal
+- Gère la comptabilité sans y penser.
+- **Sélecteur Régime Fiscal** et **Assistant Échéances** avec injection de rappels automatiques (URSSAF, CFE, TVA).
 
-### 📅 Planning
+### 🎨 MODULE 6 : Génération PDF & Encaissement Premium
+- Rendu digne d'une multinationale avec 3 thèmes interchangeables.
+- **QR Code SEPA (EPC)** : Généré via `qr_flutter` pour un paiement en 1 clic.
+- **Badges de Réassurance** : Insertion dynamique RGE / Décennale en bas de facture.
 
-- **Calendrier** : Vue mensuelle/semaine/jour (`table_calendar`)
-- **Événements manuels** : RDV, chantiers avec CRUD complet
-- **Événements auto-générés** : Échéances factures et fin de validité devis
-- **Filtres** : Par type (chantier, RDV, facture, devis)
-
-### 💰 Suivi URSSAF & Charges
-
-- **Simulation URSSAF** : Calcul automatique des cotisations micro-entrepreneur
-- **Multi-statuts** : Micro-entreprise, TNS, SASU
-- **Plafonds** : Suivi des plafonds CA avec alertes
-- **Détail par caisse** : Ventilation CIPAV, URSSAF, CSG/CRDS
-- **Seuils TVA versionnés** : Configurables par l'utilisateur, alertes approche/dépassement
-
-### 📬 Relances Impayés
-
-- **Analyse automatique** : Détection des factures en retard de paiement
-- **4 niveaux de relance** : Amiable (1-14j) → Ferme (15-30j) → Mise en demeure (31-60j) → Contentieux (60j+)
-- **Génération de textes** : Courriers professionnels pré-rédigés par niveau
-- **Envoi email** : Via `url_launcher` (mailto:) avec sujet/corps pré-remplis
-- **Statistiques** : Montant total impayé, retard moyen, répartition par niveau
-
-### 🧑‍💼 Profil Entreprise & Onboarding
-
-- **Profil complet** : 7 sections en cartes (Identité, Adresse, Facturation & Bancaire, TVA, Mentions légales, Personnalisation PDF, Signature)
-- **Onboarding guidé** : Assistant 4 étapes (Identité → Coordonnées → Facturation/TVA → Logo/Récap)
-- **Validation SIRET** : Algorithme Luhn standard + cas spécial La Poste
-- **Auto-génération** : Mentions légales générées automatiquement depuis le profil
-- **Design système** : `AppTheme` Aurora 2030 — glassmorphisme, ombres colorées, typographie cinétique
-
-### 🎨 Design System — Aurora 2030
-
-- **Glassmorphisme lumineux** : Surfaces givrées semi-transparentes avec `BackdropFilter` et bordures lumineuses
-- **Palette chromatique** : Indigo (#6366F1) → Violet (#8B5CF6), Émeraude (#10B981), Cyan (#06B6D4), Rose (#F43F5E)
-- **Typographie cinétique** : Space Grotesk (titres, letter-spacing négatif) + Inter (corps)
-- **Ombres colorées** : Ombres teintées par la couleur primaire au lieu du noir
-- **Micro-interactions** : AnimatedContainer sur la navigation, glow contextuel sur sélection
-- **Widgets Aurora** : `GlassContainer`, `AuroraBackground` (mesh gradient), `GlowIcon` (halo lumineux)
-
-### 🔄 Factures Récurrentes
-
-- **4 fréquences** : Hebdomadaire, mensuelle, trimestrielle, annuelle
-- **Toggle actif/inactif** : Activation/désactivation en un clic
-- **Calcul automatique** : Prochaine date d'émission calculée après chaque génération
-- **CRUD complet** : Création, édition, suppression avec lignes imbriquées
-
-### ⏱️ Suivi du Temps
-
-- **Saisie des temps** : Par client, par projet, par activité
-- **CA potentiel** : Calcul automatique basé sur le taux horaire et les heures non facturées
-- **Groupement** : Vue par client et par projet
-- **Marquage** : Passage de temps non facturé à facturé en lot
-
-### 📆 Rappels & Échéances Fiscales
-
-- **7 types de rappels** : URSSAF, CFE, Impôts, TVA, Échéance facture, Fin devis, Custom
-- **Génération automatique** : URSSAF (mensuel ou trimestriel), CFE (15 déc), Impôts (8 juin), TVA trimestrielle
-- **Priorités** : Urgente, haute, normale, basse — code couleur visuel
-- **Suivi** : Jours restants, détection retard, rappels proches (< 7 jours)
-
-### � Suivi d'Avancement / Progress Billing
-
-- **Vue arborescente** : Panneau gauche avec arbre Devis → Lignes → Coûts internes (matériel / main d'œuvre)
-- **Chiffrage par type** : Matériel (toggle binaire acheté/non acheté) et Main d'œuvre (slider 0-100%)
-- **Auto-save intelligent** : Sauvegarde immédiate pour les toggles, debounce 400ms pour les sliders
-- **Avancement automatique** : Calcul en temps réel de l'avancement par ligne de devis et global
-- **Bridge facturation** : Pré-remplissage automatique des factures de situation depuis l'avancement chiffrage
-- **PDF 2 blocs** : Facture de situation avec bloc "État d'avancement" + bloc "Récapitulatif financier" (déductions détaillées)
-- **ChiffrageDialog** : Dialogue spécialisé avec sélection type MAT/MO, prix d'imputation, bibliothèque articles
-
-### �💱 Multi-Devises
-
-- **Devise configurable** : EUR par défaut, extensible à toute devise
-- **Taux de change** : Stocké sur chaque facture et devis
-- **Notes privées** : Champ notes internes non visibles client
-- **Rétrocompatible** : Les documents existants restent en EUR
-
-### 🗑️ Corbeille & Soft-Delete
-
-- **Suppression douce** : Les documents ne sont pas supprimés mais marqués `deleted_at`
-- **Corbeille UI** : 4 onglets (Factures, Devis, Clients, Dépenses)
-- **Restauration** : Possibilité de restaurer un document supprimé
-- **Purge automatique** : Suppression définitive après 30 jours
-
-### 🔍 Recherche Globale
-
-- **5 entités** : Recherche simultanée dans clients, factures, devis, dépenses et articles
-- **Recherche temps réel** : Résultats instantanés dès 2 caractères
-- **Navigation directe** : Accès en 1 clic au résultat trouvé
-
-### 📤 Export & Archivage
-
-- **Export CSV** : Factures (14 colonnes), devis (12 colonnes), clients (7 colonnes), dépenses (5 colonnes)
-- **Archives** : Archivage/désarchivage des documents obsolètes
-- **Archivage intelligent** : Suggestion automatique des factures soldées depuis plus de 12 mois
-- **Annulation** : Annulation de devis avec protection des devis signés
+### 🚀 MODULE 7 & 8 : Infrastructure, Offline & GOD MODE
+- **Emails en Marque Blanche** : Edge Functions Supabase + Resend.
+- **Mode Hors-Ligne** : Cache local via `flutter_secure_storage` et synchro différée.
+- **Route Secrète Admin** (`/admin-panel`) par RLS pour piloter le SaaS : métriques DB (RPC), Kanban des tickets SAV, et Tracker de bugs avec surcharge de `FlutterError.onError`.
 
 ---
 
@@ -604,4 +506,4 @@ flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```
 
-*ERP Artisan 3.0 — Dernière mise à jour : 20 février 2026*
+*CraftOS — Dernière mise à jour : 23 février 2026*

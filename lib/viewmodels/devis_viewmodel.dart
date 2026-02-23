@@ -9,6 +9,7 @@ import '../models/entreprise_model.dart';
 import '../core/base_viewmodel.dart';
 import '../core/pdf_generation_mixin.dart';
 import '../core/autosave_mixin.dart';
+import '../services/gemini_service.dart';
 
 class DevisViewModel extends BaseViewModel
     with PdfGenerationMixin, AutoSaveMixin {
@@ -167,6 +168,39 @@ class DevisViewModel extends BaseViewModel
       await _repository.markAsSigned(devisId, url);
       await fetchDevis();
     });
+  }
+
+  // --- MODULE 3 : IA & AITISE TON DEVIS ---
+
+  Future<List<LigneDevis>?> generateAILignes(
+      String prompt, String catalogJSON) async {
+    try {
+      final data =
+          await GeminiService.generateQuoteStructure(prompt, catalogJSON);
+      if (data == null) return null;
+
+      final List<LigneDevis> newLignes = [];
+      for (var l in data) {
+        newLignes.add(LigneDevis(
+          description: l['designation'] ?? l['description'] ?? 'Ligne',
+          quantite:
+              Decimal.tryParse(l['quantite']?.toString() ?? '1') ?? Decimal.one,
+          prixUnitaire:
+              Decimal.tryParse(l['prix_unitaire']?.toString() ?? '0') ??
+                  Decimal.zero,
+          totalLigne: Decimal.tryParse(l['total_ligne']?.toString() ?? '0') ??
+              Decimal.zero,
+          typeActivite: l['type_activite'] ?? 'service',
+          unite: l['unite'] ?? 'u',
+          type: l['type_ligne'] ?? l['type'] ?? 'article',
+          isAiEstimated: l['is_ai_estimated'] == true,
+        ));
+      }
+      return newLignes;
+    } catch (e) {
+      developer.log("Erreur generateAILignes", error: e);
+      return null;
+    }
   }
 
   // --- MODULE 2 : Transformation Facture ---

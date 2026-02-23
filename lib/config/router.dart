@@ -35,6 +35,8 @@ import '../views/parametres_view.dart';
 import '../views/factures_recurrentes_view.dart';
 import '../views/suivi_temps_view.dart';
 import '../views/rappels_echeances_view.dart';
+import '../views/support_center_view.dart';
+import '../views/admin/admin_dashboard_view.dart'; // GOD MODE
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -48,11 +50,12 @@ class AppRouter {
       redirect: (context, state) {
         final isLoggedIn = authViewModel.currentUser != null;
         final isOnAppRoute = state.matchedLocation.startsWith('/app');
+        final isOnAdminRoute = state.matchedLocation.startsWith('/admin-panel');
         final isOnLogin = state.matchedLocation == '/login';
         final isOnLanding = state.matchedLocation == '/';
 
-        // Utilisateur NON connecté tente d'accéder à /app/* → Redirection /login
-        if (!isLoggedIn && isOnAppRoute) {
+        // Utilisateur NON connecté tente d'accéder à /app/* ou /admin-panel → Redirection /login
+        if (!isLoggedIn && (isOnAppRoute || isOnAdminRoute)) {
           return '/login';
         }
 
@@ -162,6 +165,14 @@ class AppRouter {
         GoRoute(
           path: '/app/rappels',
           builder: (_, __) => const RappelsEcheancesView(),
+        ),
+        GoRoute(
+          path: '/app/support',
+          builder: (_, __) => const SupportCenterView(),
+        ),
+        GoRoute(
+          path: '/admin-panel',
+          builder: (_, __) => const AdminDashboardView(),
         ),
 
         // --- ROUTES DYNAMIQUES (CRUD) ---

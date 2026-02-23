@@ -1,9 +1,12 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Added for kReleaseMode
 import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart'; // Pour PointerDeviceKind
+import 'dart:ui'; // Added for PlatformDispatcher
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // CONFIG
 import 'config/supabase_config.dart';
@@ -20,8 +23,42 @@ Future<void> main() async {
   // Initialisation Supabase
   await SupabaseConfig.initialize();
 
+  // Custom Crashlytics (override FlutterError)
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    if (originalOnError != null) {
+      originalOnError(details);
+    }
+    // Log silently to Supabase
+    try {
+      SupabaseConfig.client.from('crash_logs').insert({
+        'error_message': details.exceptionAsString(),
+        'stack_trace': details.stack?.toString(),
+        'app_version': '1.0.0+1', // Hardcoded for now
+      }).then((_) {});
+    } catch (_) {}
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    try {
+      SupabaseConfig.client.from('crash_logs').insert({
+        'error_message': error.toString(),
+        'stack_trace': stack.toString(),
+        'app_version': '1.0.0+1',
+      }).then((_) {});
+    } catch (_) {}
+    return true; // Prevents crash
+  };
+
   // Initialisation Locale (Dates FR)
   await initializeDateFormatting('fr_FR', null);
+
+  // Charger les variables d'environnement
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Aucun fichier .env trouvé ou erreur de chargement: $e");
+  }
 
   runApp(
     MultiProvider(

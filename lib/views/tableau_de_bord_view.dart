@@ -22,6 +22,7 @@ import '../widgets/dashboard/rappels_card.dart';
 import '../widgets/dashboard/tresorerie_card.dart';
 import '../widgets/dashboard/alertes_banner.dart';
 import '../widgets/dashboard/recent_activity_list.dart';
+import '../widgets/dashboard/weather_widget.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
 import '../models/enums/entreprise_enums.dart';
@@ -537,6 +538,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 letterSpacing: 1.5,
               ),
             ),
+            const SizedBox(height: 12),
+            const WeatherWidget(),
           ],
         ),
         Container(

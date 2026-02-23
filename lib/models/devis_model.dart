@@ -22,6 +22,8 @@ class LigneDevis {
   // MODULE TVA
   final Decimal tauxTva;
 
+  final bool isAiEstimated;
+
   final String uiKey;
 
   Decimal get montantTva =>
@@ -40,6 +42,7 @@ class LigneDevis {
     this.estGras = false,
     this.estItalique = false,
     this.estSouligne = false,
+    this.isAiEstimated = false,
     String? uiKey,
     Decimal? tauxTva,
   })  : uiKey = uiKey ?? const Uuid().v4(),
@@ -59,6 +62,7 @@ class LigneDevis {
       estGras: map['est_gras'] ?? false,
       estItalique: map['est_italique'] ?? false,
       estSouligne: map['est_souligne'] ?? false,
+      isAiEstimated: map['is_ai_estimated'] ?? false,
       tauxTva: Decimal.parse((map['taux_tva'] ?? 20.0).toString()),
     );
   }
@@ -77,6 +81,7 @@ class LigneDevis {
       'est_gras': estGras,
       'est_italique': estItalique,
       'est_souligne': estSouligne,
+      'is_ai_estimated': isAiEstimated,
       'taux_tva': tauxTva.toString(),
     };
   }
@@ -94,6 +99,7 @@ class LigneDevis {
     bool? estGras,
     bool? estItalique,
     bool? estSouligne,
+    bool? isAiEstimated,
     Decimal? tauxTva,
   }) {
     return LigneDevis(
@@ -110,6 +116,7 @@ class LigneDevis {
       estGras: estGras ?? this.estGras,
       estItalique: estItalique ?? this.estItalique,
       estSouligne: estSouligne ?? this.estSouligne,
+      isAiEstimated: isAiEstimated ?? this.isAiEstimated,
       tauxTva: tauxTva ?? this.tauxTva,
     );
   }

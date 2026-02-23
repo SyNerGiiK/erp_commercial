@@ -184,6 +184,7 @@ class PdfService {
 
     final logoBytes = await _downloadImage(entreprise?.logoUrl);
     final signatureEntBytes = await _downloadImage(entreprise?.signatureUrl);
+    final logoFooterBytes = await _downloadImage(entreprise?.logoFooterUrl);
 
     final pdf = pw.Document(theme: theme);
 
@@ -306,6 +307,9 @@ class PdfService {
               motifAvoir: document is Facture ? document.motifAvoir : null,
               isAvoir: document is Facture && document.type == 'avoir',
               factureSourceNumero: factureSourceNumero,
+              netAPayer: netAPayer,
+              numeroDocument: numero,
+              logoFooterBytes: logoFooterBytes,
             ),
           ];
         },
@@ -788,6 +792,9 @@ class PdfService {
     String? motifAvoir,
     bool isAvoir = false,
     String? factureSourceNumero, // Numéro de la facture d'origine (pour avoir)
+    Decimal? netAPayer,
+    String? numeroDocument,
+    Uint8List? logoFooterBytes,
   }) {
     final legalStyle =
         pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic);
@@ -898,27 +905,77 @@ class PdfService {
                 ],
               ]),
         ),
-        pw.SizedBox(width: 20),
-        pw.Column(children: [
-          if (signatureClient != null)
-            pw.Column(children: [
-              pw.Text("Bon pour accord",
-                  style: pw.TextStyle(
-                      fontSize: 8, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 5),
-              pw.Image(pw.MemoryImage(signatureClient), width: 80, height: 40),
-              pw.Text("Signé électroniquement",
-                  style:
-                      const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
-            ])
-          else
-            _buildEmptySignatureZone(),
-          pw.SizedBox(height: 20),
-          if (signatureEnt != null)
-            pw.Image(pw.MemoryImage(signatureEnt), width: 60)
+        pw.SizedBox(width: 10),
+        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+          // 1. QR Code SEPA (si facture non avoir avec IBAN)
+          if (!isAvoir &&
+              ent?.iban != null &&
+              ent!.iban!.isNotEmpty &&
+              netAPayer != null &&
+              numeroDocument != null) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(4),
+              ),
+              child: pw.Column(children: [
+                pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: _generateSepaString(ent, netAPayer, numeroDocument),
+                  width: 50,
+                  height: 50,
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text("Scan pour payer",
+                    style: const pw.TextStyle(
+                        fontSize: 6, color: PdfColors.grey700)),
+              ]),
+            ),
+            pw.SizedBox(height: 10),
+          ],
+
+          // 2. Signatures
+          pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+            if (signatureClient != null)
+              pw.Column(children: [
+                pw.Text("Bon pour accord",
+                    style: pw.TextStyle(
+                        fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 5),
+                pw.Image(pw.MemoryImage(signatureClient),
+                    width: 80, height: 40),
+                pw.Text("Signé électroniquement",
+                    style:
+                        const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
+              ])
+            else
+              _buildEmptySignatureZone(),
+            if (signatureEnt != null) ...[
+              pw.SizedBox(width: 10),
+              pw.Image(pw.MemoryImage(signatureEnt), width: 60)
+            ]
+          ]),
+
+          // 3. Badges (RGE, Qualibat, etc.)
+          if (logoFooterBytes != null) ...[
+            pw.SizedBox(height: 10),
+            pw.Image(pw.MemoryImage(logoFooterBytes), height: 35),
+          ]
         ])
       ],
     );
+  }
+
+  static String _generateSepaString(
+      ProfilEntreprise ent, Decimal amount, String ref) {
+    // Norme EPC069-12 (SCT)
+    final bic = ent.bic ?? '';
+    final name = ent.nomEntreprise.replaceAll('\n', ' ').trim();
+    final iban = ent.iban!.replaceAll(' ', '');
+    final amountStr = amount.toDouble().toStringAsFixed(2);
+    // BCD\n002\n1\nSCT\nBIC\nName\nIBAN\nEURAmount\n\nRef\n
+    return "BCD\n002\n1\nSCT\n$bic\n$name\n$iban\nEUR$amountStr\n\n$ref\n";
   }
 
   static pw.Widget _buildEmptySignatureZone() {

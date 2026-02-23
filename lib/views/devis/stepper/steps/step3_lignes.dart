@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 
 import '../../../../models/devis_model.dart';
 import '../../../../models/chiffrage_model.dart';
 import '../../../../models/article_model.dart';
+import '../../../../viewmodels/devis_viewmodel.dart';
+import '../../../../viewmodels/article_viewmodel.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../widgets/ligne_editor.dart';
 import '../../../../widgets/article_selection_dialog.dart';
@@ -34,6 +38,11 @@ class DevisStep3Lignes extends StatefulWidget {
 }
 
 class _DevisStep3LignesState extends State<DevisStep3Lignes> {
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _isAiGenerating = false;
+  String _recognizedText = "";
+
   // --- ACTIONS LIGNES ---
 
   void _ajouterLigne() {
@@ -95,6 +104,121 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
     }
   }
 
+  Future<void> _showAitiseDialog() async {
+    _recognizedText = "";
+    final currentTextCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (context, setDialogState) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.purple),
+              SizedBox(width: 8),
+              Text("AITISE TON DEVIS"),
+            ],
+          ),
+          content: SizedBox(
+            width: 500,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                    "Décrivez les travaux à réaliser (ou dictez-les), l'I.A. s'occupera du reste."),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: currentTextCtrl,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText:
+                        "Ex: Je veux refaire une salle de bain de 5m2, avec pose de baignoire...",
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (!_isListening) {
+                      bool available = await _speech.initialize();
+                      if (available) {
+                        setDialogState(() => _isListening = true);
+                        _speech.listen(onResult: (val) {
+                          setDialogState(() {
+                            _recognizedText = val.recognizedWords;
+                            currentTextCtrl.text = _recognizedText;
+                          });
+                        });
+                      } else {
+                        if (!ctx.mounted) return;
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                            content: Text("Micro non disponible")));
+                      }
+                    } else {
+                      setDialogState(() => _isListening = false);
+                      _speech.stop();
+                    }
+                  },
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                  label: Text(_isListening
+                      ? "Écoute en cours..."
+                      : "Dicter vocalement"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isListening ? Colors.red.shade50 : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("Annuler")),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx, currentTextCtrl.text);
+              },
+              child: const Text("Générer"),
+            ),
+          ],
+        );
+      }),
+    ).then((prompt) async {
+      if (prompt != null && prompt.toString().trim().isNotEmpty) {
+        if (!mounted) return;
+        setState(() => _isAiGenerating = true);
+        final devisVM = Provider.of<DevisViewModel>(context, listen: false);
+        final articleVM = Provider.of<ArticleViewModel>(context, listen: false);
+
+        final catalog = articleVM.articles
+            .map((a) => {
+                  'designation': a.designation,
+                  'unite': a.unite,
+                  'prix_unitaire': a.prixUnitaire.toString(),
+                  'type_activite': a.typeActivite
+                })
+            .toList();
+        final catalogJSON = jsonEncode(catalog);
+
+        final newAiLignes =
+            await devisVM.generateAILignes(prompt.toString(), catalogJSON);
+        if (!mounted) return;
+        setState(() => _isAiGenerating = false);
+
+        if (newAiLignes != null && newAiLignes.isNotEmpty) {
+          final newList = List<LigneDevis>.from(widget.lignes);
+          newList.addAll(newAiLignes);
+          widget.onLignesChanged(newList);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Lignes générées par l\'I.A. avec succès !')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Erreur I.A. ou aucune ligne retournée.')));
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -142,7 +266,25 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
                   icon: const Icon(Icons.library_books),
                   label: const Text("Bibliothèque"),
                 ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _showAitiseDialog,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text("AITISE TON DEVIS"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade50,
+                    foregroundColor: Colors.purple,
+                  ),
+                ),
                 const Spacer(),
+                if (_isAiGenerating)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 16.0),
+                    child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.playlist_add),
                   tooltip: "Ajouter spécial...",

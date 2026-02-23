@@ -7,7 +7,8 @@ import '../viewmodels/client_viewmodel.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
 import '../config/theme.dart';
-import 'detail_client_view.dart'; // Pour l'intégration des détails si besoin, ou navigation
+import '../services/company_data_service.dart';
+import 'detail_client_view.dart';
 
 class AjoutClientView extends StatefulWidget {
   final String? id;
@@ -21,6 +22,7 @@ class AjoutClientView extends StatefulWidget {
 class _AjoutClientViewState extends State<AjoutClientView> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = true;
+  bool _isSearching = false;
 
   String _typeClient = 'particulier';
 
@@ -95,6 +97,63 @@ class _AjoutClientViewState extends State<AjoutClientView> {
     _emailController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _searchSiret() async {
+    final siret = _siretController.text.trim();
+    if (siret.isEmpty) return;
+
+    setState(() => _isSearching = true);
+    final data = await CompanyDataService.searchCompanyBySiret(siret);
+    if (!mounted) return;
+    setState(() => _isSearching = false);
+
+    if (data != null) {
+      setState(() {
+        _nomController.text = data['nom_complet'] ?? '';
+        final siege = data['siege'];
+        if (siege != null) {
+          _adresseController.text = siege['adresse'] ?? '';
+          _cpController.text = siege['code_postal'] ?? '';
+          _villeController.text = siege['libelle_commune'] ?? '';
+        }
+        // Calcul basique TVA Intra FR à partir du SIREN
+        if (data['siren'] != null) {
+          final siren = data['siren'].toString();
+          final key = (12 + 3 * (int.tryParse(siren) ?? 0)) % 97;
+          _tvaController.text = "FR${key.toString().padLeft(2, '0')}$siren";
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Données API Sirene récupérées')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Entreprise introuvable')));
+    }
+  }
+
+  Future<void> _searchAddress() async {
+    final query = _adresseController.text.trim();
+    if (query.length < 3) return;
+
+    setState(() => _isSearching = true);
+    final results = await CompanyDataService.searchAddress(query);
+    if (!mounted) return;
+    setState(() => _isSearching = false);
+
+    if (results.isNotEmpty) {
+      final best = results.first;
+      setState(() {
+        _adresseController.text = best['name'] ?? best['label'] ?? '';
+        _cpController.text = best['postcode'] ?? '';
+        _villeController.text = best['city'] ?? '';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Adresse auto-complétée via BAN')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Adresse introuvable')));
+    }
   }
 
   Future<void> _sauvegarder() async {
@@ -241,13 +300,52 @@ class _AjoutClientViewState extends State<AjoutClientView> {
                         children: [
                           Expanded(
                               child: CustomTextField(
-                                  label: "SIRET",
-                                  controller: _siretController)),
+                            label: "SIRET",
+                            controller: _siretController,
+                            suffixIcon: IconButton(
+                              icon: _isSearching
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : const Icon(Icons.search),
+                              onPressed: _isSearching ? null : _searchSiret,
+                              tooltip: "Auto-compléter via SIRENE",
+                            ),
+                          )),
                           const SizedBox(width: 16),
                           Expanded(
                               child: CustomTextField(
-                                  label: "TVA Intra",
-                                  controller: _tvaController)),
+                            label: "TVA Intra",
+                            controller: _tvaController,
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.verified_user),
+                              onPressed: () async {
+                                final tva = _tvaController.text.trim();
+                                if (tva.length > 2) {
+                                  final country = tva.substring(0, 2);
+                                  final number = tva.substring(2);
+                                  final isValid =
+                                      await CompanyDataService.verifyVatNumber(
+                                          country, number);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(isValid
+                                            ? "TVA Valide (VIES API)"
+                                            : "TVA Invalide ou service indisponible")),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text("Format TVA incorrect")),
+                                  );
+                                }
+                              },
+                              tooltip: "Vérifier via VIES",
+                            ),
+                          )),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -263,6 +361,11 @@ class _AjoutClientViewState extends State<AjoutClientView> {
                       controller: _adresseController,
                       icon: Icons.location_on,
                       validator: (v) => v!.isEmpty ? "Requis" : null,
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.auto_fix_high),
+                        onPressed: _searchAddress,
+                        tooltip: "Rechercher avec la BAN",
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(

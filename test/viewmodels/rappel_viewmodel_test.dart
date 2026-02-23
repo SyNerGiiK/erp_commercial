@@ -190,43 +190,4 @@ void main() {
       verify(() => mockRepo.decompleter('1')).called(1);
     });
   });
-
-  group('RappelViewModel - génération automatique URSSAF', () {
-    test('devrait générer 12 rappels mensuels', () {
-      final rappels = RappelViewModel.genererRappelsUrssaf(annee: 2026);
-      expect(rappels, hasLength(12));
-      expect(rappels[0].typeRappel, TypeRappel.urssaf);
-      expect(rappels[0].dateEcheance.year, 2026);
-    });
-
-    test('devrait générer 4 rappels trimestriels', () {
-      final rappels =
-          RappelViewModel.genererRappelsUrssaf(annee: 2026, trimestriel: true);
-      expect(rappels, hasLength(4));
-    });
-
-    test('devrait générer un rappel CFE au 15 décembre', () {
-      final rappel = RappelViewModel.genererRappelCFE(2026);
-      expect(rappel.typeRappel, TypeRappel.cfe);
-      expect(rappel.dateEcheance, DateTime(2026, 12, 15));
-    });
-
-    test('devrait générer un rappel impôts au 8 juin', () {
-      final rappel = RappelViewModel.genererRappelImpots(2026);
-      expect(rappel.typeRappel, TypeRappel.impots);
-      expect(rappel.dateEcheance, DateTime(2026, 6, 8));
-    });
-
-    test('les rappels URSSAF mensuels devraient avoir la bonne priorité', () {
-      final rappels = RappelViewModel.genererRappelsUrssaf(annee: 2026);
-      for (final r in rappels) {
-        expect(r.priorite, PrioriteRappel.haute);
-      }
-    });
-
-    test('le rappel CFE devrait être de priorité haute', () {
-      final rappel = RappelViewModel.genererRappelCFE(2026);
-      expect(rappel.priorite, PrioriteRappel.haute);
-    });
-  });
 }

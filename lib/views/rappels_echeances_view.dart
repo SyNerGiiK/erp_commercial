@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../models/rappel_model.dart';
 import '../viewmodels/rappel_viewmodel.dart';
+import '../viewmodels/entreprise_viewmodel.dart';
+import '../models/enums/entreprise_enums.dart';
+import '../services/echeance_service.dart';
 import '../widgets/custom_drawer.dart';
 
 /// Vue des rappels et échéances fiscales/documentaires
@@ -285,22 +288,24 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
 
   void _handleAutoGenerate(String type) async {
     final vm = context.read<RappelViewModel>();
+    final typeEnt =
+        context.read<EntrepriseViewModel>().profil?.typeEntreprise ??
+            TypeEntreprise.microEntrepreneur;
     final annee = DateTime.now().year;
 
     List<Rappel> rappels = [];
     switch (type) {
       case 'urssaf_mensuel':
-        rappels = RappelViewModel.genererRappelsUrssaf(annee: annee);
+        rappels = EcheanceService.genererRappelsUrssaf(annee, typeEnt, false);
         break;
       case 'urssaf_trimestriel':
-        rappels = RappelViewModel.genererRappelsUrssaf(
-            annee: annee, trimestriel: true);
+        rappels = EcheanceService.genererRappelsUrssaf(annee, typeEnt, true);
         break;
       case 'cfe':
-        rappels = [RappelViewModel.genererRappelCFE(annee)];
+        rappels = [EcheanceService.genererRappelCFE(annee)];
         break;
       case 'impots':
-        rappels = [RappelViewModel.genererRappelImpots(annee)];
+        rappels = [EcheanceService.genererRappelImpots(annee, typeEnt)];
         break;
     }
 

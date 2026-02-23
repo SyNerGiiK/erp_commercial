@@ -15,7 +15,8 @@ import '../widgets/statut_badge.dart';
 import '../widgets/dialogs/paiement_dialog.dart'; // Added
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
-import '../models/paiement_model.dart'; // Added
+import '../models/paiement_model.dart';
+import '../services/edge_email_service.dart';
 import '../services/email_service.dart';
 import 'package:decimal/decimal.dart';
 
@@ -151,8 +152,23 @@ class _ListeFacturesViewState extends State<ListeFacturesView>
       return;
     }
 
-    final result = await EmailService.envoyerFacture(
-        facture: f, client: client, profil: entVM.profil);
+    // Générer le PDF pour le joindre à l'email
+    String? factureSourceNumero;
+    if (f.type == 'avoir' && f.factureSourceId != null) {
+      final factureVM = Provider.of<FactureViewModel>(context, listen: false);
+      try {
+        factureSourceNumero = factureVM.factures
+            .firstWhere((x) => x.id == f.factureSourceId)
+            .numeroFacture;
+      } catch (_) {}
+    }
+    final pdfBytes = await PdfService.generateDocument(f, client, entVM.profil,
+        docType: "FACTURE",
+        isTvaApplicable: entVM.isTvaApplicable,
+        factureSourceNumero: factureSourceNumero);
+
+    final result = await EdgeEmailService.envoyerFacture(
+        facture: f, client: client, profil: entVM.profil, pdfBytes: pdfBytes);
 
     if (!mounted) return;
 

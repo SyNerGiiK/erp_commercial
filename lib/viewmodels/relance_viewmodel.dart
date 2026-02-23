@@ -4,6 +4,7 @@ import '../models/facture_model.dart';
 import '../models/client_model.dart';
 import '../models/entreprise_model.dart';
 import '../services/relance_service.dart';
+import '../services/edge_email_service.dart';
 import '../services/email_service.dart';
 import '../repositories/facture_repository.dart';
 import '../repositories/client_repository.dart';
@@ -72,7 +73,7 @@ class RelanceViewModel extends BaseViewModel {
 
   /// Envoyer une relance par email
   Future<EmailResult> envoyerRelance(RelanceInfo relance) async {
-    return await EmailService.envoyerRelance(
+    return await EdgeEmailService.envoyerRelance(
       relance: relance,
       profil: _profil,
     );

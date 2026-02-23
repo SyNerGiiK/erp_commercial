@@ -1,6 +1,6 @@
-# Référence API — ERP Artisan
+# Référence API — CraftOS
 
-> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 20/02/2026
+> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 23/02/2026
 
 ---
 

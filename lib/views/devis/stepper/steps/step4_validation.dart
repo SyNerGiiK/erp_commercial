@@ -119,6 +119,32 @@ class _DevisStep4ValidationState extends State<DevisStep4Validation> {
         if (dashboardVm.bilanTva != null)
           TvaAlertBanner(bilan: dashboardVm.bilanTva!),
 
+        // Alerte Margin Shield
+        if (d.chiffrage.isNotEmpty && d.tauxMargeBrute < Decimal.fromInt(30))
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade300),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.shield_outlined, color: Colors.red),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "⚠️ MARGIN SHIELD : Votre taux de marge brute est de ${d.tauxMargeBrute.toStringAsFixed(1)}% (Inférieur à 30%). Risque financier détecté.",
+                    style: const TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         const Text(
           "Récapitulatif",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

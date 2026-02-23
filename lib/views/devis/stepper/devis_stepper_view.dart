@@ -15,6 +15,8 @@ import '../../../widgets/split_editor_scaffold.dart';
 import '../../../widgets/success_overlay.dart';
 import '../../../utils/calculations_utils.dart';
 import '../../../utils/format_utils.dart';
+import '../../../services/pdf_service.dart';
+import '../../../services/edge_email_service.dart';
 import '../../../services/email_service.dart';
 import '../../../services/audit_service.dart';
 
@@ -276,10 +278,15 @@ class _DevisStepperViewState extends State<DevisStepperView> {
     final updatedDevis = vm.devis.where((d) => d.id == devisId).firstOrNull;
 
     if (updatedDevis != null && _selectedClient != null) {
-      final emailResult = await EmailService.envoyerDevis(
+      final pdfBytes = await PdfService.generateDocument(
+          updatedDevis, _selectedClient!, entVM.profil,
+          docType: "DEVIS", isTvaApplicable: entVM.isTvaApplicable);
+
+      final emailResult = await EdgeEmailService.envoyerDevis(
         devis: updatedDevis,
         client: _selectedClient!,
         profil: entVM.profil,
+        pdfBytes: pdfBytes,
       );
 
       if (emailResult.success && updatedDevis.id != null) {

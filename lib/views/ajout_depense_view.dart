@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+
+import '../services/gemini_service.dart';
 
 import '../models/depense_model.dart';
 import '../viewmodels/depense_viewmodel.dart';
@@ -29,6 +33,7 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
   String _categorie = 'materiaux';
   String? _selectedDevisId;
   bool _isLoading = true;
+  bool _isOcrLoading = false;
 
   final List<String> _categories = [
     'materiaux',
@@ -88,6 +93,50 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
       lastDate: DateTime(2030),
     );
     if (picked != null) setState(() => _date = picked);
+  }
+
+  Future<void> _scanReceipt() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    setState(() => _isOcrLoading = true);
+    try {
+      final bytes = await image.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      final data = await GeminiService.extractReceiptData(base64Image);
+      if (!mounted) return;
+
+      if (data != null) {
+        setState(() {
+          _fournisseurController.text =
+              data['merchant_name'] ?? _fournisseurController.text;
+          _titreController.text = data['merchant_name'] != null
+              ? "Achat ${data['merchant_name']}"
+              : _titreController.text;
+          _montantController.text =
+              (data['total_amount'] ?? _montantController.text).toString();
+          if (data['date'] != null) {
+            try {
+              _date = DateTime.parse(data['date']);
+            } catch (_) {}
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket analysé avec succès !')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Impossible d\'extraire les données du ticket.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Erreur lors de l\'analyse du ticket.')));
+      }
+    } finally {
+      if (mounted) setState(() => _isOcrLoading = false);
+    }
   }
 
   Future<void> _sauvegarder() async {
@@ -159,6 +208,25 @@ class _AjoutDepenseViewState extends State<AjoutDepenseView> {
       child: SingleChildScrollView(
         child: Column(
           children: [
+            if (_isOcrLoading)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              Container(
+                margin: const EdgeInsets.only(bottom: 15),
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.document_scanner),
+                  label: const Text('Scanner un ticket de caisse (I.A. OCR)'),
+                  onPressed: _scanReceipt,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppTheme.primary, width: 2),
+                  ),
+                ),
+              ),
             CustomTextField(
               label: "Intitulé (ex: Sacs ciment)",
               controller: _titreController,

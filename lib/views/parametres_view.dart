@@ -192,6 +192,16 @@ class _ParametresViewState extends State<ParametresView> {
         return Scaffold(
           appBar: AppBar(
             title: const Text("Configuration Micro-Entreprise"),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                if (GoRouter.of(context).canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/app/home');
+                }
+              },
+            ),
             actions: [
               // Bouton Sync API
               IconButton(

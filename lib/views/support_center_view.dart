@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/support_viewmodel.dart';
 import '../models/support_ticket_model.dart';
@@ -93,6 +94,16 @@ class _SupportCenterViewState extends State<SupportCenterView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Support AI & Centre d\'aide'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (GoRouter.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/app/home');
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

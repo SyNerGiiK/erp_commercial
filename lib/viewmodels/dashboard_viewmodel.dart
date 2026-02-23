@@ -253,6 +253,11 @@ class DashboardViewModel extends BaseViewModel {
 
   Future<void> refreshData() async {
     await execute(() async {
+      // RESET ACCUMULATING VARIABLES
+      _caVente = Decimal.zero;
+      _caPrestaBIC = Decimal.zero;
+      _caPrestaBNC = Decimal.zero;
+
       final now = DateTime.now();
       final dates = _getDatesForPeriod(_selectedPeriod, now);
       final datesPrev =

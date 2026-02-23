@@ -39,6 +39,14 @@ class _SignatureViewState extends State<SignatureView> {
         title: const Text("Signature Client"),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),

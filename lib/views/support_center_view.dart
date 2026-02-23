@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/support_viewmodel.dart';
 import '../models/support_ticket_model.dart';
 import '../config/theme.dart';
+import '../widgets/custom_drawer.dart';
 // Note: We use the AppLayout if it exists, or just a Scaffold.
 // Often there is a custom AppBar/Drawer depending on the app's structure.
 // I will just return a Scaffold here, and the app's navigation structure can wrap it.
@@ -94,23 +95,21 @@ class _SupportCenterViewState extends State<SupportCenterView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Support AI & Centre d\'aide'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (GoRouter.of(context).canPop()) {
-              context.pop();
-            } else {
-              context.go('/app/home');
-            }
-          },
-        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Nouveau ticket',
-            onPressed: _showNewTicketDialog,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Rafraîchir',
+            onPressed: () => context.read<SupportViewModel>().fetchTickets(),
           ),
         ],
+      ),
+      drawer: const CustomDrawer(selectedIndex: 16),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showNewTicketDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Nouveau ticket'),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
       ),
       body: Consumer<SupportViewModel>(
         builder: (context, vm, child) {

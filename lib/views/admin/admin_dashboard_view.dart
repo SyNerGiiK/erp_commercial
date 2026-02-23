@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/admin_viewmodel.dart';
 import '../../config/theme.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/custom_drawer.dart';
 
 class AdminDashboardView extends StatefulWidget {
   const AdminDashboardView({super.key});
@@ -39,10 +40,6 @@ class _AdminDashboardViewState extends State<AdminDashboardView>
       appBar: AppBar(
         title: const Text('SUPER-COCKPIT (God Mode)'),
         backgroundColor: Colors.black,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/app/home'),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -61,6 +58,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView>
           ],
         ),
       ),
+      drawer: const CustomDrawer(selectedIndex: 99),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(

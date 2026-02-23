@@ -20,6 +20,8 @@ Services : Classes statiques pures (Tva, Relance, Archivage, Pdf, Export, Echean
 
 2. ☢️ RÈGLES CRITIQUES (ZÉRO TOLÉRANCE)
 
+PROJET SUPABASE CIBLE : Tu dois TOUJOURS et UNIQUEMENT utiliser le projet Supabase "Cap'Tech Project" (jamais "ERP Artisan PROD" ou un autre) pour toute analyse, modification ou migration de base de données, sauf ordre explicite contraire du USER.
+
 ARGENT = Decimal : INTERDICTION d'utiliser double.
 
 Division : (total / qte).toDecimal() (OBLIGATOIRE).

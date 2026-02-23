@@ -5,7 +5,8 @@ import '../config/theme.dart';
 import '../viewmodels/temps_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
 import '../models/temps_activite_model.dart';
-import '../widgets/custom_drawer.dart';
+import '../widgets/base_screen.dart';
+import '../widgets/aurora/glass_container.dart';
 import 'package:decimal/decimal.dart';
 
 /// Vue du suivi du temps d'activité
@@ -30,33 +31,32 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
     final vm = context.watch<TempsViewModel>();
     final clientVM = context.watch<ClientViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Suivi du temps'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                vm.totalHeuresMoisFormate,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primary,
-                ),
+    return BaseScreen(
+      menuIndex: 14,
+      title: 'Suivi du temps',
+      headerActions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Center(
+            child: Text(
+              vm.totalHeuresMoisFormate,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primary,
               ),
             ),
           ),
-        ],
-      ),
-      drawer: const CustomDrawer(selectedIndex: 14),
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, clientVM),
         icon: const Icon(Icons.add),
         label: const Text('Saisir du temps'),
         backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
       ),
-      body: vm.isLoading
+      child: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.items.isEmpty
               ? _buildEmptyState()
@@ -89,9 +89,8 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
     return Column(
       children: [
         // KPI Bar
-        Container(
+        GlassContainer(
           padding: const EdgeInsets.all(16),
-          color: AppTheme.primary.withValues(alpha: 0.05),
           child: Row(
             children: [
               _buildKpi(
@@ -129,88 +128,89 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                       .firstOrNull ??
                   'Sans client';
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: CircleAvatar(
-                    backgroundColor: item.estFacture
-                        ? AppTheme.accent.withValues(alpha: 0.1)
-                        : item.estFacturable
-                            ? AppTheme.primary.withValues(alpha: 0.1)
-                            : Colors.grey.shade100,
-                    radius: 20,
-                    child: Icon(
-                      item.estFacture
-                          ? Icons.check_circle
-                          : Icons.timer_outlined,
-                      size: 20,
-                      color: item.estFacture
-                          ? AppTheme.accent
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassContainer(
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: CircleAvatar(
+                      backgroundColor: item.estFacture
+                          ? AppTheme.accent.withValues(alpha: 0.1)
                           : item.estFacturable
-                              ? AppTheme.primary
-                              : Colors.grey,
+                              ? AppTheme.primary.withValues(alpha: 0.1)
+                              : Colors.grey.shade100,
+                      radius: 20,
+                      child: Icon(
+                        item.estFacture
+                            ? Icons.check_circle
+                            : Icons.timer_outlined,
+                        size: 20,
+                        color: item.estFacture
+                            ? AppTheme.accent
+                            : item.estFacturable
+                                ? AppTheme.primary
+                                : Colors.grey,
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    item.description,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Row(
-                    children: [
-                      Text(
-                        '${item.dateActivite.day}/${item.dateActivite.month}/${item.dateActivite.year}',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        clientName,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
-                      ),
-                      if (item.projet.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            item.projet,
-                            style: const TextStyle(
-                                fontSize: 10, color: AppTheme.primary),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        item.dureeFormatee,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      if (item.montant > Decimal.zero)
+                    title: Text(
+                      item.description,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Row(
+                      children: [
                         Text(
-                          '${item.montant.toDouble().toStringAsFixed(2)} €',
+                          '${item.dateActivite.day}/${item.dateActivite.month}/${item.dateActivite.year}',
                           style: TextStyle(
                               fontSize: 12, color: Colors.grey.shade500),
                         ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          clientName,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                        if (item.projet.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              item.projet,
+                              style: const TextStyle(
+                                  fontSize: 10, color: AppTheme.primary),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          item.dureeFormatee,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (item.montant > Decimal.zero)
+                          Text(
+                            '${item.montant.toDouble().toStringAsFixed(2)} €',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade500),
+                          ),
+                      ],
+                    ),
+                    onLongPress: () => _confirmDelete(item),
                   ),
-                  onLongPress: () => _confirmDelete(item),
                 ),
               );
             },

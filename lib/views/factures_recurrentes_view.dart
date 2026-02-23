@@ -5,9 +5,9 @@ import '../config/theme.dart';
 import '../models/facture_recurrente_model.dart';
 import '../viewmodels/facture_recurrente_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
-import '../widgets/custom_drawer.dart';
+import '../widgets/base_screen.dart';
+import '../widgets/aurora/glass_container.dart';
 
-/// Vue de gestion des factures récurrentes
 class FacturesRecurrentesView extends StatefulWidget {
   const FacturesRecurrentesView({super.key});
 
@@ -30,30 +30,29 @@ class _FacturesRecurrentesViewState extends State<FacturesRecurrentesView> {
     final vm = context.watch<FactureRecurrenteViewModel>();
     final clientVM = context.watch<ClientViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Factures Récurrentes'),
-        actions: [
-          if (vm.aGenerer.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Chip(
-                label: Text('${vm.aGenerer.length} à générer'),
-                backgroundColor: AppTheme.warning,
-                labelStyle: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
+    return BaseScreen(
+      menuIndex: 13,
+      title: 'Factures Récurrentes',
+      headerActions: [
+        if (vm.aGenerer.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Chip(
+              label: Text('${vm.aGenerer.length} à générer'),
+              backgroundColor: AppTheme.warning,
+              labelStyle: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
-        ],
-      ),
-      drawer: const CustomDrawer(selectedIndex: 13),
+          ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFormDialog(context, null),
         icon: const Icon(Icons.add),
         label: const Text('Nouvelle récurrence'),
         backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
       ),
-      body: vm.isLoading
+      child: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.items.isEmpty
               ? _buildEmptyState()
@@ -94,99 +93,102 @@ class _FacturesRecurrentesViewState extends State<FacturesRecurrentesView> {
                 .firstOrNull ??
             'Client inconnu';
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              backgroundColor: item.estActive
-                  ? AppTheme.primary.withValues(alpha: 0.1)
-                  : Colors.grey.shade100,
-              child: Icon(
-                Icons.repeat_rounded,
-                color: item.estActive ? AppTheme.primary : Colors.grey,
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GlassContainer(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: CircleAvatar(
+                backgroundColor: item.estActive
+                    ? AppTheme.primary.withValues(alpha: 0.1)
+                    : Colors.grey.shade100,
+                child: Icon(
+                  Icons.repeat_rounded,
+                  color: item.estActive ? AppTheme.primary : Colors.grey,
+                ),
               ),
-            ),
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    item.objet,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: item.estActive
-                        ? AppTheme.accent.withValues(alpha: 0.1)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    item.estActive ? 'Active' : 'Inactive',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: item.estActive ? AppTheme.accent : Colors.grey,
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.objet,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(clientName, style: TextStyle(color: Colors.grey.shade600)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.schedule, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 4),
-                    Text(
-                      item.frequence.label,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: item.estActive
+                          ? AppTheme.accent.withValues(alpha: 0.1)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 16),
-                    Icon(Icons.euro, size: 14, color: Colors.grey.shade500),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${item.totalTtc.toDouble().toStringAsFixed(2)} €',
+                    child: Text(
+                      item.estActive ? 'Active' : 'Inactive',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: item.estActive ? AppTheme.accent : Colors.grey,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Text(
-                      '${item.nbFacturesGenerees} générée(s)',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) => _handleAction(value, item),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                    value: 'toggle', child: Text('Activer/Désactiver')),
-                const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Supprimer',
-                      style: TextStyle(color: AppTheme.error)),
-                ),
-              ],
+                  ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(clientName,
+                      style: TextStyle(color: Colors.grey.shade600)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule,
+                          size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.frequence.label,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(Icons.euro, size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${item.totalTtc.toDouble().toStringAsFixed(2)} €',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        '${item.nbFacturesGenerees} générée(s)',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) => _handleAction(value, item),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                      value: 'toggle', child: Text('Activer/Désactiver')),
+                  const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Supprimer',
+                        style: TextStyle(color: AppTheme.error)),
+                  ),
+                ],
+              ),
             ),
           ),
         );

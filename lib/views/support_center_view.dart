@@ -4,10 +4,9 @@ import 'package:provider/provider.dart';
 import '../viewmodels/support_viewmodel.dart';
 import '../models/support_ticket_model.dart';
 import '../config/theme.dart';
-import '../widgets/custom_drawer.dart';
+import '../widgets/base_screen.dart';
+import '../widgets/aurora/glass_container.dart';
 // Note: We use the AppLayout if it exists, or just a Scaffold.
-// Often there is a custom AppBar/Drawer depending on the app's structure.
-// I will just return a Scaffold here, and the app's navigation structure can wrap it.
 
 class SupportCenterView extends StatefulWidget {
   const SupportCenterView({super.key});
@@ -92,18 +91,16 @@ class _SupportCenterViewState extends State<SupportCenterView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Support AI & Centre d\'aide'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Rafraîchir',
-            onPressed: () => context.read<SupportViewModel>().fetchTickets(),
-          ),
-        ],
-      ),
-      drawer: const CustomDrawer(selectedIndex: 16),
+    return BaseScreen(
+      menuIndex: 16,
+      title: 'Support AI & Centre d\'aide',
+      headerActions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Rafraîchir',
+          onPressed: () => context.read<SupportViewModel>().fetchTickets(),
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewTicketDialog,
         icon: const Icon(Icons.add),
@@ -111,7 +108,7 @@ class _SupportCenterViewState extends State<SupportCenterView> {
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
       ),
-      body: Consumer<SupportViewModel>(
+      child: Consumer<SupportViewModel>(
         builder: (context, vm, child) {
           if (vm.isLoading && vm.tickets.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -141,9 +138,9 @@ class _SupportCenterViewState extends State<SupportCenterView> {
             itemCount: vm.tickets.length,
             itemBuilder: (context, index) {
               final ticket = vm.tickets[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: GlassContainer(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -7,7 +7,8 @@ import '../viewmodels/rappel_viewmodel.dart';
 import '../viewmodels/entreprise_viewmodel.dart';
 import '../models/enums/entreprise_enums.dart';
 import '../services/echeance_service.dart';
-import '../widgets/custom_drawer.dart';
+import '../widgets/base_screen.dart';
+import '../widgets/aurora/glass_container.dart';
 
 /// Vue des rappels et échéances fiscales/documentaires
 class RappelsEcheancesView extends StatefulWidget {
@@ -40,67 +41,64 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
   Widget build(BuildContext context) {
     final vm = context.watch<RappelViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rappels & Échéances'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('À venir'),
-                  if (vm.nbUrgents > 0) ...[
-                    const SizedBox(width: 6),
-                    CircleAvatar(
-                      radius: 10,
-                      backgroundColor: AppTheme.error,
-                      child: Text(
-                        '${vm.nbUrgents}',
-                        style:
-                            const TextStyle(fontSize: 11, color: Colors.white),
-                      ),
+    return BaseScreen(
+      menuIndex: 15,
+      title: 'Rappels & Échéances',
+      appBarBottom: TabBar(
+        controller: _tabController,
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('À venir'),
+                if (vm.nbUrgents > 0) ...[
+                  const SizedBox(width: 6),
+                  CircleAvatar(
+                    radius: 10,
+                    backgroundColor: AppTheme.error,
+                    child: Text(
+                      '${vm.nbUrgents}',
+                      style: const TextStyle(fontSize: 11, color: Colors.white),
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
-            const Tab(text: 'Tous'),
-            Tab(text: 'Complétés (${vm.completes.length})'),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.auto_awesome),
-            onSelected: (value) => _handleAutoGenerate(value),
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: 'urssaf_mensuel',
-                child: Text('Générer rappels URSSAF (mensuel)'),
-              ),
-              const PopupMenuItem(
-                value: 'urssaf_trimestriel',
-                child: Text('Générer rappels URSSAF (trimestriel)'),
-              ),
-              const PopupMenuItem(
-                value: 'cfe',
-                child: Text('Générer rappel CFE'),
-              ),
-              const PopupMenuItem(
-                value: 'impots',
-                child: Text('Générer rappel Impôts'),
-              ),
-            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddDialog(context),
-          ),
+          const Tab(text: 'Tous'),
+          Tab(text: 'Complétés (${vm.completes.length})'),
         ],
       ),
-      drawer: const CustomDrawer(selectedIndex: 15),
-      body: vm.isLoading
+      headerActions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.auto_awesome),
+          onSelected: (value) => _handleAutoGenerate(value),
+          itemBuilder: (ctx) => [
+            const PopupMenuItem(
+              value: 'urssaf_mensuel',
+              child: Text('Générer rappels URSSAF (mensuel)'),
+            ),
+            const PopupMenuItem(
+              value: 'urssaf_trimestriel',
+              child: Text('Générer rappels URSSAF (trimestriel)'),
+            ),
+            const PopupMenuItem(
+              value: 'cfe',
+              child: Text('Générer rappel CFE'),
+            ),
+            const PopupMenuItem(
+              value: 'impots',
+              child: Text('Générer rappel Impôts'),
+            ),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showAddDialog(context),
+        ),
+      ],
+      child: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
@@ -159,129 +157,134 @@ class _RappelsEcheancesViewState extends State<RappelsEcheancesView>
                 ? "Aujourd'hui"
                 : 'Dans ${rappel.joursRestants}j';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: rappel.estEnRetard
-              ? AppTheme.error.withValues(alpha: 0.3)
-              : Colors.transparent,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Text(
-              rappel.typeRappel.icon,
-              style: const TextStyle(fontSize: 22),
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceGlassLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: rappel.estEnRetard
+                ? AppTheme.error.withValues(alpha: 0.3)
+                : AppTheme.primary.withValues(alpha: 0.1),
           ),
         ),
-        title: Row(
-          children: [
-            Expanded(
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
               child: Text(
-                rappel.titre,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  decoration:
-                      rappel.estComplete ? TextDecoration.lineThrough : null,
-                ),
-                overflow: TextOverflow.ellipsis,
+                rappel.typeRappel.icon,
+                style: const TextStyle(fontSize: 22),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                joursText,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (rappel.description != null && rappel.description!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
+          ),
+          title: Row(
+            children: [
+              Expanded(
                 child: Text(
-                  rappel.description!,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  maxLines: 2,
+                  rappel.titre,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    decoration:
+                        rappel.estComplete ? TextDecoration.lineThrough : null,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  joursText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
                   ),
+                ),
+              ),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (rappel.description != null && rappel.description!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    rappel.typeRappel.label,
-                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                    rappel.description!,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '${rappel.dateEcheance.day}/${rappel.dateEcheance.month}/${rappel.dateEcheance.year}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                ),
-                if (rappel.priorite == PrioriteRappel.urgente) ...[
-                  const SizedBox(width: 8),
+              const SizedBox(height: 4),
+              Row(
+                children: [
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: AppTheme.error.withValues(alpha: 0.1),
+                      color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'URGENT',
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.error),
+                    child: Text(
+                      rappel.typeRappel.label,
+                      style:
+                          TextStyle(fontSize: 10, color: Colors.grey.shade600),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${rappel.dateEcheance.day}/${rappel.dateEcheance.month}/${rappel.dateEcheance.year}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  ),
+                  if (rappel.priorite == PrioriteRappel.urgente) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'URGENT',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.error),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ],
-        ),
-        trailing: rappel.estComplete
-            ? IconButton(
-                icon: const Icon(Icons.undo, color: Colors.grey),
-                onPressed: () =>
-                    context.read<RappelViewModel>().decompleter(rappel.id!),
-              )
-            : IconButton(
-                icon: Icon(Icons.check_circle_outline, color: color),
-                onPressed: () =>
-                    context.read<RappelViewModel>().completer(rappel.id!),
               ),
-        onLongPress: () => _confirmDelete(rappel),
+            ],
+          ),
+          trailing: rappel.estComplete
+              ? IconButton(
+                  icon: const Icon(Icons.undo, color: Colors.grey),
+                  onPressed: () =>
+                      context.read<RappelViewModel>().decompleter(rappel.id!),
+                )
+              : IconButton(
+                  icon: Icon(Icons.check_circle_outline, color: color),
+                  onPressed: () =>
+                      context.read<RappelViewModel>().completer(rappel.id!),
+                ),
+          onLongPress: () => _confirmDelete(rappel),
+        ),
       ),
     );
   }

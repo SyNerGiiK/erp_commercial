@@ -653,6 +653,11 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
    - RPC DB Size (`get_db_metrics`)
 2. **Migration `20260223_002_support_tickets_table.sql`** :
    - Création de la table `support_tickets` pour le module SAV IA avec RLS.
+3. **Migration `20260223_003_schema_alignment.sql`** (MASTER ALIGNMENT PROD) :
+   - Synchronisation absolue de la DB de production avec les modèles Dart (Sprints 1 à 21).
+   - `CREATE TABLE` : `audit_logs`, `factures_recurrentes`, `lignes_facture_recurrente`, `temps_activites`, `rappels`.
+   - `ALTER TABLE` : +45 colonnes ajoutées sur `entreprises`, `urssaf_configs`, `factures`, `devis`, `lignes_chiffrages`, etc.
+   - `TRIGGERS` : Standardisation d'`updated_at`.
 
 ### Ordre d'exécution
 
@@ -666,6 +671,7 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 7. migration_sprint21_chantier_depenses.sql (Sprint 21)
 8. 20260223_001_god_mode_rpc.sql            (Sprint 22)
 9. 20260223_002_support_tickets_table.sql   (Sprint 22)
+10. 20260223_003_schema_alignment.sql       (Sprint 22)
 ```
 
 > **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Les migrations effectives sont celles listées ci-dessus.

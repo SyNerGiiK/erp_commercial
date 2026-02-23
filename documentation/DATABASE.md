@@ -165,6 +165,41 @@ Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
 
 **Statuts workflow :** `brouillon` → `validee` → `envoyee` → `payee`
 
+### entreprises
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `nom_entreprise` | `TEXT` | NOT NULL | — | Raison sociale de l'utilisateur |
+| `is_admin` | `BOOLEAN` | NULL | `false` | Activer God Mode |
+
+### support_tickets
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
+| `subject` | `TEXT` | NOT NULL | — | Sujet du ticket |
+| `description` | `TEXT` | NOT NULL | — | Description détaillée |
+| `status` | `TEXT` | NOT NULL | `'open'` | Statut du ticket (open, closed) |
+| `ai_resolution` | `TEXT` | NULL | — | Réponse générée par l'IA |
+| `created_at` | `TIMESTAMPTZ` | NULL | `now()` | Date de création |
+| `updated_at` | `TIMESTAMPTZ` | NULL | `now()` | Dernière mise à jour |
+
+### crash_logs
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---|---|---|---|---|
+| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
+| `user_id` | `UUID` | NULL | — | FK → auth.users |
+| `error_message` | `TEXT` | NOT NULL | — | Message d'erreur |
+| `stack_trace` | `TEXT` | NULL | — | Trace de l'erreur |
+| `app_version` | `VARCHAR(50)` | NULL | — | Version de l'app |
+| `device_info` | `JSONB` | NULL | — | Infos de l'appareil |
+| `created_at` | `TIMESTAMPTZ` | NULL | `now()` | Date du crash |
+| `resolved` | `BOOLEAN` | NULL | `false` | Crash résolu |
+
 ### lignes_facture
 
 | Colonne | Type | Nullable | Défaut | Description |
@@ -610,6 +645,15 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 3. **Backfill legacy** : copie `devis_id` vers `chantier_devis_id` si colonne historique présente
 4. **Commentaire SQL** : description métier de la liaison pour le cockpit rentabilité
 
+### Sprint 22 : God Mode & Support Tickets
+
+1. **Migration `20260223_001_god_mode_rpc.sql`** :
+   - Journalisation des erreurs frontend (`crash_logs`)
+   - Super-Admin Flag (`is_admin` dans `entreprises`)
+   - RPC DB Size (`get_db_metrics`)
+2. **Migration `20260223_002_support_tickets_table.sql`** :
+   - Création de la table `support_tickets` pour le module SAV IA avec RLS.
+
 ### Ordre d'exécution
 
 ```
@@ -620,6 +664,8 @@ Les migrations sont dans le dossier `migrations/` et doivent être exécutées d
 5. migration_sprint14_20_features.sql       (Sprint 14-20)
 6. migration_sprint15_progress_billing.sql  (Sprint 15)
 7. migration_sprint21_chantier_depenses.sql (Sprint 21)
+8. 20260223_001_god_mode_rpc.sql            (Sprint 22)
+9. 20260223_002_support_tickets_table.sql   (Sprint 22)
 ```
 
 > **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Les migrations effectives sont celles listées ci-dessus.

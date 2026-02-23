@@ -28,7 +28,25 @@ class SupportRepository extends BaseRepository implements ISupportRepository {
       final data = prepareForInsert(ticket.toMap());
       final response =
           await client.from('support_tickets').insert(data).select().single();
-      return SupportTicket.fromMap(response);
+
+      final createdTicket = SupportTicket.fromMap(response);
+
+      // Invoke the Edge Function directly from the client to avoid pg_net issues
+      try {
+        await client.functions.invoke('ai_support_triage', body: {
+          'record': {
+            'id': createdTicket.id,
+            'subject': createdTicket.subject,
+            'description': createdTicket.description
+          }
+        });
+      } catch (funcErr) {
+        // We log the function error but still return the created ticket so the UI doesn't crash
+        // The ticket just won't have an AI resolution yet.
+        print('Edge Function invoke error: $funcErr');
+      }
+
+      return createdTicket;
     } catch (e) {
       throw handleError(e, 'createTicket');
     }

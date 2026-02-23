@@ -7,7 +7,7 @@ document.querySelector('#app').innerHTML = `
     <div class="logo">CraftOS</div>
     <div>
       <a href="#features" style="margin-right: 2.5rem; color: var(--text-secondary); transition: color 0.2s; font-weight: 500;">Fonctionnalités</a>
-      <a href="https://app.craftos.fr" class="cta-button" style="padding: 0.6rem 1.5rem;">Connexion</a>
+      <a href="https://app-craftos.vercel.app/signup#/login" class="cta-button" style="padding: 0.6rem 1.5rem;">Connexion</a>
     </div>
   </nav>
 
@@ -15,7 +15,7 @@ document.querySelector('#app').innerHTML = `
     <section class="hero">
       <h1>Le SaaS BTP <span style="background: linear-gradient(135deg, var(--secondary-cyan), var(--primary-indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ultime</span></h1>
       <p>Design Apple. Automatisation Tesla. Gestion financière parfaite pour les artisans modernes, 100% cloud et assistée par I.A.</p>
-      <a href="https://app.craftos.fr/signup" class="cta-button" style="font-size: 1.125rem; padding: 1rem 2.5rem; margin-top: 1rem;">Commencer gratuitement</a>
+      <a href="https://app-craftos.vercel.app/signup#/login" class="cta-button" style="font-size: 1.125rem; padding: 1rem 2.5rem; margin-top: 1rem;">Commencer gratuitement</a>
       
       <div class="hero-lottie">
         <dotlottie-player
@@ -69,7 +69,7 @@ document.querySelector('#app').innerHTML = `
           <li>Signature électronique</li>
           <li>Support 24/7 par I.A.</li>
         </ul>
-        <a href="https://app.craftos.fr/signup" class="cta-button" style="display: block; width: 100%; text-align: center; padding: 1rem;">Créer mon compte</a>
+        <a href="https://app-craftos.vercel.app/signup#/login" class="cta-button" style="display: block; width: 100%; text-align: center; padding: 1rem;">Créer mon compte</a>
       </div>
     </section>
   </main>
@@ -77,10 +77,10 @@ document.querySelector('#app').innerHTML = `
 
 // Navbar scroll effect
 window.addEventListener('scroll', () => {
-    const nav = document.getElementById('navbar');
-    if (window.scrollY > 50) {
-        nav.classList.add('scrolled');
-    } else {
-        nav.classList.remove('scrolled');
-    }
+  const nav = document.getElementById('navbar');
+  if (window.scrollY > 50) {
+    nav.classList.add('scrolled');
+  } else {
+    nav.classList.remove('scrolled');
+  }
 });

@@ -17,7 +17,7 @@ class GeminiService {
     try {
       final response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "contents": [
@@ -68,7 +68,7 @@ class GeminiService {
     try {
       final response = await http.post(
         Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey'),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "contents": [

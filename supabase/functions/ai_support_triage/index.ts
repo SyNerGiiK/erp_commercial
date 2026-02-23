@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "AIzaSyB05E7l8l6CKHLGzJVFzPwkkk1T_R9euYY";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
         const userQuery = `Sujet: ${record.subject}\nDescription: ${record.description}`;
 
         // Call Gemini API
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -46,10 +46,15 @@ Deno.serve(async (req) => {
         });
 
         const geminiData = await geminiResponse.json();
+
+        if (geminiData.error) {
+            throw new Error(`Gemini API Error: ${geminiData.error.message || JSON.stringify(geminiData.error)}`);
+        }
+
         const answer = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!answer) {
-            throw new Error("Invalid response from Gemini");
+            throw new Error(`Invalid response from Gemini: ${JSON.stringify(geminiData)}`);
         }
 
         if (answer.trim() === "ESCALATE_TO_HUMAN") {
@@ -78,7 +83,7 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error("Error in ai_support_triage:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: (error as Error).message }), {
             status: 500,
             headers: { "Content-Type": "application/json" }
         });

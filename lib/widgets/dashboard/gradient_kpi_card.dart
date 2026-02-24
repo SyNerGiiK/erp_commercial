@@ -77,7 +77,7 @@ class GradientKpiCard extends StatelessWidget {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -107,17 +107,19 @@ class GradientKpiCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 18),
+                const Spacer(flex: 2),
 
                 // Value — typographie cinématique
                 FittedBox(
                   fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     value,
                     style: const TextStyle(
@@ -130,7 +132,7 @@ class GradientKpiCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 10),
+                const Spacer(flex: 1),
 
                 // Footer (Variation & Subtitle)
                 Row(

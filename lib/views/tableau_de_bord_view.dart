@@ -35,12 +35,20 @@ class TableauDeBordView extends StatefulWidget {
 }
 
 class _TableauDeBordViewState extends State<TableauDeBordView> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initDashboard();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _initDashboard() async {
@@ -83,99 +91,105 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 final isTablet = outerConstraints.maxWidth > 700;
 
                 return Scrollbar(
+                    controller: _scrollController,
                     child: SingleChildScrollView(
-                  primary: true,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: outerConstraints.maxHeight,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ─── HEADER ────────────────────────────
-                        _buildHeader(context, vm),
-                        const SizedBox(height: AppTheme.spacing24),
-
-                        // ─── ALERTES (retard + archivage) ──────
-                        AlertesBanner(
-                          relances: vm.relances,
-                          facturesArchivables: vm.showArchivageSuggestion
-                              ? vm.facturesArchivables
-                              : [],
-                          onRelancesTap: () => context.go('/app/relances'),
-                          onArchiverTap: () async {
-                            final count = vm.facturesArchivables.length;
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Archiver les factures'),
-                                content: Text(
-                                  'Archiver $count facture${count > 1 ? 's' : ''} soldée${count > 1 ? 's' : ''} depuis plus d\'un an ?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Annuler'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Archiver'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              await vm.archiverToutesLesFactures();
-                            }
-                          },
-                          onDismissArchivage: vm.dismissArchivageSuggestion,
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: outerConstraints.maxHeight,
                         ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ─── HEADER ────────────────────────────
+                            _buildHeader(context, vm),
+                            const SizedBox(height: AppTheme.spacing24),
 
-                        // ─── 5 KPI CARDS ──────────────────────
-                        _buildKpiRow(context, vm, isDesktop, isTablet),
-                        const SizedBox(height: AppTheme.spacing24),
-
-                        // ─── ZONE PRINCIPALE 2 COLONNES ───────
-                        if (isDesktop)
-                          _buildDesktopMainSection(context, vm)
-                        else
-                          _buildMobileMainSection(context, vm),
-
-                        const SizedBox(height: AppTheme.spacing20),
-
-                        // ─── 4 MINI-CARDS (infos complémentaires) ─
-                        _buildMiniCardsRow(context, vm, isDesktop, isTablet),
-
-                        const SizedBox(height: AppTheme.spacing20),
-
-                        // ─── ACTIVITÉ RÉCENTE ──────────────────
-                        if (vm.recentActivity.isNotEmpty) ...[
-                          const SectionHeader(
-                            title: 'Activité Récente',
-                            icon: Icons.history_rounded,
-                          ),
-                          SizedBox(
-                            height: 160,
-                            child: RecentActivityList(
-                              items: vm.recentActivity,
-                              onTap: (item) {
-                                if (item is Facture) {
-                                  context.push('/app/ajout_facture/${item.id}',
-                                      extra: item);
-                                } else if (item is Devis) {
-                                  context.push('/app/ajout_devis/${item.id}',
-                                      extra: item);
+                            // ─── ALERTES (retard + archivage) ──────
+                            AlertesBanner(
+                              relances: vm.relances,
+                              facturesArchivables: vm.showArchivageSuggestion
+                                  ? vm.facturesArchivables
+                                  : [],
+                              onRelancesTap: () => context.go('/app/relances'),
+                              onArchiverTap: () async {
+                                final count = vm.facturesArchivables.length;
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Archiver les factures'),
+                                    content: Text(
+                                      'Archiver $count facture${count > 1 ? 's' : ''} soldée${count > 1 ? 's' : ''} depuis plus d\'un an ?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text('Annuler'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text('Archiver'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await vm.archiverToutesLesFactures();
                                 }
                               },
+                              onDismissArchivage: vm.dismissArchivageSuggestion,
                             ),
-                          ),
-                        ],
-                        const SizedBox(height: AppTheme.spacing16),
-                      ],
-                    ),
-                  ),
-                ));
+
+                            // ─── 5 KPI CARDS ──────────────────────
+                            _buildKpiRow(context, vm, isDesktop, isTablet),
+                            const SizedBox(height: AppTheme.spacing24),
+
+                            // ─── ZONE PRINCIPALE 2 COLONNES ───────
+                            if (isDesktop)
+                              _buildDesktopMainSection(context, vm)
+                            else
+                              _buildMobileMainSection(context, vm),
+
+                            const SizedBox(height: AppTheme.spacing20),
+
+                            // ─── 4 MINI-CARDS (infos complémentaires) ─
+                            _buildMiniCardsRow(
+                                context, vm, isDesktop, isTablet),
+
+                            const SizedBox(height: AppTheme.spacing20),
+
+                            // ─── ACTIVITÉ RÉCENTE ──────────────────
+                            if (vm.recentActivity.isNotEmpty) ...[
+                              const SectionHeader(
+                                title: 'Activité Récente',
+                                icon: Icons.history_rounded,
+                              ),
+                              SizedBox(
+                                height: 160,
+                                child: RecentActivityList(
+                                  items: vm.recentActivity,
+                                  onTap: (item) {
+                                    if (item is Facture) {
+                                      context.push(
+                                          '/app/ajout_facture/${item.id}',
+                                          extra: item);
+                                    } else if (item is Devis) {
+                                      context.push(
+                                          '/app/ajout_devis/${item.id}',
+                                          extra: item);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: AppTheme.spacing16),
+                          ],
+                        ),
+                      ),
+                    ));
               },
             ),
           ),
@@ -254,7 +268,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
         crossAxisCount: cols,
         crossAxisSpacing: spacing,
         mainAxisSpacing: spacing,
-        mainAxisExtent: 135,
+        mainAxisExtent: 160,
       ),
       itemCount: kpiCards.length,
       itemBuilder: (context, i) {

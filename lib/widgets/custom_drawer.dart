@@ -8,7 +8,7 @@ import '../viewmodels/entreprise_viewmodel.dart';
 import '../config/theme.dart';
 
 /// Sidebar Aurora 2030 — Navigation glassmorphique avec lueur contextuelle.
-class CustomDrawer extends StatelessWidget {
+class CustomDrawer extends StatefulWidget {
   final int selectedIndex;
   final bool isPermanent;
 
@@ -18,8 +18,21 @@ class CustomDrawer extends StatelessWidget {
     this.isPermanent = false,
   });
 
+  @override
+  State<CustomDrawer> createState() => _CustomDrawerState();
+}
+
+class _CustomDrawerState extends State<CustomDrawer> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _navigate(BuildContext context, String routeName) {
-    if (!isPermanent) Navigator.pop(context);
+    if (!widget.isPermanent) Navigator.pop(context);
     context.go(routeName);
   }
 
@@ -43,8 +56,9 @@ class CustomDrawer extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: isPermanent ? 0.88 : 0.92),
-              border: isPermanent
+              color: Colors.white
+                  .withValues(alpha: widget.isPermanent ? 0.88 : 0.92),
+              border: widget.isPermanent
                   ? Border(
                       right: BorderSide(
                         color: AppTheme.divider.withValues(alpha: 0.3),
@@ -61,9 +75,10 @@ class CustomDrawer extends StatelessWidget {
                 // ── NAVIGATION ──
                 Expanded(
                   child: Scrollbar(
-                    thumbVisibility: isPermanent,
+                    controller: _scrollController,
+                    thumbVisibility: widget.isPermanent,
                     child: ListView(
-                      primary: true,
+                      controller: _scrollController,
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 8),
                       children: [
@@ -297,7 +312,7 @@ class CustomDrawer extends StatelessWidget {
     IconData icon,
     String route,
   ) {
-    final isSelected = selectedIndex == index;
+    final isSelected = widget.selectedIndex == index;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       child: Material(
@@ -308,7 +323,7 @@ class CustomDrawer extends StatelessWidget {
           hoverColor: AppTheme.primary.withValues(alpha: 0.04),
           onTap: () {
             if (isSelected) {
-              if (!isPermanent) Navigator.pop(context);
+              if (!widget.isPermanent) Navigator.pop(context);
             } else {
               _navigate(context, route);
             }

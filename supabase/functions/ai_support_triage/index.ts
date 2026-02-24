@@ -7,6 +7,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 const SYSTEM_PROMPT = `Tu es l'assistant de support IA officiel de CraftOS (SaaS PWA de gestion ultime pour les artisans du BTP - ex-ERP Artisan 3.0).
 L'artisan te pose une question (via un ticket SAV). Ton but est de lui apporter une réponse ultra-précise, utile et polie basée sur ton encyclopédie du logiciel.
 
@@ -29,17 +34,26 @@ L'artisan te pose une question (via un ticket SAV). Ton but est de lui apporter 
 Sinon, résous son problème toi-même en te basant sur CraftOS.`;
 
 Deno.serve(async (req) => {
+    // Handling CORS preflight request
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders });
+    }
+
     try {
         const payload = await req.json();
 
-        // Check if it's a webhook payload from Supabase
-        const record = payload.record;
+        // Check if it's a webhook payload from Supabase, or direct payload
+        const record = payload.record || payload;
         if (!record || !record.id || !record.description) {
-            return new Response("Invalid payload", { status: 400 });
+            return new Response("Invalid payload", { status: 400, headers: corsHeaders });
         }
 
         const ticketId = record.id;
-        const userQuery = `Sujet: ${record.subject}\nDescription: ${record.description}`;
+        const userQuery = `Sujet: ${record.subject || "N/A"}\nDescription: ${record.description}`;
+
+        if (!GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY environment variable is not set");
+        }
 
         // Call Gemini API
         const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -76,7 +90,7 @@ Deno.serve(async (req) => {
             // Leave ticket open for God Mode
             console.log(`Ticket ${ticketId} escalated to human.`);
             return new Response(JSON.stringify({ status: "escalated" }), {
-                headers: { "Content-Type": "application/json" }
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -93,14 +107,14 @@ Deno.serve(async (req) => {
 
         console.log(`Ticket ${ticketId} auto-resolved by AI.`);
         return new Response(JSON.stringify({ status: "resolved" }), {
-            headers: { "Content-Type": "application/json" }
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
 
     } catch (error) {
         console.error("Error in ai_support_triage:", error);
         return new Response(JSON.stringify({ error: (error as Error).message }), {
             status: 500,
-            headers: { "Content-Type": "application/json" }
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
     }
 });

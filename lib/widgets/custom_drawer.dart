@@ -63,6 +63,7 @@ class CustomDrawer extends StatelessWidget {
                   child: Scrollbar(
                     thumbVisibility: isPermanent,
                     child: ListView(
+                      primary: true,
                       padding: const EdgeInsets.symmetric(
                           vertical: 12, horizontal: 8),
                       children: [

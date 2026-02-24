@@ -84,6 +84,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
 
                 return Scrollbar(
                     child: SingleChildScrollView(
+                  primary: true,
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(

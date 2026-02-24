@@ -1,6 +1,6 @@
 # Architecture — CraftOS
 
-> Document de référence architecture — Dernière mise à jour : 23/02/2026
+> Document de référence architecture — Dernière mise à jour : 24/02/2026
 
 ---
 
@@ -45,7 +45,7 @@
 |---|---|---|
 | Framework | Flutter (Web + Windows) | 3.38.9 |
 | Langage | Dart | 3.10.8 |
-| Backend | Supabase (PostgreSQL 15+) | Cloud |
+| Backend | Supabase (PostgreSQL 17) | Cloud |
 | Auth | Supabase Auth | Email/Password |
 | State Management | Provider + ChangeNotifier | 6.x |
 | Routing | GoRouter | 14.x |
@@ -346,11 +346,11 @@ Tous les modèles suivent le pattern : `fromMap()` + `toMap()` + `copyWith()`.
 | `ProfilEntreprise` | `entreprises` | Config entreprise | SIRET, enums (type, régime, caisse), PDF theme, TVA, mentions légales |
 | `Depense` | `depenses` | Dépense déductible | `montant` (Decimal), `categorie`, `dateDepense`, `estDeductible` |
 | `Article` | `articles` | Bibliothèque prix | `designation`, `prixUnitaire` (Decimal), `unite`, `typeActivite` |
-| `CotisationUrssaf` | `cotisations` | Cotisation URSSAF | `montantCa`, `tauxCotisation`, `montantCotisation` (Decimal) |
+| `CotisationUrssaf` | `urssaf_configs` | Config URSSAF+fiscal (70+ colonnes) | Taux cotisations, plafonds CA, seuils TVA 2026, taux IS, ACRE |
 | `ConfigCharges` | — (local) | Config charges sociales | Taux par type d'activité, impôt libératoire |
-| `Chiffrage` | — (local + DB) | Ligne chiffrage + progress | TypeChiffrage (materiel/mainDoeuvre), linkedLigneDevisId, estAchete, avancementMo, prixVenteInterne, `valeurRealisee`, `avancementPourcent` |
-| `Planning` | `events` | Événement calendrier | `titre`, `dateDebut`, `dateFin`, `clientId` |
-| `Shopping` | `shopping_items` | Item liste courses | `nom`, `quantite`, `prix`, `isChecked` |
+| `Chiffrage` | `lignes_chiffrages` | Ligne chiffrage interne | TypeChiffrage (materiel/mainDoeuvre), linkedLigneDevisId, estAchete, avancementMo, prixVenteInterne, `valeurRealisee`, `avancementPourcent` |
+| `Planning` | `plannings` | Événement calendrier | `titre`, `dateDebut`, `dateFin`, `clientId` |
+| `Shopping` | `courses` | Item liste courses | `designation`, `quantite`, `prixUnitaire`, `estAchete` |
 | `FactureRecurrente` | `factures_recurrentes` | Facture récurrente | `frequence` (FrequenceRecurrence), `prochaineEmission`, `estActive`, `nbFacturesGenerees`, `totalHt/Tva/Ttc`, `devise`, `remiseTaux` |
 | `LigneFactureRecurrente` | `lignes_facture_recurrente` | Ligne facture récurrente | `description`, `quantite`, `prixUnitaire`, `totalLigne`, `tauxTva`, `typeActivite` |
 | `TempsActivite` | `temps_activites` | Suivi du temps | `dureeMinutes`, `tauxHoraire`, `montant` (Decimal), `projet`, `estFacturable`, `estFacture`, `dureeFormatee` |
@@ -407,21 +407,23 @@ class FactureRepository extends DocumentRepository implements IFactureRepository
 
 | Repository | Interface | Tables | Hérite de |
 |---|---|---|---|
-| `FactureRepository` | `IFactureRepository` | factures, lignes_facture, paiements | `DocumentRepository` |
-| `DevisRepository` | `IDevisRepository` | devis, lignes_devis | `DocumentRepository` |
-| `ClientRepository` | `IClientRepository` | clients | `BaseRepository` |
-| `DashboardRepository` | `IDashboardRepository` | factures, devis, depenses, clients | `BaseRepository` |
-| `EntrepriseRepository` | `IEntrepriseRepository` | entreprises | `BaseRepository` |
-| `DepenseRepository` | `IDepenseRepository` | depenses | `BaseRepository` |
-| `UrssafRepository` | `IUrssafRepository` | cotisations | `BaseRepository` |
-| `ArticleRepository` | `IArticleRepository` | articles | `BaseRepository` |
-| `AuthRepository` | `IAuthRepository` | auth.users | `BaseRepository` |
-| `GlobalSearchRepository` | `IGlobalSearchRepository` | toutes tables | `BaseRepository` |
-| `PlanningRepository` | `IPlanningRepository` | events | `BaseRepository` |
-| `ShoppingRepository` | `IShoppingRepository` | shopping_items | `BaseRepository` |
-| `FactureRecurrenteRepository` | `IFactureRecurrenteRepository` | factures_recurrentes, lignes_facture_recurrente | `BaseRepository` |
-| `TempsRepository` | `ITempsRepository` | temps_activites | `BaseRepository` |
-| `RappelRepository` | `IRappelRepository` | rappels | `BaseRepository` |
+| `FactureRepository` | `IFactureRepository` | `factures`, `lignes_factures`, `paiements` | `DocumentRepository` |
+| `DevisRepository` | `IDevisRepository` | `devis`, `lignes_devis` | `DocumentRepository` |
+| `ClientRepository` | `IClientRepository` | `clients` | `BaseRepository` |
+| `DashboardRepository` | `IDashboardRepository` | `factures`, `devis`, `depenses`, `clients` | `BaseRepository` |
+| `EntrepriseRepository` | `IEntrepriseRepository` | `entreprises` | `BaseRepository` |
+| `DepenseRepository` | `IDepenseRepository` | `depenses` | `BaseRepository` |
+| `UrssafRepository` | `IUrssafRepository` | `urssaf_configs` | `BaseRepository` |
+| `ArticleRepository` | `IArticleRepository` | `articles` | `BaseRepository` |
+| `AuthRepository` | `IAuthRepository` | `auth.users` | `BaseRepository` |
+| `GlobalSearchRepository` | `IGlobalSearchRepository` | toutes tables publiques | `BaseRepository` |
+| `PlanningRepository` | `IPlanningRepository` | `plannings` | `BaseRepository` |
+| `ShoppingRepository` | `IShoppingRepository` | `courses` | `BaseRepository` |
+| `FactureRecurrenteRepository` | `IFactureRecurrenteRepository` | `factures_recurrentes`, `lignes_facture_recurrente` | `BaseRepository` |
+| `TempsRepository` | `ITempsRepository` | `temps_activites` | `BaseRepository` |
+| `RappelRepository` | `IRappelRepository` | `rappels` | `BaseRepository` |
+| `ChiffrageRepository` | `IChiffrageRepository` | `lignes_chiffrages` | `BaseRepository` |
+| `SupportRepository` | `ISupportRepository` | `support_tickets` | `BaseRepository` |
 
 ---
 

@@ -75,7 +75,7 @@ L'application couvre 8 modules fondamentaux allant de l'acquisition web au CRM i
 |-----------|-------------|---------|
 | **Frontend** | Flutter Web | 3.38.9 (Stable) |
 | **Langage** | Dart | 3.10.8 |
-| **Backend / BDD** | Supabase (PostgreSQL 15+) | ^2.3.0 |
+| **Backend / BDD** | Supabase (PostgreSQL 17) | ^2.3.0 |
 | **State Management** | Provider | ^6.1.1 |
 | **Navigation** | GoRouter | ^13.0.0 |
 | **Calculs financiers** | Decimal | ^2.3.0 |
@@ -291,10 +291,15 @@ Tous les modèles implémentent `fromMap()`, `toMap()` et `copyWith()`.
 | `FactureRecurrente` | `factures_recurrentes` | Facture récurrente (fréquence, prochaine émission, lignes, toggle actif) |
 | `TempsActivite` | `temps_activites` | Suivi temps (durée, taux horaire, montant calculé, projet) |
 | `Rappel` | `rappels` | Rappel/échéance (7 types, 4 priorités, jours restants, récurrence) |
-| `PlanningEvent` | `planning_events` | Événement calendrier (manuel ou auto-généré) |
-| `ShoppingItem` | `shopping_items` | Article liste de courses |
-| `UrssafDeclaration` | `urssaf_declarations` | Déclaration trimestrielle URSSAF |
-| `UrssafConfig` | `urssaf_configs` | Configuration charges + seuils TVA versionnés |
+| `PlanningEvent` | `plannings` | Événement calendrier (manuel ou auto-généré) |
+| `ShoppingItem` | `courses` | Article liste de courses |
+| `UrssafConfig` | `urssaf_configs` | Configuration taux URSSAF, seuils TVA 2026 (70+ colonnes) |
+| `RendezVous` | `rendez_vous` | Rendez-vous / agenda |
+| `Photo` | `photos` | Photos chantier liées aux clients |
+| `CompteurDocument` | `compteurs_documents` | Compteurs séquentiels numérotation (anti-fraude) |
+| `AuditLog` | `audit_logs` | Journal d'audit automatique (INSERT/UPDATE/DELETE) |
+| `SupportTicket` | `support_tickets` | Ticket SAV client |
+| `CrashLog` | `crash_logs` | Log d'erreurs applicatives |
 
 ### Règles Decimal
 
@@ -506,4 +511,4 @@ flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```
 
-*CraftOS — Dernière mise à jour : 23 février 2026*
+*CraftOS — Dernière mise à jour : 24 février 2026*

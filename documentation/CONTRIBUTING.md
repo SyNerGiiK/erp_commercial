@@ -1,6 +1,6 @@
 # Guide du contributeur — ERP Artisan
 
-> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 20/02/2026
+> Conventions, règles de développement et processus de contribution — Dernière mise à jour : 24/02/2026
 
 ---
 
@@ -106,9 +106,9 @@ Views → ViewModels (Provider/ChangeNotifier) → Repositories (Interface + Imp
 | Méthodes / variables | `camelCase` | `loadFactures()` |
 | Constantes | `camelCase` | `seuilFranchiseService` |
 | Enums | `PascalCase` + `camelCase` values | `TypeEntreprise.microEntrepreneurService` |
-| Tables SQL | `snake_case` pluriel | `factures`, `lignes_facture` |
+| Tables SQL | `snake_case` pluriel | `factures`, `lignes_factures`, `clients` |
 | Colonnes SQL | `snake_case` | `total_ht`, `client_id` |
-| FK SQL | `singulier_id` | `client_id`, `facture_id` |
+| FK SQL | `singulier_id` | `client_id`, `facture_id`, `devis_id` |
 
 ### Structure des fichiers
 

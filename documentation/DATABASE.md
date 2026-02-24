@@ -1,677 +1,840 @@
-# Base de données — CraftOS
+# DATABASE.md — Base de Données ERP Artisan
 
-> Documentation complète du schéma Supabase (PostgreSQL 15+) — Dernière mise à jour : 23/02/2026
-
----
-
-## Table des matières
-
-1. [Vue d'ensemble](#vue-densemble)
-2. [Schéma des tables](#schéma-des-tables)
-3. [Tables détaillées](#tables-détaillées)
-4. [Relations (Foreign Keys)](#relations-foreign-keys)
-5. [Triggers](#triggers)
-6. [Row Level Security (RLS)](#row-level-security-rls)
-7. [Index](#index)
-8. [Historique des migrations](#historique-des-migrations)
+> **Projet Supabase cible :** `Cap'Tech Project` — ID : `phfkebkwlhqizgizqlhu` — Région : `eu-west-1`
+> **Moteur :** PostgreSQL 17 | **Dernière mise à jour :** 2026-02-24
 
 ---
 
-## Vue d'ensemble
+## 1. Principes Généraux
 
-Le schéma utilise **Supabase** (PostgreSQL 15+) avec :
+| Règle | Description |
+|-------|-------------|
+| **Nommage tables** | Pluriel (`clients`, `factures`, `devis`) |
+| **Nommage clés étrangères** | Singulier + `_id` (ex: `client_id`, `devis_id`) |
+| **Clés primaires** | `UUID` généré par `gen_random_uuid()` |
+| **Dates** | `TIMESTAMPTZ` (avec timezone) |
+| **Montants** | `NUMERIC` (jamais `DOUBLE PRECISION`) |
+| **Soft-delete** | `deleted_at TIMESTAMPTZ NULL` (pas de DELETE réel sur les docs) |
+| **Isolation utilisateur** | Toutes les tables ont un `user_id UUID` référençant `auth.users.id` |
+| **RLS** | Row Level Security activé sur **toutes** les tables |
 
-- **RLS activé** sur toutes les tables — chaque utilisateur ne voit que ses propres données
-- **Triggers d'audit** automatiques sur factures, devis, paiements (loi anti-fraude 2018)
-- **Trigger d'immutabilité** bloquant la modification des factures validées
-- **Triggers updated_at** sur toutes les tables principales
-- **UUIDs** comme clés primaires (`gen_random_uuid()`)
-- **TIMESTAMPTZ** pour toutes les dates
+---
+
+## 2. Schéma des Tables
+
+### 2.1 `entreprises`
+Profil de l'entreprise artisane (1 ligne par utilisateur).
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `nom_entreprise` | TEXT | NON | — | Raison sociale |
+| `nom_gerant` | TEXT | NON | — | Nom du gérant |
+| `adresse` | TEXT | OUI | — | Adresse postale |
+| `code_postal` | TEXT | OUI | — | Code postal |
+| `ville` | TEXT | OUI | — | Ville |
+| `siret` | TEXT | OUI | — | Numéro SIRET |
+| `email` | TEXT | OUI | — | Email de l'entreprise |
+| `telephone` | TEXT | OUI | — | Téléphone |
+| `iban` | TEXT | OUI | — | IBAN bancaire |
+| `bic` | TEXT | OUI | — | BIC bancaire |
+| `frequence_cotisation` | TEXT | OUI | `'mois'` | Fréquence cotisation URSSAF |
+| `logo_url` | TEXT | OUI | — | URL du logo (base64 stocké en DB) |
+| `signature_url` | TEXT | OUI | — | URL de la signature |
+| `mentions_legales` | TEXT | OUI | — | Mentions légales PDF |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `type_entreprise` | VARCHAR | OUI | `'microEntrepreneurServiceBIC'` | Type légal de l'entreprise |
+| `regime_fiscal` | VARCHAR | OUI | — | Régime fiscal (`micro`, `reelSimplifie`, `reelNormal`) |
+| `caisse_retraite` | VARCHAR | OUI | `'ssi'` | Caisse de retraite (`ssi`, `cipav`, `carmf`…) |
+| `tva_applicable` | BOOLEAN | OUI | `false` | TVA facturée (SASU/SARL) |
+| `numero_tva_intra` | TEXT | OUI | — | N° TVA intracommunautaire |
+| `pdf_theme` | VARCHAR | OUI | `'moderne'` | Thème PDF (`moderne`, `classique`, `minimal`) |
+| `mode_facturation` | VARCHAR | OUI | `'global'` | Mode facturation (`global`, `detaille`) |
+| `mode_discret` | BOOLEAN | OUI | `false` | Masquer résumé financier dans éditeur |
+| `taux_penalites_retard` | NUMERIC | OUI | `11.62` | Taux pénalités retard (%) |
+| `escompte_applicable` | BOOLEAN | OUI | `false` | Escompte applicable |
+| `est_immatricule` | BOOLEAN | OUI | `false` | Entreprise immatriculée |
+| `pdf_primary_color` | TEXT | OUI | — | Couleur primaire hex (ex: `1E5572`) pour PDF |
+| `logo_footer_url` | TEXT | OUI | — | URL logo footer (certifications) |
+| `is_admin` | BOOLEAN | OUI | `false` | Accès administrateur plateforme |
+
+**Index :** `idx_entreprises_type` sur `type_entreprise`
+
+---
+
+### 2.2 `clients`
+Carnet d'adresses des clients.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `nom_complet` | TEXT | NON | — | Nom complet (CHECK: non vide) |
+| `type_client` | TEXT | OUI | `'particulier'` | `particulier` ou `professionnel` |
+| `siret` | TEXT | OUI | — | SIRET (si professionnel) |
+| `tva_intra` | TEXT | OUI | — | N° TVA intracommunautaire |
+| `nom_contact` | TEXT | OUI | — | Contact principal |
+| `adresse` | TEXT | OUI | — | Adresse |
+| `code_postal` | TEXT | OUI | — | Code postal |
+| `ville` | TEXT | OUI | — | Ville |
+| `telephone` | TEXT | OUI | — | Téléphone |
+| `email` | TEXT | OUI | — | Email (CHECK: format valide) |
+| `notes_privees` | TEXT | OUI | — | Notes internes (non visibles client) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Dernière modification |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :**
+- `idx_clients_not_deleted` sur `(user_id)` WHERE `deleted_at IS NULL`
+- `idx_clients_deleted` sur `(user_id, deleted_at)` WHERE `deleted_at IS NOT NULL`
+
+**Contraintes CHECK :**
+- `nom_complet` : `char_length(TRIM(nom_complet)) > 0`
+- `email` : format email valide ou NULL/vide
+
+---
+
+### 2.3 `articles`
+Catalogue d'articles/prestations réutilisables.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `designation` | TEXT | NON | — | Libellé (CHECK: non vide) |
+| `prix_unitaire` | NUMERIC | OUI | `0` | Prix de vente unitaire HT |
+| `prix_achat` | NUMERIC | OUI | `0` | Prix d'achat unitaire |
+| `type_activite` | TEXT | OUI | `'service'` | `service` ou `vente` |
+| `unite` | TEXT | OUI | `'u'` | Unité de mesure |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `taux_tva` | NUMERIC | OUI | `20` | Taux TVA (%) |
+
+---
+
+### 2.4 `devis`
+Devis commerciaux / Chantiers.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `numero_devis` | TEXT | NON | — | Numéro formaté (ex: `D-2026-0001`) |
+| `objet` | TEXT | OUI | — | Objet / titre du devis |
+| `client_id` | UUID | OUI | — | FK → `clients.id` |
+| `date_emission` | TIMESTAMPTZ | OUI | `now()` | Date d'émission |
+| `date_validite` | TIMESTAMPTZ | OUI | — | Date d'expiration |
+| `statut` | TEXT | OUI | `'brouillon'` | `brouillon`, `envoye`, `signe`, `refuse`, `expire`, `annule` |
+| `est_transforme` | BOOLEAN | OUI | `false` | Converti en facture |
+| `est_archive` | BOOLEAN | OUI | `false` | Archivé |
+| `total_ht` | NUMERIC | OUI | `0` | Total HT (≥ 0) |
+| `remise_taux` | NUMERIC | OUI | `0` | Remise globale (%) |
+| `acompte_montant` | NUMERIC | OUI | `0` | Montant d'acompte demandé |
+| `acompte_percentage` | NUMERIC | OUI | `30` | Pourcentage acompte (%) |
+| `conditions_reglement` | TEXT | OUI | — | Conditions de paiement |
+| `notes_publiques` | TEXT | OUI | — | Notes visibles dans le PDF |
+| `notes_privees` | TEXT | OUI | — | Notes internes |
+| `signature_url` | TEXT | OUI | — | URL signature client |
+| `date_signature` | TIMESTAMPTZ | OUI | — | Date de la signature |
+| `tva_intra` | TEXT | OUI | — | N° TVA intracommunautaire |
+| `total_tva` | NUMERIC | OUI | `0` | Total TVA |
+| `total_ttc` | NUMERIC | OUI | `0` | Total TTC |
+| `devis_parent_id` | UUID | OUI | — | FK auto-référente → `devis.id` (avenants) |
+| `devise` | TEXT | OUI | `'EUR'` | Code devise ISO |
+| `taux_change` | NUMERIC | OUI | — | Taux de change si devise ≠ EUR |
+| `type_chiffrage` | TEXT | OUI | `'standard'` | `standard` ou `progress_billing` |
+| `avancement_global` | NUMERIC | OUI | — | % avancement global (Progress Billing) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Dernière modification (trigger) |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :**
+- `idx_devis_not_deleted` sur `(user_id)` WHERE `deleted_at IS NULL`
+- `idx_devis_deleted` sur `(user_id, deleted_at)` WHERE `deleted_at IS NOT NULL`
+- `idx_devis_numero_unique` UNIQUE sur `(user_id, numero_devis)` WHERE `numero_devis` non vide et ≠ `'brouillon'`
+
+**Contraintes CHECK :** `statut` ∈ {`brouillon`, `envoye`, `signe`, `refuse`, `expire`, `annule`}
+
+---
+
+### 2.5 `lignes_devis`
+Lignes de détail des devis.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `devis_id` | UUID | NON | — | FK → `devis.id` |
+| `description` | TEXT | OUI | — | Désignation de la ligne |
+| `quantite` | NUMERIC | OUI | `1` | Quantité |
+| `prix_unitaire` | NUMERIC | OUI | `0` | Prix unitaire HT |
+| `total_ligne` | NUMERIC | OUI | `0` | Total HT de la ligne |
+| `type_activite` | TEXT | OUI | `'service'` | `service` ou `vente` |
+| `unite` | TEXT | OUI | `'u'` | Unité |
+| `type` | TEXT | OUI | `'article'` | `article`, `titre`, `sous_total`, `saut_page` |
+| `est_gras` | BOOLEAN | OUI | `false` | Formatage gras |
+| `est_italique` | BOOLEAN | OUI | `false` | Formatage italique |
+| `est_souligne` | BOOLEAN | OUI | `false` | Formatage souligné |
+| `ordre` | INTEGER | OUI | `0` | Ordre d'affichage |
+| `taux_tva` | NUMERIC | OUI | `0` | Taux TVA de la ligne (%) |
+
+---
+
+### 2.6 `factures`
+Factures, avoirs, acomptes, situations.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `numero_facture` | TEXT | NON | — | Numéro formaté (ex: `F-2026-0001`) |
+| `objet` | TEXT | OUI | — | Objet / titre |
+| `client_id` | UUID | OUI | — | FK → `clients.id` |
+| `date_emission` | TIMESTAMPTZ | OUI | `now()` | Date d'émission |
+| `date_echeance` | TIMESTAMPTZ | OUI | — | Date d'échéance paiement |
+| `date_validation` | TIMESTAMPTZ | OUI | — | Date de validation (remplie par trigger) |
+| `statut` | TEXT | OUI | `'brouillon'` | Statut opérationnel |
+| `statut_juridique` | TEXT | OUI | `'brouillon'` | Statut légal : `brouillon`, `validee`, `payee` |
+| `est_archive` | BOOLEAN | OUI | `false` | Archivée |
+| `total_ht` | NUMERIC | OUI | `0` | Total HT (≥ 0) |
+| `remise_taux` | NUMERIC | OUI | `0` | Remise globale (%) |
+| `acompte_deja_regle` | NUMERIC | OUI | `0` | Acompte déjà encaissé |
+| `conditions_reglement` | TEXT | OUI | — | Conditions de paiement |
+| `notes_publiques` | TEXT | OUI | — | Notes visibles PDF |
+| `notes_privees` | TEXT | OUI | — | Notes internes |
+| `devis_source_id` | UUID | OUI | — | Devis d'origine |
+| `parent_document_id` | UUID | OUI | — | Document parent (situation → facture globale) |
+| `facture_source_id` | UUID | OUI | — | FK auto-référente → `factures.id` (pour avoir) |
+| `type_document` | TEXT | OUI | `'facture'` | Type de document |
+| `type` | TEXT | OUI | `'standard'` | `standard`, `acompte`, `situation`, `solde`, `avoir` |
+| `avancement_global` | NUMERIC | OUI | — | % avancement (facture de situation) |
+| `tva_intra` | TEXT | OUI | — | N° TVA intracommunautaire |
+| `total_tva` | NUMERIC | OUI | `0` | Total TVA |
+| `total_ttc` | NUMERIC | OUI | `0` | Total TTC |
+| `signature_url` | TEXT | OUI | — | URL signature |
+| `date_signature` | TIMESTAMPTZ | OUI | — | Date signature |
+| `numero_bon_commande` | TEXT | OUI | — | N° bon de commande client |
+| `motif_avoir` | TEXT | OUI | — | Motif de l'avoir |
+| `devise` | TEXT | OUI | `'EUR'` | Code devise ISO |
+| `taux_change` | NUMERIC | OUI | — | Taux de change |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :**
+- `idx_factures_not_deleted` sur `(user_id)` WHERE `deleted_at IS NULL`
+- `idx_factures_deleted` sur `(user_id, deleted_at)` WHERE `deleted_at IS NOT NULL`
+- `idx_factures_numero_unique` UNIQUE sur `(user_id, numero_facture)` WHERE non vide et ≠ `'brouillon'`
+
+> ⚠️ **Immuabilité légale** : Une facture avec `statut_juridique != 'brouillon'` ne peut plus voir ses données financières modifiées (trigger `trg_protect_validated_facture`). Créer un avoir pour toute rectification.
+
+---
+
+### 2.7 `lignes_factures`
+Lignes de détail des factures.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `facture_id` | UUID | NON | — | FK → `factures.id` |
+| `description` | TEXT | OUI | — | Désignation |
+| `quantite` | NUMERIC | OUI | `1` | Quantité |
+| `prix_unitaire` | NUMERIC | OUI | `0` | Prix unitaire HT |
+| `total_ligne` | NUMERIC | OUI | `0` | Total HT ligne |
+| `type_activite` | TEXT | OUI | `'service'` | `service` ou `vente` |
+| `unite` | TEXT | OUI | `'u'` | Unité |
+| `type` | TEXT | OUI | `'article'` | Type de ligne |
+| `est_gras` | BOOLEAN | OUI | `false` | Gras |
+| `est_italique` | BOOLEAN | OUI | `false` | Italique |
+| `est_souligne` | BOOLEAN | OUI | `false` | Souligné |
+| `ordre` | INTEGER | OUI | `0` | Ordre d'affichage |
+| `avancement` | NUMERIC | OUI | `100` | % avancement ligne (factures de situation) |
+| `taux_tva` | NUMERIC | OUI | `0` | Taux TVA (%) |
+
+---
+
+### 2.8 `lignes_chiffrages`
+Chiffrage interne (Progress Billing) — coûts réels liés aux lignes devis/factures.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `devis_id` | UUID | OUI | — | FK → `devis.id` |
+| `facture_id` | UUID | OUI | — | FK → `factures.id` |
+| `designation` | TEXT | OUI | — | Désignation interne |
+| `quantite` | NUMERIC | OUI | `1` | Quantité |
+| `unite` | TEXT | OUI | `'u'` | Unité |
+| `prix_achat_unitaire` | NUMERIC | OUI | `0` | Prix d'achat unitaire |
+| `prix_vente_unitaire` | NUMERIC | OUI | `0` | Prix de vente unitaire |
+| `prix_vente_interne` | NUMERIC | NON | `0` | Part du prix de vente public allouée (Valeur Réalisée) |
+| `type_chiffrage` | TEXT | NON | `'materiel'` | `materiel` ou `main_doeuvre` (CHECK) |
+| `est_achete` | BOOLEAN | NON | `false` | Matériel réceptionné (binaire 0/100%) |
+| `avancement_mo` | NUMERIC | NON | `0` | % avancement MO (0–100, CHECK) |
+| `linked_ligne_devis_id` | UUID | OUI | — | FK → `lignes_devis.id` (groupement Progress Billing) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+
+**Index :**
+- `idx_lignes_chiffrages_devis_id` WHERE `devis_id IS NOT NULL`
+- `idx_lignes_chiffrages_linked_ligne_devis` WHERE `linked_ligne_devis_id IS NOT NULL`
+- `idx_lignes_chiffrages_type` sur `type_chiffrage`
+
+---
+
+### 2.9 `paiements`
+Encaissements sur les factures.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `facture_id` | UUID | NON | — | FK → `factures.id` |
+| `montant` | NUMERIC | OUI | `0` | Montant (CHECK: ≠ 0) |
+| `date_paiement` | TIMESTAMPTZ | OUI | `now()` | Date de paiement |
+| `type_paiement` | TEXT | OUI | `'virement'` | `virement`, `cheque`, `especes`, `cb`… |
+| `commentaire` | TEXT | OUI | — | Commentaire libre |
+| `is_acompte` | BOOLEAN | OUI | `false` | Est un acompte |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+
+---
+
+### 2.10 `factures_recurrentes`
+Modèles de facturation automatique récurrente.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `client_id` | UUID | NON | — | FK → `clients.id` |
+| `objet` | TEXT | NON | — | Objet de la facturation |
+| `frequence` | TEXT | NON | — | `hebdomadaire`, `mensuelle`, `trimestrielle`, `annuelle` (CHECK) |
+| `prochaine_emission` | DATE | NON | — | Prochaine date d'émission |
+| `jour_emission` | INTEGER | OUI | `1` | Jour du mois (1–28) (CHECK) |
+| `est_active` | BOOLEAN | OUI | `true` | Modèle actif |
+| `total_ht` | NUMERIC | NON | `0` | Total HT du modèle |
+| `total_tva` | NUMERIC | NON | `0` | Total TVA |
+| `total_ttc` | NUMERIC | NON | `0` | Total TTC |
+| `remise_taux` | NUMERIC | NON | `0` | Remise (%) |
+| `conditions_reglement` | TEXT | OUI | `''` | Conditions de paiement |
+| `notes_publiques` | TEXT | OUI | — | Notes PDF |
+| `devise` | TEXT | OUI | `'EUR'` | Devise |
+| `nb_factures_generees` | INTEGER | OUI | `0` | Compteur de factures émises |
+| `derniere_generation` | TIMESTAMPTZ | OUI | — | Date dernière génération |
+| `date_fin` | DATE | OUI | — | Date de fin du modèle récurrent |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :**
+- `idx_factures_recurrentes_user` WHERE `deleted_at IS NULL`
+- `idx_factures_recurrentes_next` sur `prochaine_emission` WHERE `est_active = true AND deleted_at IS NULL`
+
+---
+
+### 2.11 `lignes_facture_recurrente`
+Lignes des modèles de factures récurrentes.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `facture_recurrente_id` | UUID | NON | — | FK → `factures_recurrentes.id` |
+| `description` | TEXT | NON | — | Désignation |
+| `quantite` | NUMERIC | NON | `1` | Quantité |
+| `prix_unitaire` | NUMERIC | NON | `0` | Prix unitaire HT |
+| `total_ligne` | NUMERIC | NON | `0` | Total ligne |
+| `type_activite` | TEXT | OUI | `'service'` | `service` ou `vente` |
+| `unite` | TEXT | OUI | `'u'` | Unité |
+| `taux_tva` | NUMERIC | OUI | `20` | Taux TVA (%) |
+| `ordre` | INTEGER | OUI | `0` | Ordre d'affichage |
+
+---
+
+### 2.12 `depenses`
+Dépenses et charges professionnelles.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `titre` | TEXT | NON | — | Intitulé de la dépense |
+| `montant` | NUMERIC | OUI | `0` | Montant |
+| `date` | TIMESTAMPTZ | OUI | `now()` | Date de la dépense |
+| `categorie` | TEXT | OUI | `'autre'` | Catégorie |
+| `fournisseur` | TEXT | OUI | — | Fournisseur |
+| `devis_id` | UUID | OUI | — | FK obsolète (utiliser `chantier_devis_id`) |
+| `chantier_devis_id` | UUID | OUI | — | FK → `devis.id` (calcul marge réelle) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :** `idx_depenses_chantier_devis_id` WHERE `chantier_devis_id IS NOT NULL`
+
+---
+
+### 2.13 `temps_activites`
+Suivi du temps passé par projet/client.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `client_id` | UUID | OUI | — | FK → `clients.id` |
+| `projet` | TEXT | OUI | `''` | Nom du projet/chantier |
+| `description` | TEXT | NON | — | Description de l'activité |
+| `date_activite` | DATE | NON | — | Date de l'activité |
+| `duree_minutes` | INTEGER | NON | `0` | Durée en minutes |
+| `taux_horaire` | NUMERIC | OUI | `0` | Taux horaire (€/h) |
+| `est_facturable` | BOOLEAN | OUI | `true` | Temps facturable |
+| `est_facture` | BOOLEAN | OUI | `false` | Temps déjà facturé |
+| `facture_id` | UUID | OUI | — | FK → `factures.id` (si facturé) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+| `deleted_at` | TIMESTAMPTZ | OUI | NULL | Soft-delete |
+
+**Index :**
+- `idx_temps_activites_user` WHERE `deleted_at IS NULL`
+- `idx_temps_activites_client` sur `(client_id, date_activite)` WHERE `deleted_at IS NULL`
+- `idx_temps_activites_facturable` WHERE `est_facturable = true AND est_facture = false AND deleted_at IS NULL`
+
+---
+
+### 2.14 `rappels`
+Rappels et échéances fiscales/admin.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `titre` | TEXT | NON | — | Titre du rappel |
+| `description` | TEXT | OUI | — | Description |
+| `type_rappel` | TEXT | NON | — | `urssaf`, `cfe`, `tva`, `impots`, `custom`, `echeance_facture`, `fin_devis` |
+| `date_echeance` | DATE | NON | — | Date d'échéance |
+| `est_complete` | BOOLEAN | OUI | `false` | Rappel complété |
+| `est_recurrent` | BOOLEAN | OUI | `false` | Rappel récurrent |
+| `frequence_recurrence` | TEXT | OUI | — | `mensuelle`, `trimestrielle`, `annuelle` |
+| `priorite` | TEXT | OUI | `'normale'` | `basse`, `normale`, `haute`, `urgente` |
+| `entite_liee_id` | UUID | OUI | — | ID de l'entité liée (facture, devis…) |
+| `entite_liee_type` | TEXT | OUI | — | Type de l'entité liée |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+
+**Contraintes CHECK :**
+- `type_rappel` ∈ {`urssaf`, `cfe`, `tva`, `impots`, `custom`, `echeance_facture`, `fin_devis`}
+- `priorite` ∈ {`basse`, `normale`, `haute`, `urgente`}
+
+**Index :**
+- `idx_rappels_user` WHERE `est_complete = false`
+- `idx_rappels_echeance` sur `date_echeance` WHERE `est_complete = false`
+
+---
+
+### 2.15 `plannings`
+Planning des chantiers et interventions.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `titre` | TEXT | NON | — | Titre de l'événement |
+| `date_debut` | TIMESTAMPTZ | NON | — | Début |
+| `date_fin` | TIMESTAMPTZ | NON | — | Fin |
+| `client_id` | UUID | OUI | — | FK → `clients.id` |
+| `type` | TEXT | OUI | `'chantier'` | Type d'événement |
+| `description` | TEXT | OUI | — | Description |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+
+---
+
+### 2.16 `rendez_vous`
+Agenda / rendez-vous.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | `auth.uid()` | FK → `auth.users.id` |
+| `client_id` | UUID | OUI | — | FK → `clients.id` |
+| `titre` | TEXT | NON | — | Titre |
+| `date_debut` | TIMESTAMPTZ | NON | — | Début |
+| `date_fin` | TIMESTAMPTZ | NON | — | Fin |
+| `description` | TEXT | OUI | — | Description |
+| `est_fait` | BOOLEAN | OUI | `false` | Marqué comme effectué |
+
+---
+
+### 2.17 `courses`
+Liste de courses / achats à faire.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `designation` | TEXT | NON | — | Désignation |
+| `quantite` | NUMERIC | OUI | `1` | Quantité |
+| `prix_unitaire` | NUMERIC | OUI | `0` | Prix unitaire |
+| `unite` | TEXT | OUI | `'u'` | Unité |
+| `est_achete` | BOOLEAN | OUI | `false` | Acheté |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+
+---
+
+### 2.18 `photos`
+Photos liées aux clients/chantiers.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `client_id` | UUID | NON | — | FK → `clients.id` |
+| `url` | TEXT | NON | — | URL de la photo (Storage Supabase) |
+| `commentaire` | TEXT | OUI | — | Commentaire |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+
+---
+
+### 2.19 `compteurs_documents`
+Compteurs séquentiels pour la numérotation des documents.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `annee` | INTEGER | NON | — | Année du compteur |
+| `type_document` | TEXT | NON | — | `facture`, `devis`, `avoir`, `acompte` |
+| `valeur_actuelle` | INTEGER | OUI | `0` | Valeur courante (incrémentée atomiquement) |
+
+**Contrainte UNIQUE :** `(user_id, annee, type_document)` — garantit l'unicité du compteur par type et par an.
+
+> ⚠️ **Critique :** Ce compteur est mis à jour atomiquement par `get_next_document_number_strict()` via verrou de ligne (`SELECT FOR UPDATE`). Ne jamais incrémenter manuellement.
+
+---
+
+### 2.20 `audit_logs`
+Journal d'audit automatique (INSERT/UPDATE/DELETE sur les documents).
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `table_name` | TEXT | NON | — | Table concernée |
+| `record_id` | UUID | NON | — | ID de l'enregistrement |
+| `action` | TEXT | NON | — | `INSERT`, `UPDATE`, `DELETE`, `VALIDATE`, `PAYMENT`, `EMAIL_SENT`, `RELANCE_SENT` |
+| `old_data` | JSONB | OUI | — | État avant modification |
+| `new_data` | JSONB | OUI | — | État après modification |
+| `metadata` | JSONB | OUI | `{}` | Métadonnées additionnelles |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Timestamp de l'événement |
+
+**Index :**
+- `idx_audit_logs_user` sur `user_id`
+- `idx_audit_logs_record` sur `record_id`
+- `idx_audit_logs_table` sur `table_name`
+- `idx_audit_logs_created` sur `created_at DESC`
+
+---
+
+### 2.21 `urssaf_configs`
+Configuration des taux de cotisations URSSAF/fiscaux (1 ligne par utilisateur).
+
+Table très large (~70 colonnes) stockant tous les taux légaux 2026 :
+
+**Taux micro-entrepreneur :**
+- `taux_micro_vente` (12.3%), `taux_micro_prestation_bic` (21.2%), `taux_micro_prestation_bnc` (25.6%)
+- `taux_micro_liberal_cipav` (23.2%), `taux_micro_meubles` (6.0%)
+- `accre_active` BOOLEAN — ACRE active ; `accre_annee` INTEGER (1–4)
+- Plafonds CA : `plafond_ca_micro_vente` (188 700€), `plafond_ca_micro_service` (77 700€)
+- Seuils TVA : `seuil_tva_micro_vente` (91 900€), `seuil_tva_micro_service` (36 800€)
+
+**Taux TNS (gérant majoritaire SARL/EURL) :**
+- Maladie (0–6.5%), Retraite base (17.75%), Retraite complémentaire (7–8%)
+- CSG/CRDS (9.7%), Allocations familiales (0–3.1%)
+
+**Taux salarié (SASU/SAS) :**
+- Vieillesse salariale/patronale, Retraite complémentaire AGIRC-ARRCO
+- Maladie patronale (7% si ≤2.5 SMIC, 13% sinon)
+- Réduction Fillon
+
+**IS et dividendes :**
+- `taux_is_reduit` (15% jusqu'à 42 500€), `taux_is_normal` (25%)
+- `taux_csg_dividendes` (10.6% — hausse 2026), `taux_pfu_total` (30%)
+
+**Index :**
+- `idx_urssaf_configs_acre` sur `accre_active`
+- `idx_urssaf_configs_type` sur `type_entreprise`
+
+---
+
+### 2.22 `support_tickets`
+Tickets de support utilisateur.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` |
+| `subject` | TEXT | NON | — | Sujet |
+| `description` | TEXT | NON | — | Description du problème |
+| `status` | TEXT | NON | `'open'` | `open`, `closed` |
+| `ai_resolution` | TEXT | OUI | — | Résolution générée par l'IA |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Modification (trigger) |
+
+---
+
+### 2.23 `crash_logs`
+Logs d'erreurs applicatives côté client.
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `user_id` | UUID | OUI | — | FK → `auth.users.id` |
+| `error_message` | TEXT | NON | — | Message d'erreur |
+| `stack_trace` | TEXT | OUI | — | Stack trace |
+| `app_version` | VARCHAR | OUI | — | Version de l'app |
+| `device_info` | JSONB | OUI | — | Infos navigateur/OS |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `resolved` | BOOLEAN | OUI | `false` | Résolu |
+
+---
+
+## 3. Triggers SQL
+
+### 3.1 Triggers `updated_at` (BEFORE UPDATE)
+
+| Trigger | Table | Fonction |
+|---------|-------|---------|
+| `trg_clients_updated_at` | `clients` | `set_updated_at()` |
+| `trg_devis_updated_at` | `devis` | `set_updated_at()` |
+| `trg_depenses_updated_at` | `depenses` | `set_updated_at()` |
+| `trg_factures_updated_at` | `factures` | `set_updated_at()` |
+| `trg_factures_recurrentes_updated_at` | `factures_recurrentes` | `update_updated_at()` |
+| `trg_lignes_chiffrages_updated_at` | `lignes_chiffrages` | `update_lignes_chiffrages_updated_at()` |
+| `trg_paiements_updated_at` | `paiements` | `set_updated_at()` |
+| `trg_rappels_updated_at` | `rappels` | `update_updated_at()` |
+| `trg_support_tickets_updated_at` | `support_tickets` | `set_updated_at()` |
+| `trg_temps_activites_updated_at` | `temps_activites` | `update_updated_at()` |
+
+### 3.2 Triggers de numérotation (BEFORE INSERT/UPDATE)
+
+| Trigger | Table | Déclenchement | Logique |
+|---------|-------|---------------|---------|
+| `trg_generate_devis_number` | `devis` | Passage statut → `envoye`/`signe` | Appelle `get_next_document_number_strict()` |
+| `trg_generate_facture_number` | `factures` | Passage `statut_juridique` → `validee`/`payee` | Appelle `get_next_document_number_strict()`, positionne `date_validation` |
+
+### 3.3 Triggers de protection (BEFORE UPDATE/DELETE)
+
+| Trigger | Table | Protection |
+|---------|-------|-----------|
+| `trig_prevent_devis_mod` | `devis` | Bloque modif financière sur devis non-brouillon ; bloque DELETE si statut ∉ {`brouillon`, `expire`} |
+| `trg_protect_validated_facture` | `factures` | Bloque modif champs financiers si `statut_juridique != 'brouillon'` |
+| `trig_prevent_facture_mod` | `factures` | Redondance ; même logique que `trg_protect_validated_facture` |
+
+> 💡 Le soft-delete (`updated deleted_at`) est toujours autorisé par tous les triggers de protection.
+
+### 3.4 Triggers d'audit (AFTER INSERT/UPDATE/DELETE)
+
+| Trigger | Table | Fonction |
+|---------|-------|---------|
+| `trg_audit_devis` | `devis` | `audit_devis_changes()` → `audit_logs` |
+| `trg_audit_factures` | `factures` | `audit_facture_changes()` → `audit_logs` |
+| `trg_audit_factures_recurrentes` | `factures_recurrentes` | `audit_factures_recurrentes()` → `audit_logs` |
+| `trg_audit_paiements` | `paiements` | `audit_paiement_changes()` → `audit_logs` (récupère `user_id` depuis la facture parente) |
+
+---
+
+## 4. Fonctions PostgreSQL
+
+### 4.1 `get_next_document_number_strict(p_user_id, p_type_doc, p_annee) → TEXT`
+Génère le prochain numéro de document avec **verrou de ligne atomique**.
+
+**Préfixes :**
+| Type | Préfixe | Exemple |
+|------|---------|---------|
+| `facture` | `F` | `F-2026-0001` |
+| `devis` | `D` | `D-2026-0042` |
+| `avoir` | `AV` | `AV-2026-0003` |
+| `acompte` | `FA` | `FA-2026-0001` |
+
+**Format :** `PREFIXE-ANNEE-NNNN` (4 chiffres avec padding zéro)
+
+**Séquence :**
+1. `UPDATE compteurs_documents SET valeur_actuelle = valeur_actuelle + 1 RETURNING valeur_actuelle` (atomique via verrou)
+2. Si aucun compteur : INSERT avec valeur 1
+3. Retourne le numéro formaté
+
+### 4.2 `get_next_document_number(p_type_document, p_annee) → TEXT` *(Legacy)*
+Ancienne version utilisant `auth.uid()`. Conservée pour compatibilité.  
+**Préférer `get_next_document_number_strict()`** pour toute nouvelle implémentation.
+
+### 4.3 `expire_devis_depasses() → INTEGER`
+Met à jour les devis expirés (`statut = 'expire'` si `statut = 'envoye'` ET `date_validite < NOW()`).  
+Retourne le nombre de devis mis à jour. À appeler périodiquement (cron).
+
+### 4.4 `purge_old_deleted_items() → VOID`
+Purge physique des enregistrements soft-deletés depuis plus de **30 jours** :
+1. Supprime les paiements orphelins, lignes_factures, lignes_chiffrages d'abord (FK)
+2. Supprime les factures, devis, clients, dépenses soft-deletés
+
+### 4.5 `get_db_metrics() → JSON`
+Retourne la taille de la base de données courante en bytes et MB.
+
+### 4.6 Fonctions de trigger d'audit
+- `audit_devis_changes()` — Log INSERT/UPDATE/DELETE sur `devis`
+- `audit_facture_changes()` — Log INSERT/UPDATE/DELETE sur `factures`  
+- `audit_factures_recurrentes()` — Log INSERT/UPDATE/DELETE sur `factures_recurrentes`
+- `audit_paiement_changes()` — Log INSERT/UPDATE/DELETE sur `paiements` (résout le `user_id` depuis la facture parente)
+
+### 4.7 Fonctions de trigger de protection
+- `protect_validated_facture()` — Bloque les modifications financières sur factures validées
+- `prevent_facture_modification()` — Bloque DELETE sur factures non-brouillon, protège les champs fiscaux
+- `prevent_devis_modification()` — Bloque DELETE sur devis validés, protège les champs financiers
+- `prevent_invoice_line_modification()` — Bloque toute modification de `lignes_factures` si facture validée
+- `prevent_invoice_modification()` — Double protection sur modification des factures
+
+### 4.8 Fonctions de trigger `updated_at`
+- `set_updated_at()` — `NEW.updated_at = NOW(); RETURN NEW;`
+- `update_updated_at()` — Identique, alias
+- `update_lignes_chiffrages_updated_at()` — Identique, spécifique à `lignes_chiffrages`
+
+---
+
+## 5. Row Level Security (RLS)
+
+> Toutes les tables ont RLS activé. Le principe est **`auth.uid() = user_id`** pour les tables avec `user_id` direct.
+
+### Policies par table
+
+| Table | Policy | Opération | Condition |
+|-------|--------|-----------|-----------|
+| `articles` | Users can all on own articles | ALL | `auth.uid() = user_id` |
+| `clients` | Users can all on own clients | ALL | `auth.uid() = user_id` |
+| `compteurs_documents` | Users can manage their counters | ALL | `auth.uid() = user_id` |
+| `courses` | Users can all on own courses | ALL | `auth.uid() = user_id` |
+| `depenses` | Users can all on own depenses | ALL | `auth.uid() = user_id` |
+| `devis` | Users can all on own devis | ALL | `auth.uid() = user_id` |
+| `entreprises` | Users can all on own entreprise | ALL | `auth.uid() = user_id` |
+| `factures` | Users can all on own factures | ALL | `auth.uid() = user_id` |
+| `factures_recurrentes` | Users manage own | ALL | `auth.uid() = user_id` |
+| `lignes_chiffrages` | Users can all on own chiffrage | ALL | `auth.uid() = user_id` |
+| `lignes_devis` | Users can all on own lignes_devis | ALL | Via `EXISTS (SELECT 1 FROM devis WHERE devis.id = lignes_devis.devis_id AND devis.user_id = auth.uid())` |
+| `lignes_factures` | Users can all on own lignes_factures | ALL | Via `EXISTS (SELECT 1 FROM factures WHERE factures.id = lignes_factures.facture_id AND factures.user_id = auth.uid())` |
+| `lignes_facture_recurrente` | Users can manage via parent | ALL | Via `facture_recurrente_id IN (SELECT id FROM factures_recurrentes WHERE user_id = auth.uid())` |
+| `paiements` | Users can all on own paiements | ALL | Via `EXISTS (SELECT 1 FROM factures WHERE factures.id = paiements.facture_id AND factures.user_id = auth.uid())` |
+| `photos` | Users can all/insert/select/delete | ALL | `auth.uid() = user_id` |
+| `plannings` | Users can all on own plannings | ALL | `auth.uid() = user_id` |
+| `rappels` | Users manage own rappels | ALL | `auth.uid() = user_id` |
+| `rendez_vous` | Users can all on own rdv | ALL | `auth.uid() = user_id` |
+| `temps_activites` | Users manage own | ALL | `auth.uid() = user_id` |
+| `urssaf_configs` | Users can all on own urssaf | ALL | `auth.uid() = user_id` |
+
+**Policies spéciales :**
+| Table | Policy | Opération | Condition |
+|-------|--------|-----------|-----------|
+| `audit_logs` | Users can read own audit logs | SELECT | `auth.uid() = user_id` |
+| `audit_logs` | Users can insert audit logs | INSERT | `auth.uid() = user_id OR user_id IS NULL` |
+| `crash_logs` | Users can insert their own | INSERT | `auth.uid() = user_id OR user_id IS NULL` |
+| `crash_logs` | Admins can view all crash logs | SELECT | `auth.uid() IN (SELECT id FROM entreprises WHERE is_admin = true)` |
+| `support_tickets` | Users can view/insert/update own | SELECT/INSERT/UPDATE | `auth.uid() = user_id` |
+
+---
+
+## 6. Relations (Diagramme simplifié)
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   clients    │────<│   factures   │────<│  paiements   │
-└──────────────┘     └──────────────┘     └──────────────┘
-       │                    │ 1:N
-       │              ┌─────┴──────┐
-       │              │lignes_facture│
-       │              └────────────┘
-       │
-       ├────<┌──────────────┐
-       │     │    devis     │
-       │     └──────────────┘
-       │          │ 1:N
-       │    ┌─────┴──────┐
-       │    │ lignes_devis │
-       │    └────────────┘
-       │          │ 1:N
-       │    ┌─────┴──────────┐
-       │    │lignes_chiffrages│── (progress billing)
-       │    └────────────────┘
-       │
-       ├────<┌────────────────────┐     ┌────────────────────────┐
-       │     │factures_recurrentes│──<│lignes_facture_recurrente│
-       │     └────────────────────┘     └────────────────────────┘
-       │
-       ├────<┌───────────────┐
-       │     │temps_activites│
-       │     └───────────────┘
-       │
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  entreprises │     │  audit_logs  │     │   depenses   │
-└──────────────┘     └──────────────┘     └──────────────┘
-
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   articles   │     │  cotisations │     │    events    │
-└──────────────┘     └──────────────┘     └──────────────┘
-
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   rappels    │     │support_tickets│    │  crash_logs  │
-└──────────────┘     └──────────────┘     └──────────────┘
+auth.users
+    │
+    ├── entreprises (1:1)
+    ├── urssaf_configs (1:1)
+    │
+    ├── clients (1:N)
+    │   ├── devis (N:1)
+    │   ├── factures (N:1)
+    │   ├── factures_recurrentes (N:1)
+    │   ├── temps_activites (N:1)
+    │   ├── plannings (N:1)
+    │   └── photos (N:1)
+    │
+    ├── devis (1:N)
+    │   ├── lignes_devis (1:N)
+    │   ├── lignes_chiffrages (1:N)
+    │   ├── devis [auto-référence : avenants] (1:N)
+    │   └── depenses [via chantier_devis_id] (1:N)
+    │
+    ├── factures (1:N)
+    │   ├── lignes_factures (1:N)
+    │   ├── lignes_chiffrages (1:N)
+    │   ├── paiements (1:N)
+    │   ├── factures [auto-référence : avoirs] (1:N)
+    │   └── temps_activites [si facturé] (1:N)
+    │
+    ├── factures_recurrentes (1:N)
+    │   └── lignes_facture_recurrente (1:N)
+    │
+    ├── compteurs_documents (1:N par type/année)
+    ├── audit_logs (1:N)
+    ├── rappels (1:N)
+    ├── courses (1:N)
+    ├── rendez_vous (1:N)
+    ├── depenses (1:N)
+    ├── articles (1:N)
+    ├── support_tickets (1:N)
+    └── crash_logs (1:N)
 ```
 
 ---
 
-## Schéma des tables
+## 7. Règles CRUD — BaseRepository
 
-| Table | Description | RLS | Audit | updated_at |
-|---|---|---|---|---|
-| `clients` | Clients (particuliers et professionnels) | ✅ | ❌ | ✅ |
-| `factures` | Factures et avoirs | ✅ | ✅ | ✅ |
-| `lignes_facture` | Lignes de facture | ✅ | ❌ | ❌ |
-| `paiements` | Paiements sur factures | ✅ | ✅ | ✅ |
-| `devis` | Devis commerciaux | ✅ | ✅ | ✅ |
-| `lignes_devis` | Lignes de devis (inclus `is_ai_estimated`) | ✅ | ❌ | ❌ |
-| `entreprises` | Profil entreprise (1 par user) | ✅ | ❌ | ❌ |
-| `depenses` | Dépenses comptables | ✅ | ❌ | ✅ |
-| `articles` | Bibliothèque de prix | ✅ | ❌ | ❌ |
-| `cotisations` | Cotisations URSSAF | ✅ | ❌ | ❌ |
-| `audit_logs` | Piste d'audit (loi anti-fraude) | ✅ | — | ❌ |
-| `events` | Planning / calendrier | ✅ | ❌ | ❌ |
-| `shopping_items` | Liste courses / matériaux | ✅ | ❌ | ❌ |
-| `factures_recurrentes` | Factures récurrentes | ✅ | ❌ | ✅ |
-| `lignes_facture_recurrente` | Lignes facture récurrente | ✅ | ❌ | ❌ |
-| `temps_activites` | Suivi du temps | ✅ | ❌ | ✅ |
-| `rappels` | Rappels & échéances | ✅ | ❌ | ✅ |
-| `lignes_chiffrages` | Chiffrage détaillé (progress billing) | ✅ | ❌ | ✅ |
-| `support_tickets` | Tickets SAV I.A. (Module 1) | ✅ | ❌ | ✅ |
-| `crash_logs` | Journal des erreurs God Mode | ✅ | ❌ | ❌ |
+Toute opération passe par `BaseRepository` en Flutter :
 
----
+```dart
+// prepareForInsert : ajoute user_id depuis auth.uid(), retire 'id'
+Map<String, dynamic> prepareForInsert(Map<String, dynamic> data) {
+  data['user_id'] = supabase.auth.currentUser!.id;
+  data.remove('id');
+  return data;
+}
 
-## Tables détaillées
-
-### clients
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `nom_complet` | `TEXT` | NOT NULL | — | Raison sociale ou nom |
-| `type_client` | `TEXT` | NOT NULL | `'particulier'` | `'particulier'` ou `'professionnel'` |
-| `nom_contact` | `TEXT` | NULL | — | Contact principal (si pro) |
-| `siret` | `TEXT` | NULL | — | SIRET (14 chiffres) |
-| `tva_intra` | `TEXT` | NULL | — | N° TVA intracommunautaire |
-| `adresse` | `TEXT` | NOT NULL | — | Adresse postale |
-| `code_postal` | `TEXT` | NOT NULL | — | Code postal |
-| `ville` | `TEXT` | NOT NULL | — | Ville |
-| `telephone` | `TEXT` | NOT NULL | — | Téléphone |
-| `email` | `TEXT` | NOT NULL | — | Email |
-| `notes_privees` | `TEXT` | NULL | — | Notes internes |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Date de création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière mise à jour |
-
-### factures
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `numero_facture` | `TEXT` | NOT NULL | — | FA-YYYY-NNNN (trigger SQL) |
-| `objet` | `TEXT` | NOT NULL | — | Objet de la facture |
-| `client_id` | `UUID` | NOT NULL | — | FK → clients.id |
-| `devis_source_id` | `UUID` | NULL | — | FK → devis.id (si transformation) |
-| `facture_source_id` | `UUID` | NULL | — | FK → factures.id (pour avoir) |
-| `parent_document_id` | `UUID` | NULL | — | Lien parent (avoir → facture) |
-| `type_document` | `TEXT` | NOT NULL | `'facture'` | `'facture'` ou `'avoir'` |
-| `date_emission` | `TIMESTAMPTZ` | NOT NULL | — | Date d'émission |
-| `date_echeance` | `TIMESTAMPTZ` | NOT NULL | — | Date d'échéance |
-| `date_validation` | `TIMESTAMPTZ` | NULL | — | Date de validation |
-| `statut` | `TEXT` | NOT NULL | `'brouillon'` | Statut workflow |
-| `statut_juridique` | `TEXT` | NOT NULL | `'brouillon'` | Protégé par trigger immutabilité |
-| `est_archive` | `BOOLEAN` | NOT NULL | `false` | Archivée |
-| `type` | `TEXT` | NOT NULL | `'standard'` | standard, acompte, situation, solde |
-| `avancement_global` | `NUMERIC` | NULL | — | % avancement (situation) |
-| `signature_url` | `TEXT` | NULL | — | URL signature Storage |
-| `date_signature` | `TIMESTAMPTZ` | NULL | — | Date de signature |
-| `total_ht` | `NUMERIC` | NOT NULL | `0` | Total HT |
-| `total_tva` | `NUMERIC` | NOT NULL | `0` | Total TVA |
-| `total_ttc` | `NUMERIC` | NOT NULL | `0` | Total TTC |
-| `remise_taux` | `NUMERIC` | NOT NULL | `0` | Taux de remise (%) |
-| `acompte_deja_regle` | `NUMERIC` | NOT NULL | `0` | Acompte déjà réglé |
-| `conditions_reglement` | `TEXT` | NOT NULL | — | Conditions de règlement |
-| `notes_publiques` | `TEXT` | NULL | — | Notes visibles sur le PDF |
-| `tva_intra` | `TEXT` | NULL | — | N° TVA |
-| `numero_bon_commande` | `TEXT` | NULL | — | Référence bon de commande |
-| `motif_avoir` | `TEXT` | NULL | — | Motif de l'avoir |
-| `taux_penalites_retard` | `NUMERIC(5,2)` | NOT NULL | `11.62` | Taux pénalités retard |
-| `escompte_applicable` | `BOOLEAN` | NOT NULL | `false` | Escompte applicable |
-| `mentions_legales` | `TEXT` | NULL | — | Mentions légales complètes |
-| `devise` | `TEXT` | NOT NULL | `'EUR'` | Devise (EUR, USD, GBP, CHF) |
-| `taux_change` | `NUMERIC` | NOT NULL | `1.0` | Taux de change vs EUR |
-| `notes_privees` | `TEXT` | NULL | — | Notes internes (non imprimées) |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Date de création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière mise à jour |
-
-**Statuts workflow :** `brouillon` → `validee` → `envoyee` → `payee`
-
-### entreprises
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `nom_entreprise` | `TEXT` | NOT NULL | — | Raison sociale de l'utilisateur |
-| `is_admin` | `BOOLEAN` | NULL | `false` | Activer God Mode |
-
-### support_tickets
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `subject` | `TEXT` | NOT NULL | — | Sujet du ticket |
-| `description` | `TEXT` | NOT NULL | — | Description détaillée |
-| `status` | `TEXT` | NOT NULL | `'open'` | Statut du ticket (open, closed) |
-| `ai_resolution` | `TEXT` | NULL | — | Réponse générée par l'IA |
-| `created_at` | `TIMESTAMPTZ` | NULL | `now()` | Date de création |
-| `updated_at` | `TIMESTAMPTZ` | NULL | `now()` | Dernière mise à jour |
-
-### crash_logs
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NULL | — | FK → auth.users |
-| `error_message` | `TEXT` | NOT NULL | — | Message d'erreur |
-| `stack_trace` | `TEXT` | NULL | — | Trace de l'erreur |
-| `app_version` | `VARCHAR(50)` | NULL | — | Version de l'app |
-| `device_info` | `JSONB` | NULL | — | Infos de l'appareil |
-| `created_at` | `TIMESTAMPTZ` | NULL | `now()` | Date du crash |
-| `resolved` | `BOOLEAN` | NULL | `false` | Crash résolu |
-
-### lignes_facture
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `facture_id` | `UUID` | NOT NULL | — | FK → factures.id |
-| `description` | `TEXT` | NOT NULL | — | Description |
-| `quantite` | `NUMERIC` | NOT NULL | — | Quantité |
-| `prix_unitaire` | `NUMERIC` | NOT NULL | — | Prix unitaire HT |
-| `total_ligne` | `NUMERIC` | NOT NULL | — | Total HT ligne |
-| `type_activite` | `TEXT` | NOT NULL | `'service'` | service ou commerce |
-| `unite` | `TEXT` | NOT NULL | `'u'` | Unité |
-| `type` | `TEXT` | NOT NULL | `'article'` | article, titre, sous-titre |
-| `ordre` | `INTEGER` | NOT NULL | `0` | Position dans la facture |
-| `est_gras` | `BOOLEAN` | NOT NULL | `false` | Mise en forme |
-| `est_italique` | `BOOLEAN` | NOT NULL | `false` | Mise en forme |
-| `est_souligne` | `BOOLEAN` | NOT NULL | `false` | Mise en forme |
-| `avancement` | `NUMERIC` | NOT NULL | `100` | % avancement (situation) |
-| `taux_tva` | `NUMERIC` | NOT NULL | `20.0` | Taux TVA applicable |
-
-### paiements
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `facture_id` | `UUID` | NOT NULL | — | FK → factures.id |
-| `montant` | `NUMERIC` | NOT NULL | — | Montant du paiement |
-| `date_paiement` | `TIMESTAMPTZ` | NOT NULL | — | Date du paiement |
-| `type_paiement` | `TEXT` | NOT NULL | `'virement'` | virement, cheque, especes, cb |
-| `commentaire` | `TEXT` | NULL | `''` | Note libre |
-| `is_acompte` | `BOOLEAN` | NOT NULL | `false` | Paiement d'acompte |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Date de création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière mise à jour |
-
-### devis
-
-Structure très similaire à `factures`, avec colonnes spécifiques :
-
-| Colonne spécifique | Type | Description |
-|---|---|---|
-| `numero_devis` | `TEXT` | DV-YYYY-NNNN (auto) |
-| `duree_validite` | `INTEGER` | Durée validité en jours |
-| `taux_acompte` | `NUMERIC` | Taux d'acompte demandé |
-| `devis_parent_id` | `UUID` | FK → devis.id (avenants) |
-| `version_avenant` | `INTEGER` | N° version avenant |
-| `devise` | `TEXT` | Devise (EUR, USD, GBP, CHF) — défaut EUR |
-| `taux_change` | `NUMERIC` | Taux de change vs EUR — défaut 1.0 |
-| `notes_privees` | `TEXT` | Notes internes (non imprimées) |
-
-**Statuts :** `brouillon`, `envoye`, `accepte`, `refuse`, `expire`, `facture`, `avenant`
-
-### lignes_devis
-
-Structure identique à `lignes_facture` avec `devis_id` au lieu de `facture_id`, incluant un champ additionnel :
-- `is_ai_estimated` (BOOLEAN, DEFAULT false) : Indique si la ligne de chiffrage/devis a été estimée par le module d'IA (AITISE TON DEVIS).
-
-### entreprises
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users (unique) |
-| `nom_entreprise` | `TEXT` | NOT NULL | — | Raison sociale |
-| `nom_gerant` | `TEXT` | NOT NULL | — | Nom du gérant |
-| `adresse` | `TEXT` | NOT NULL | — | Adresse |
-| `code_postal` | `TEXT` | NOT NULL | — | Code postal |
-| `ville` | `TEXT` | NOT NULL | — | Ville |
-| `siret` | `TEXT` | NOT NULL | — | SIRET (14 chiffres) |
-| `email` | `TEXT` | NOT NULL | — | Email professionnel |
-| `telephone` | `TEXT` | NULL | — | Téléphone |
-| `iban` | `TEXT` | NULL | — | IBAN |
-| `bic` | `TEXT` | NULL | — | BIC |
-| `frequence_cotisation` | `TEXT` | NOT NULL | `'mensuelle'` | mensuelle ou trimestrielle |
-| `logo_url` | `TEXT` | NULL | — | URL logo |
-| `signature_url` | `TEXT` | NULL | — | URL signature défaut |
-| `mentions_legales` | `TEXT` | NULL | — | Mentions personnalisées |
-| `type_entreprise` | `TEXT` | NOT NULL | `'micro_entrepreneur_service'` | Type juridique |
-| `regime_fiscal` | `TEXT` | NULL | — | Régime fiscal |
-| `caisse_retraite` | `TEXT` | NOT NULL | `'ssi'` | SSI, CIPAV, etc. |
-| `tva_applicable` | `BOOLEAN` | NOT NULL | `false` | TVA applicable |
-| `numero_tva_intra` | `TEXT` | NULL | — | N° TVA intracommunautaire |
-| `pdf_theme` | `TEXT` | NOT NULL | `'moderne'` | classique, moderne, minimaliste |
-| `pdf_primary_color` | `TEXT` | NULL | — | Hex sans # (ex: 1E5572) |
-| `logo_footer_url` | `TEXT` | NULL | — | Logo footer (certifications) |
-| `mode_facturation` | `TEXT` | NOT NULL | `'global'` | global ou detaille |
-| `mode_discret` | `BOOLEAN` | NOT NULL | `false` | Cacher le CA dans l'UI |
-| `taux_penalites_retard` | `NUMERIC(5,2)` | NOT NULL | `11.62` | Taux pénalités par défaut |
-| `escompte_applicable` | `BOOLEAN` | NOT NULL | `false` | Escompte par défaut |
-| `est_immatricule` | `BOOLEAN` | NOT NULL | `false` | Si false → "Dispensé d'immatriculation" |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Date de création |
-
-### depenses
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `description` | `TEXT` | NOT NULL | — | Description |
-| `montant` | `NUMERIC` | NOT NULL | — | Montant TTC |
-| `date_depense` | `TIMESTAMPTZ` | NOT NULL | — | Date |
-| `categorie` | `TEXT` | NOT NULL | — | Catégorie |
-| `est_deductible` | `BOOLEAN` | NOT NULL | `false` | Déductible |
-| `justificatif` | `TEXT` | NULL | — | URL justificatif |
-| `chantier_devis_id` | `UUID` | NULL | — | FK → devis.id (liaison chantier pour marge réelle cockpit) |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Mise à jour |
-
-### audit_logs
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `table_name` | `TEXT` | NOT NULL | — | Table concernée |
-| `record_id` | `UUID` | NOT NULL | — | ID de l'enregistrement |
-| `action` | `TEXT` | NOT NULL | — | Type d'action (voir CHECK) |
-| `old_data` | `JSONB` | NULL | — | Données avant modification |
-| `new_data` | `JSONB` | NULL | — | Données après modification |
-| `metadata` | `JSONB` | NULL | `'{}'` | Métadonnées additionnelles |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Horodatage |
-
-**CHECK constraint :** `action IN ('INSERT', 'UPDATE', 'DELETE', 'VALIDATE', 'PAYMENT', 'EMAIL_SENT', 'RELANCE_SENT')`
-
-### articles
-
-| Colonne | Type | Description |
-|---|---|---|
-| `id` | `UUID` | PK |
-| `user_id` | `UUID` | FK → auth.users |
-| `designation` | `TEXT` | Nom de l'article |
-| `prix_unitaire` | `NUMERIC` | Prix unitaire HT |
-| `unite` | `TEXT` | Unité (u, h, m², etc.) |
-| `type_activite` | `TEXT` | service ou commerce |
-| `categorie` | `TEXT` | Catégorie |
-| `description` | `TEXT` | Description longue |
-
-### cotisations
-
-| Colonne | Type | Description |
-|---|---|---|
-| `id` | `UUID` | PK |
-| `user_id` | `UUID` | FK → auth.users |
-| `periode` | `TEXT` | Période (ex: "2026-T1") |
-| `montant_ca` | `NUMERIC` | CA de la période |
-| `taux_cotisation` | `NUMERIC` | Taux applicable |
-| `montant_cotisation` | `NUMERIC` | Montant calculé |
-| `date_paiement` | `TIMESTAMPTZ` | Date de règlement |
-| `est_paye` | `BOOLEAN` | Cotisation réglée |
-
-### factures_recurrentes
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `client_id` | `UUID` | NOT NULL | — | FK → clients.id |
-| `objet` | `TEXT` | NOT NULL | — | Objet de la facture |
-| `frequence` | `TEXT` | NOT NULL | `'mensuel'` | hebdomadaire, mensuel, trimestriel, annuel |
-| `prochaine_emission` | `TIMESTAMPTZ` | NOT NULL | — | Date prochaine génération |
-| `est_active` | `BOOLEAN` | NOT NULL | `true` | Toggle actif/inactif |
-| `nb_factures_generees` | `INTEGER` | NOT NULL | `0` | Compteur factures générées |
-| `total_ht` | `NUMERIC` | NOT NULL | `0` | Total HT |
-| `total_tva` | `NUMERIC` | NOT NULL | `0` | Total TVA |
-| `total_ttc` | `NUMERIC` | NOT NULL | `0` | Total TTC |
-| `devise` | `TEXT` | NOT NULL | `'EUR'` | Devise |
-| `remise_taux` | `NUMERIC` | NOT NULL | `0` | Taux de remise |
-| `conditions_reglement` | `TEXT` | NOT NULL | `'30 jours'` | Conditions de règlement |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
-
-### lignes_facture_recurrente
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `facture_recurrente_id` | `UUID` | NOT NULL | — | FK → factures_recurrentes.id |
-| `description` | `TEXT` | NOT NULL | — | Description |
-| `quantite` | `NUMERIC` | NOT NULL | — | Quantité |
-| `prix_unitaire` | `NUMERIC` | NOT NULL | — | Prix unitaire HT |
-| `total_ligne` | `NUMERIC` | NOT NULL | — | Total HT ligne |
-| `type_activite` | `TEXT` | NOT NULL | `'service'` | service ou commerce |
-| `taux_tva` | `NUMERIC` | NOT NULL | `20.0` | Taux TVA applicable |
-
-### temps_activites
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `client_id` | `UUID` | NULL | — | FK → clients.id |
-| `projet` | `TEXT` | NOT NULL | — | Nom du projet |
-| `description` | `TEXT` | NULL | — | Description |
-| `date_activite` | `TIMESTAMPTZ` | NOT NULL | — | Date de l'activité |
-| `duree_minutes` | `INTEGER` | NOT NULL | — | Durée en minutes |
-| `taux_horaire` | `NUMERIC` | NOT NULL | — | Taux horaire HT |
-| `est_facturable` | `BOOLEAN` | NOT NULL | `true` | Facturable au client |
-| `est_facture` | `BOOLEAN` | NOT NULL | `false` | Déjà facturé |
-| `facture_id` | `UUID` | NULL | — | FK → factures.id |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
-
-### rappels
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `titre` | `TEXT` | NOT NULL | — | Titre du rappel |
-| `description` | `TEXT` | NULL | — | Description détaillée |
-| `type_rappel` | `TEXT` | NOT NULL | `'autre'` | urssaf, cfe, impots, tva, echeance_facture, echeance_devis, autre |
-| `date_echeance` | `TIMESTAMPTZ` | NOT NULL | — | Date d'échéance |
-| `est_complete` | `BOOLEAN` | NOT NULL | `false` | Complété |
-| `priorite` | `TEXT` | NOT NULL | `'normale'` | basse, normale, haute, urgente |
-| `est_recurrent` | `BOOLEAN` | NOT NULL | `false` | Récurrent |
-| `frequence_recurrence` | `TEXT` | NULL | — | Fréquence si récurrent |
-| `entite_liee_id` | `UUID` | NULL | — | Entité liée (facture, devis) |
-| `entite_liee_type` | `TEXT` | NULL | — | Type entité liée |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
-| `updated_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Dernière MAJ |
-
-### lignes_chiffrages
-
-Table de chiffrage interne avec support **Progress Billing** (suivi d'avancement par type).
-
-| Colonne | Type | Nullable | Défaut | Description |
-|---|---|---|---|---|
-| `id` | `UUID` | NOT NULL | `gen_random_uuid()` | PK |
-| `user_id` | `UUID` | NOT NULL | — | FK → auth.users |
-| `devis_id` | `UUID` | NOT NULL | — | FK → devis.id |
-| `linked_ligne_devis_id` | `UUID` | NULL | — | FK → lignes_devis.id (regroupement par ligne publique) |
-| `designation` | `TEXT` | NOT NULL | — | Désignation du coût |
-| `quantite` | `NUMERIC` | NOT NULL | — | Quantité |
-| `unite` | `TEXT` | NOT NULL | `'u'` | Unité |
-| `prix_unitaire` | `NUMERIC` | NOT NULL | — | Prix d'achat unitaire HT |
-| `total_ligne` | `NUMERIC` | NOT NULL | — | Total HT ligne |
-| `fournisseur` | `TEXT` | NULL | — | Fournisseur |
-| `type_chiffrage` | `TEXT` | NOT NULL | `'materiel'` | `'materiel'` ou `'main_doeuvre'` (CHECK) |
-| `est_achete` | `BOOLEAN` | NOT NULL | `false` | Matériel réceptionné (binaire 0%/100%) |
-| `avancement_mo` | `NUMERIC` | NOT NULL | `0` | Avancement main d'œuvre (0-100, CHECK) |
-| `prix_vente_interne` | `NUMERIC` | NOT NULL | `0` | Part du prix de vente public allouée |
-| `created_at` | `TIMESTAMPTZ` | NOT NULL | `now()` | Création |
-| `updated_at` | `TIMESTAMPTZ` | NULL | `now()` | Dernière MAJ |
-
-**Type chiffrage :**
-- `materiel` : fournitures, achats — avancement binaire via `est_achete` (0% ou 100%)
-- `main_doeuvre` : travail, pose — avancement progressif via `avancement_mo` (slider 0-100%)
-
-**Calcul de la Valeur Réalisée :** `prix_vente_interne × avancement%` (matériel : 0 ou 100, MO : valeur du slider)
-
----
-
-## Relations (Foreign Keys)
-
-```
-auth.users (Supabase Auth)
-  │
-  ├── 1:N → clients.user_id
-  ├── 1:N → factures.user_id
-  ├── 1:N → devis.user_id
-  ├── 1:N → depenses.user_id
-  ├── 1:N → entreprises.user_id (1:1 en pratique)
-  ├── 1:N → articles.user_id
-  ├── 1:N → cotisations.user_id
-  ├── 1:N → audit_logs.user_id
-  ├── 1:N → events.user_id
-  ├── 1:N → shopping_items.user_id
-  ├── 1:N → factures_recurrentes.user_id
-  ├── 1:N → temps_activites.user_id
-  └── 1:N → rappels.user_id
-
-clients
-  ├── 1:N → factures.client_id
-  └── 1:N → devis.client_id
-
-factures
-  ├── 1:N → lignes_facture.facture_id
-  ├── 1:N → paiements.facture_id
-  └── self → factures.facture_source_id (avoirs)
-
-devis
-  ├── 1:N → lignes_devis.devis_id
-  ├── 1:N → lignes_chiffrages.devis_id
-  ├── 1:N → depenses.chantier_devis_id
-  ├── 1:1 → factures.devis_source_id (transformation)
-  └── self → devis.devis_parent_id (avenants)
-
-lignes_devis
-  └── 1:N → lignes_chiffrages.linked_ligne_devis_id (progress billing)
-
-factures_recurrentes
-  └── 1:N → lignes_facture_recurrente.facture_recurrente_id
-
-clients
-  ├── 1:N → factures_recurrentes.client_id
-  └── 1:N → temps_activites.client_id
-
-factures
-  └── 1:N → temps_activites.facture_id
+// prepareForUpdate : retire 'user_id' ET 'id' (RLS bloque sinon)
+Map<String, dynamic> prepareForUpdate(Map<String, dynamic> data) {
+  data.remove('id');
+  data.remove('user_id'); // OBLIGATOIRE sinon RLS bloque
+  return data;
+}
 ```
 
----
-
-## Triggers
-
-### Audit automatique
-
-| Trigger | Table | Event | Fonction | Description |
-|---|---|---|---|---|
-| `trg_audit_factures` | `factures` | AFTER INSERT/UPDATE/DELETE | `audit_facture_changes()` | Log toute modification dans audit_logs |
-| `trg_audit_devis` | `devis` | AFTER INSERT/UPDATE/DELETE | `audit_devis_changes()` | Log toute modification dans audit_logs |
-| `trg_audit_paiements` | `paiements` | AFTER INSERT/UPDATE/DELETE | `audit_paiement_changes()` | Log avec résolution user_id via facture |
-
-**Fonctions :** `SECURITY DEFINER` — s'exécutent avec les droits du propriétaire de la fonction.
-
-### Immutabilité factures validées
-
-| Trigger | Table | Event | Fonction |
-|---|---|---|---|
-| `trg_protect_validated_facture` | `factures` | BEFORE UPDATE | `protect_validated_facture()` |
-
-**Comportement :** Si `statut_juridique != 'brouillon'` et que les champs protégés changent → `RAISE EXCEPTION`.
-
-**Champs protégés :** `total_ht`, `total_tva`, `total_ttc`, `objet`, `client_id`, `remise_taux`, `conditions_reglement`
-
-**Champs modifiables sur facture validée :** `statut`, `est_archive`, `signature_url`, `date_signature` (transitions de workflow)
-
-### Updated_at automatique
-
-| Trigger | Table |
-|---|---|
-| `trg_factures_updated_at` | `factures` |
-| `trg_devis_updated_at` | `devis` |
-| `trg_paiements_updated_at` | `paiements` |
-| `trg_clients_updated_at` | `clients` |
-| `trg_depenses_updated_at` | `depenses` |
-| `trg_factures_recurrentes_updated_at` | `factures_recurrentes` |
-| `trg_temps_activites_updated_at` | `temps_activites` |
-| `trg_rappels_updated_at` | `rappels` |
-| `trg_lignes_chiffrages_updated_at` | `lignes_chiffrages` |
-
-**Fonction commune :** `set_updated_at()` — met `NEW.updated_at = NOW()` avant chaque UPDATE.
+> ⚠️ **Ne jamais tenter de modifier `user_id` en UPDATE.** La policy RLS bloquera systématiquement.
 
 ---
 
-## Row Level Security (RLS)
+## 8. Gestion Soft-Delete et Corbeille
 
-**Principe :** Toutes les tables ont RLS activé. Chaque user ne voit que ses propres données.
+Les tables `clients`, `devis`, `factures`, `depenses`, `temps_activites`, `factures_recurrentes` supportent le soft-delete via `deleted_at`.
+
+**Règles :**
+- Un enregistrement est "supprimé" quand `deleted_at IS NOT NULL`
+- Toutes les requêtes de liste filtrent `WHERE deleted_at IS NULL`
+- La corbeille affiche les enregistrements `WHERE deleted_at IS NOT NULL`
+- La purge physique se fait après 30 jours via `purge_old_deleted_items()`
+- Les triggers de protection autorisent toujours le soft-delete (même sur facture validée)
+
+---
+
+## 9. Numérotation Séquentielle (Conformité Anti-Fraude)
+
+Le système garantit la numérotation strictement séquentielle par :
+
+1. **Trigger `trg_generate_devis_number`** : déclenché au passage en `envoye`/`signe`
+2. **Trigger `trg_generate_facture_number`** : déclenché au passage en `validee`/`payee`
+3. **Fonction `get_next_document_number_strict()`** : verrou atomique sur `compteurs_documents`
+4. **Index UNIQUE** `idx_devis_numero_unique` et `idx_factures_numero_unique` : empêchent les doublons
+
+**Format :** `{PRÉFIXE}-{ANNÉE}-{NNNN}` (numéro à 4 chiffres, remis à zéro chaque année)
+
+---
+
+## 10. Extensions PostgreSQL utilisées
 
 ```sql
--- Pattern standard pour toutes les tables
-CREATE POLICY policy_name ON table_name
-  FOR ALL
-  USING (auth.uid() = user_id);
+-- Vérifier les extensions actives :
+SELECT name, installed_version FROM pg_available_extensions WHERE installed_version IS NOT NULL;
 ```
 
-**Cas spéciaux :**
-
-- `lignes_facture` / `lignes_devis` : policy basée sur la facture/devis parent (join)
-- `paiements` : policy basée sur la facture parent
-- `audit_logs` : policy directe sur `user_id`
-
----
-
-## Index
-
-### audit_logs (optimisation des requêtes d'audit)
-
-```sql
-CREATE INDEX idx_audit_logs_record ON audit_logs(record_id);
-CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_table ON audit_logs(table_name);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at DESC);
-```
-
-### lignes_chiffrages (optimisation progress billing)
-
-```sql
-CREATE INDEX idx_lignes_chiffrages_linked_ligne_devis ON lignes_chiffrages(linked_ligne_devis_id) WHERE linked_ligne_devis_id IS NOT NULL;
-CREATE INDEX idx_lignes_chiffrages_devis_id ON lignes_chiffrages(devis_id) WHERE devis_id IS NOT NULL;
-CREATE INDEX idx_lignes_chiffrages_type ON lignes_chiffrages(type_chiffrage);
-```
-
-### Autres index (créés automatiquement)
-
-- PK sur toutes les tables (`id`)
-- FK index automatiques sur les colonnes référencées
-- `user_id` index implicite via les policies RLS
-
----
-
-## Historique des migrations
-
-Les migrations sont dans le dossier `migrations/` et doivent être exécutées dans l'ordre.
-
-### Sprint 1-2 : Conformité légale (`migration_sprint1_legal_compliance.sql`)
-
-**207 lignes** — Migration fondamentale :
-
-1. **Nouveaux champs `entreprises`** : `taux_penalites_retard`, `escompte_applicable`, `est_immatricule`
-2. **Nouveaux champs `factures`** : `numero_bon_commande`, `motif_avoir`
-3. **Table `audit_logs`** : Création complète avec index et RLS
-4. **Triggers d'audit** : `trg_audit_factures`, `trg_audit_devis`, `trg_audit_paiements`
-5. **Trigger d'immutabilité** : `trg_protect_validated_facture`
-
-### Sprint 5 : Updated_at (`migration_sprint5_updated_at.sql`)
-
-1. **Fonction `set_updated_at()`** : Trigger function commune
-2. **Colonne `updated_at`** : Ajoutée sur factures, devis, paiements, clients, depenses
-3. **Backfill** : `updated_at = created_at` pour les données existantes (avec désactivation temporaire des triggers de protection)
-4. **5 triggers** : `trg_*_updated_at` sur chaque table
-
-### Sprint 8 : Extension audit (`migration_sprint8_audit_email.sql`)
-
-1. **Extension CHECK constraint** : Ajout de `'EMAIL_SENT'` et `'RELANCE_SENT'` aux actions audit autorisées
-
-### Sprint 9 : Personnalisation PDF (`migration_sprint9_pdf_custom.sql`)
-
-1. **Colonne `pdf_primary_color`** : Couleur hex personnalisée pour les thèmes PDF
-2. **Colonne `logo_footer_url`** : Logo footer (certifications, labels qualité)
-
-### Sprint 14-20 : Fonctionnalités avancées (`migration_sprint14_20_features.sql`)
-
-1. **Table `factures_recurrentes`** : Factures récurrentes avec fréquence, prochaine émission, toggle, compteur + RLS
-2. **Table `lignes_facture_recurrente`** : Lignes détaillées des factures récurrentes + RLS
-3. **Table `temps_activites`** : Suivi du temps (durée, taux horaire, projet, facturable) + RLS
-4. **Table `rappels`** : Rappels & échéances (7 types, 4 priorités, récurrence) + RLS
-5. **ALTER `factures`** : Ajout `devise`, `taux_change`, `notes_privees`
-6. **ALTER `devis`** : Ajout `devise`, `taux_change`, `notes_privees`
-7. **3 triggers `updated_at`** sur factures_recurrentes, temps_activites, rappels
-
-### Sprint 15 : Smart Progress Billing (`migration_sprint15_progress_billing.sql`)
-
-1. **ALTER `lignes_chiffrages`** : Ajout colonnes `linked_ligne_devis_id` (FK → lignes_devis), `type_chiffrage` (CHECK materiel/main_doeuvre), `est_achete`, `avancement_mo` (CHECK 0-100), `prix_vente_interne`
-2. **3 index** : `idx_lignes_chiffrages_linked_ligne_devis`, `idx_lignes_chiffrages_devis_id`, `idx_lignes_chiffrages_type`
-3. **Trigger `updated_at`** : `trg_lignes_chiffrages_updated_at`
-4. **RLS policy** : `lignes_chiffrages_user_policy` (FOR ALL, user_id = auth.uid())
-5. **Commentaires SQL** : Documentation des colonnes pour les outils Supabase
-
-### Sprint 21 : Liaison Dépenses ↔ Chantiers (`migration_sprint21_chantier_depenses.sql`)
-
-1. **ALTER `depenses`** : Ajout colonne `chantier_devis_id` (FK → devis.id, `ON DELETE SET NULL`)
-2. **Index partiel** : `idx_depenses_chantier_devis_id` pour accélérer les filtres chantier
-3. **Backfill legacy** : copie `devis_id` vers `chantier_devis_id` si colonne historique présente
-4. **Commentaire SQL** : description métier de la liaison pour le cockpit rentabilité
-
-### Sprint 22 : God Mode & Support Tickets
-
-1. **Migration `20260223_001_god_mode_rpc.sql`** :
-   - Journalisation des erreurs frontend (`crash_logs`)
-   - Super-Admin Flag (`is_admin` dans `entreprises`)
-   - RPC DB Size (`get_db_metrics`)
-2. **Migration `20260223_002_support_tickets_table.sql`** :
-   - Création de la table `support_tickets` pour le module SAV IA avec RLS.
-3. **Migration `20260223_003_schema_alignment.sql`** (MASTER ALIGNMENT PROD) :
-   - Synchronisation absolue de la DB de production avec les modèles Dart (Sprints 1 à 21).
-   - `CREATE TABLE` : `audit_logs`, `factures_recurrentes`, `lignes_facture_recurrente`, `temps_activites`, `rappels`.
-   - `ALTER TABLE` : +45 colonnes ajoutées sur `entreprises`, `urssaf_configs`, `factures`, `devis`, `lignes_chiffrages`, etc.
-   - `TRIGGERS` : Standardisation d'`updated_at`.
-
-### Ordre d'exécution
-
-```
-1. migration_sprint1_legal_compliance.sql   (Sprint 1-2)
-2. migration_sprint5_updated_at.sql         (Sprint 5)
-3. migration_sprint8_audit_email.sql        (Sprint 8)
-4. migration_sprint9_pdf_custom.sql         (Sprint 9)
-5. migration_sprint14_20_features.sql       (Sprint 14-20)
-6. migration_sprint15_progress_billing.sql  (Sprint 15)
-7. migration_sprint21_chantier_depenses.sql (Sprint 21)
-8. 20260223_001_god_mode_rpc.sql            (Sprint 22)
-9. 20260223_002_support_tickets_table.sql   (Sprint 22)
-10. 20260223_003_schema_alignment.sql       (Sprint 22)
-```
-
-> **Note :** Les fichiers `hardening_integrity.sql`, `migration_avoirs.sql`, et `migration_numerotation_stricte.sql` référencés dans l'arborescence sont des fichiers placeholder ou legacy qui n'existent plus. Les migrations effectives sont celles listées ci-dessus.
+Extensions clés : `uuid-ossp` (uuid_generate_v4), `pgcrypto` (gen_random_uuid).

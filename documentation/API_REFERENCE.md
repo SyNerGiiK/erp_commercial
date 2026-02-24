@@ -1,6 +1,6 @@
 # Référence API — CraftOS
 
-> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 23/02/2026
+> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 24/02/2026
 
 ---
 
@@ -282,20 +282,29 @@ Identique à `LigneFacture` avec un champ supplémentaire `uiKey` (UUID v4 pour 
 | `categorie` | `String?` | Catégorie |
 | `description` | `String?` | Description longue |
 
-### CotisationUrssaf
+### UrssafConfig (CotisationUrssaf)
 
-**Fichier :** `lib/models/urssaf_model.dart` — Table : `cotisations`
+**Fichier :** `lib/models/urssaf_model.dart` — Table : `urssaf_configs`
 
-| Champ | Type Dart | Description |
+Table de configuration des taux de cotisation (70+ colonnes). Contient tous les taux légaux 2026 :
+
+| Champ clé | Type Dart | Description |
 |---|---|---|
 | `id` | `String?` | Identifiant |
 | `userId` | `String?` | Propriétaire |
-| `periode` | `String` | Période (ex: "2026-T1") |
-| `montantCa` | `Decimal` | CA de la période |
-| `tauxCotisation` | `Decimal` | Taux applicable |
-| `montantCotisation` | `Decimal` | Montant calculé |
-| `datePaiement` | `DateTime?` | Date de règlement |
-| `estPaye` | `bool` | Cotisation réglée |
+| `accreActive` | `bool` | ACRE activée |
+| `accreAnnee` | `int` | Année ACRE (1=−50%, 2=−25%, 3=−10%, 4+=0%) |
+| `tauxMicroVente` | `Decimal` | Taux micro commerce (12.3%) |
+| `tauxMicroPrestationBic` | `Decimal` | Taux micro service BIC (21.2%) |
+| `tauxMicroPrestationBnc` | `Decimal` | Taux micro service BNC (25.6%) |
+| `plafondCaMicroVente` | `Decimal` | Plafond CA vente (188 700€) |
+| `plafondCaMicroService` | `Decimal` | Plafond CA service (77 700€) |
+| `seuilTvaMicroVente` | `Decimal` | Seuil franchise TVA vente (91 900€) |
+| `seuilTvaMicroService` | `Decimal` | Seuil franchise TVA service (36 800€) |
+| `tauxIsReduit` | `Decimal` | IS réduit 15% jusqu'à 42 500€ |
+| `tauxIsNormal` | `Decimal` | IS normal 25% |
+| `versementLiberatoire` | `bool` | VL (IR mensuel/trimestriel) actif |
+| ... | ... | + 55 autres colonnes taux TNS, salarié, IS, dividendes |
 
 ### FactureRecurrente
 

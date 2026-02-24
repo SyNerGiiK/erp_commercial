@@ -82,7 +82,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                 final isDesktop = outerConstraints.maxWidth > 1100;
                 final isTablet = outerConstraints.maxWidth > 700;
 
-                return SingleChildScrollView(
+                return Scrollbar(
+                    child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -173,7 +174,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                       ],
                     ),
                   ),
-                );
+                ));
               },
             ),
           ),
@@ -242,36 +243,34 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     ];
 
     // On calcule le nombre de colonnes selon la taille
-    final cols = isDesktop ? 5 : (isTablet ? 3 : 2);
+    final cols = isDesktop ? 5 : (isTablet ? 3 : 1);
     const spacing = 16.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardWidth = (constraints.maxWidth - spacing * (cols - 1)) / cols;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (int i = 0; i < kpiCards.length; i++)
-              SizedBox(
-                width: cardWidth,
-                child: kpiCards[i],
-              )
-                  .animate()
-                  .fadeIn(
-                    duration: 500.ms,
-                    delay: (80 * i).ms,
-                    curve: Curves.easeOutCubic,
-                  )
-                  .slideY(
-                    begin: 0.12,
-                    end: 0,
-                    duration: 500.ms,
-                    delay: (80 * i).ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-          ],
-        );
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        crossAxisSpacing: spacing,
+        mainAxisSpacing: spacing,
+        mainAxisExtent: 135,
+      ),
+      itemCount: kpiCards.length,
+      itemBuilder: (context, i) {
+        return kpiCards[i]
+            .animate()
+            .fadeIn(
+              duration: 500.ms,
+              delay: (80 * i).ms,
+              curve: Curves.easeOutCubic,
+            )
+            .slideY(
+              begin: 0.12,
+              end: 0,
+              duration: 500.ms,
+              delay: (80 * i).ms,
+              curve: Curves.easeOutCubic,
+            );
       },
     );
   }
@@ -440,33 +439,31 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     final cols = isDesktop ? 4 : (isTablet ? 2 : 1);
     const spacing = 16.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardWidth = (constraints.maxWidth - spacing * (cols - 1)) / cols;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (int i = 0; i < cards.length; i++)
-              SizedBox(
-                width: cardWidth,
-                child: cards[i],
-              )
-                  .animate()
-                  .fadeIn(
-                    duration: 500.ms,
-                    delay: (500 + 80 * i).ms,
-                    curve: Curves.easeOutCubic,
-                  )
-                  .slideY(
-                    begin: 0.1,
-                    end: 0,
-                    duration: 500.ms,
-                    delay: (500 + 80 * i).ms,
-                    curve: Curves.easeOutCubic,
-                  ),
-          ],
-        );
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        crossAxisSpacing: spacing,
+        mainAxisSpacing: spacing,
+        mainAxisExtent: 220,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, i) {
+        return cards[i]
+            .animate()
+            .fadeIn(
+              duration: 500.ms,
+              delay: (500 + 80 * i).ms,
+              curve: Curves.easeOutCubic,
+            )
+            .slideY(
+              begin: 0.1,
+              end: 0,
+              duration: 500.ms,
+              delay: (500 + 80 * i).ms,
+              curve: Curves.easeOutCubic,
+            );
       },
     );
   }
@@ -569,36 +566,38 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
   Widget _buildPeriodTab(BuildContext context, DashboardViewModel vm,
       DashboardPeriod period, String label) {
     final isSelected = vm.selectedPeriod == period;
-    return GestureDetector(
-      onTap: () => vm.setPeriod(period),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spacing16, vertical: AppTheme.spacing8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : Colors.transparent,
-          borderRadius: AppTheme.borderRadiusSmall,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                    spreadRadius: -2,
-                  ),
-                ]
-              : [],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppTheme.textLight,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13,
+    return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => vm.setPeriod(period),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacing16, vertical: AppTheme.spacing8),
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primary : Colors.transparent,
+              borderRadius: AppTheme.borderRadiusSmall,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.primary.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                        spreadRadius: -2,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppTheme.textLight,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 13,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 }

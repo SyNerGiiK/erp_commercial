@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_theme_base.dart';
@@ -8,13 +9,13 @@ class ClassiquePdfTheme extends PdfThemeBase {
   String get name => 'classique';
 
   @override
-  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF2C3E50);
+  PdfColor get defaultPrimaryColor => PdfColor.fromInt(0xFF2C3E50);
   @override
-  PdfColor get accentColor => const PdfColor.fromInt(0xFF34495E);
+  PdfColor get accentColor => PdfColor.fromInt(0xFF34495E);
   @override
-  PdfColor get lightGrey => const PdfColor.fromInt(0xFFF5F5F5);
+  PdfColor get lightGrey => PdfColor.fromInt(0xFFF5F5F5);
   @override
-  PdfColor get darkGrey => const PdfColor.fromInt(0xFF2C3E50);
+  PdfColor get darkGrey => PdfColor.fromInt(0xFF2C3E50);
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
@@ -149,7 +150,7 @@ class ClassiquePdfTheme extends PdfThemeBase {
       {String? numeroTvaIntra, pw.MemoryImage? logoFooter}) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 5),
-      decoration: const pw.BoxDecoration(
+      decoration: pw.BoxDecoration(
           border: pw.Border(
               top: pw.BorderSide(
                   color: PdfColor.fromInt(0xFF2C3E50), width: 1))),
@@ -161,12 +162,11 @@ class ClassiquePdfTheme extends PdfThemeBase {
           ),
         pw.Text(
           "${nomEntreprise ?? ''} | SIRET: ${siret ?? ''}",
-          style: const pw.TextStyle(
-              fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50)),
+          style: pw.TextStyle(fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50)),
         ),
         if (iban != null)
           pw.Text("IBAN: $iban | BIC: $bic",
-              style: const pw.TextStyle(
+              style: pw.TextStyle(
                   fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50))),
         if (mentions != null)
           pw.Text(mentions,
@@ -174,7 +174,7 @@ class ClassiquePdfTheme extends PdfThemeBase {
               textAlign: pw.TextAlign.center),
         if (isTvaApplicable && numeroTvaIntra != null)
           pw.Text("TVA Intracommunautaire : $numeroTvaIntra",
-              style: const pw.TextStyle(
+              style: pw.TextStyle(
                   fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50))),
         pw.Text("Document généré par Artisan 3.0",
             style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),

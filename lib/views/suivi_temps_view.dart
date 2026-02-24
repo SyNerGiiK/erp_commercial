@@ -299,6 +299,8 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  key: ValueKey(selectedClientId),
+                  initialValue: selectedClientId,
                   decoration: const InputDecoration(
                     labelText: 'Client',
                     border: OutlineInputBorder(),
@@ -307,7 +309,8 @@ class _SuiviTempsViewState extends State<SuiviTempsView> {
                       .map((c) => DropdownMenuItem(
                           value: c.id, child: Text(c.nomComplet)))
                       .toList(),
-                  onChanged: (val) => selectedClientId = val,
+                  onChanged: (val) =>
+                      setDialogState(() => selectedClientId = val),
                 ),
                 const SizedBox(height: 12),
                 Row(

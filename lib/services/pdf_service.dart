@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
@@ -48,8 +49,8 @@ class PdfGenerationRequest {
 
 class PdfService {
   // Couleurs par défaut (fallback quand pas de profil)
-  static const PdfColor _primaryColor = PdfColor.fromInt(0xFF1E5572);
-  static const PdfColor _lightGrey = PdfColor.fromInt(0xFFF8F8F8);
+  static final PdfColor _primaryColor = PdfColor.fromInt(0xFF1E5572);
+  static final PdfColor _lightGrey = PdfColor.fromInt(0xFFF8F8F8);
 
   /// Résout le thème PDF à utiliser depuis le profil entreprise
   static PdfThemeBase _resolveTheme(ProfilEntreprise? entreprise) {
@@ -415,7 +416,7 @@ class PdfService {
   static pw.Widget _buildChunkTable(List<dynamic> chunk,
       {bool isSituation = false, bool isBL = false, bool showTva = true}) {
     return pw.Table(
-        border: const pw.TableBorder(
+        border: pw.TableBorder(
             bottom: pw.BorderSide(color: _lightGrey, width: 0.5)),
         columnWidths: {
           0: const pw.FlexColumnWidth(4),
@@ -426,7 +427,7 @@ class PdfService {
         },
         children: [
           pw.TableRow(
-              decoration: const pw.BoxDecoration(color: _primaryColor),
+              decoration: pw.BoxDecoration(color: _primaryColor),
               children: [
                 _buildHeaderCell("Désignation",
                     alignment: pw.Alignment.centerLeft),
@@ -466,7 +467,7 @@ class PdfService {
     if (l.type == 'titre') {
       style = pw.TextStyle(
           fontWeight: pw.FontWeight.bold, color: _primaryColor, fontSize: 12);
-      decoration = const pw.BoxDecoration(color: _lightGrey);
+      decoration = pw.BoxDecoration(color: _lightGrey);
     }
     if (l.type == 'sous-titre') {
       style = pw.TextStyle(
@@ -546,7 +547,7 @@ class PdfService {
               totalMarche > Decimal.zero) ...[
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
-              decoration: const pw.BoxDecoration(color: _lightGrey),
+              decoration: pw.BoxDecoration(color: _lightGrey),
               child: pw.Column(children: [
                 pw.Text("ÉTAT D'AVANCEMENT",
                     style: pw.TextStyle(
@@ -745,7 +746,7 @@ class PdfService {
                   pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
               cellStyle: const pw.TextStyle(fontSize: 8),
               border: null,
-              headerDecoration: const pw.BoxDecoration(color: _lightGrey),
+              headerDecoration: pw.BoxDecoration(color: _lightGrey),
             ),
             pw.SizedBox(height: 10),
           ],
@@ -885,7 +886,7 @@ class PdfService {
 
                   // Pénalités de retard (obligatoire CGI art. 289 / Code Commerce L441-10)
                   pw.Text(
-                    "En cas de retard de paiement, une pénalité de ${ent.tauxPenalitesRetard.toStringAsFixed(2)}% par an sera appliquée (3 fois le taux d'intérêt légal minimum).",
+                    "En cas de retard de paiement, une pénalité de ${ent.tauxPenalitesRetard.toDouble().toStringAsFixed(2)}% par an sera appliquée (3 fois le taux d'intérêt légal minimum).",
                     style: legalStyle,
                   ),
 

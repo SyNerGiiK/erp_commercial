@@ -1,4 +1,5 @@
-﻿import 'enums/entreprise_enums.dart';
+﻿import 'package:decimal/decimal.dart';
+import 'enums/entreprise_enums.dart';
 
 class ProfilEntreprise {
   final String? id;
@@ -51,9 +52,8 @@ class ProfilEntreprise {
   /// Mode discret (masquer le résumé financier dans l'éditeur)
   final bool modeDiscret;
 
-  // === MENTIONS LÉGALES OBLIGATOIRES ===
   /// Taux de pénalités de retard (défaut : taux directeur BCE + 10 = 11.62% en 2025)
-  final double tauxPenalitesRetard;
+  final Decimal tauxPenalitesRetard;
 
   /// Escompte applicable en cas de paiement anticipé
   final bool escompteApplicable;
@@ -92,11 +92,11 @@ class ProfilEntreprise {
     this.logoFooterUrl,
     this.modeFacturation = ModeFacturation.global,
     this.modeDiscret = false,
-    this.tauxPenalitesRetard = 11.62,
+    Decimal? tauxPenalitesRetard,
     this.escompteApplicable = false,
     this.estImmatricule = false,
     this.isAdmin = false,
-  });
+  }) : tauxPenalitesRetard = tauxPenalitesRetard ?? Decimal.parse('11.62');
 
   factory ProfilEntreprise.fromMap(Map<String, dynamic> map) {
     return ProfilEntreprise(
@@ -127,7 +127,9 @@ class ProfilEntreprise {
       logoFooterUrl: map['logo_footer_url'],
       modeFacturation: _parseModeFacturation(map['mode_facturation']),
       modeDiscret: map['mode_discret'] ?? false,
-      tauxPenalitesRetard: (map['taux_penalites_retard'] ?? 11.62).toDouble(),
+      tauxPenalitesRetard: Decimal.parse(
+        (map['taux_penalites_retard'] ?? '11.62').toString(),
+      ),
       escompteApplicable: map['escompte_applicable'] ?? false,
       estImmatricule: map['est_immatricule'] ?? false,
       isAdmin: map['is_admin'] ?? false,
@@ -261,7 +263,7 @@ class ProfilEntreprise {
     String? logoFooterUrl,
     ModeFacturation? modeFacturation,
     bool? modeDiscret,
-    double? tauxPenalitesRetard,
+    Decimal? tauxPenalitesRetard,
     bool? escompteApplicable,
     bool? estImmatricule,
     bool? isAdmin,

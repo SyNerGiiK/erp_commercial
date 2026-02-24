@@ -31,7 +31,8 @@ class BaseScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLargeScreen = MediaQuery.of(context).size.width > 900;
+    final width = MediaQuery.sizeOf(context).width;
+    final isDesktop = width >= 1024;
 
     final appBar = CustomAppBar(
       title: title,
@@ -69,7 +70,7 @@ class BaseScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: useFullWidth ? double.infinity : 1200,
+                  maxWidth: useFullWidth ? 1200 : 800,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -84,9 +85,10 @@ class BaseScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: appBar,
-      drawer: isLargeScreen ? null : CustomDrawer(selectedIndex: menuIndex),
-      body: isLargeScreen
+      drawer: isDesktop ? null : CustomDrawer(selectedIndex: menuIndex),
+      body: isDesktop
           ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
                   width: 260,

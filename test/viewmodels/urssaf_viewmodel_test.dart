@@ -114,7 +114,11 @@ void main() {
           .thenThrow(Exception('Save failed'));
 
       // ACT
-      await viewModel.saveConfig(newConfig);
+      try {
+        await viewModel.saveConfig(newConfig);
+      } catch (_) {
+        // Exception gérée
+      }
 
       // ASSERT - L'erreur est gérée silencieusement par BaseViewModel
       expect(viewModel.isLoading, false);

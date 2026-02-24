@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_theme_base.dart';
@@ -8,13 +9,13 @@ class ModernePdfTheme extends PdfThemeBase {
   String get name => 'moderne';
 
   @override
-  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF1E5572);
+  PdfColor get defaultPrimaryColor => PdfColor.fromInt(0xFF1E5572);
   @override
-  PdfColor get accentColor => const PdfColor.fromInt(0xFF2A769E);
+  PdfColor get accentColor => PdfColor.fromInt(0xFF2A769E);
   @override
-  PdfColor get lightGrey => const PdfColor.fromInt(0xFFF8F8F8);
+  PdfColor get lightGrey => PdfColor.fromInt(0xFFF8F8F8);
   @override
-  PdfColor get darkGrey => const PdfColor.fromInt(0xFF333333);
+  PdfColor get darkGrey => PdfColor.fromInt(0xFF333333);
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
@@ -60,7 +61,7 @@ class ModernePdfTheme extends PdfThemeBase {
       children: [
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
           pw.Text("Émetteur",
-              style: const pw.TextStyle(
+              style: pw.TextStyle(
                   fontSize: 10, color: PdfColor.fromInt(0xFF2A769E))),
           pw.Text(nomEntreprise ?? "",
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
@@ -79,7 +80,7 @@ class ModernePdfTheme extends PdfThemeBase {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text("Adressé à",
-                    style: const pw.TextStyle(
+                    style: pw.TextStyle(
                         fontSize: 10, color: PdfColor.fromInt(0xFF2A769E))),
                 pw.Text(clientNom ?? "",
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
@@ -124,13 +125,12 @@ class ModernePdfTheme extends PdfThemeBase {
         ),
       pw.Text(
         "${nomEntreprise ?? ''} - SIRET: ${siret ?? ''}",
-        style: const pw.TextStyle(
-            fontSize: 8, color: PdfColor.fromInt(0xFF333333)),
+        style: pw.TextStyle(fontSize: 8, color: PdfColor.fromInt(0xFF333333)),
       ),
       if (iban != null)
         pw.Text("IBAN: $iban - BIC: $bic",
-            style: const pw.TextStyle(
-                fontSize: 8, color: PdfColor.fromInt(0xFF333333)),
+            style:
+                pw.TextStyle(fontSize: 8, color: PdfColor.fromInt(0xFF333333)),
             textAlign: pw.TextAlign.center),
       if (mentions != null)
         pw.Text(mentions,
@@ -138,8 +138,8 @@ class ModernePdfTheme extends PdfThemeBase {
             textAlign: pw.TextAlign.center),
       if (isTvaApplicable && numeroTvaIntra != null)
         pw.Text("TVA Intracommunautaire : $numeroTvaIntra",
-            style: const pw.TextStyle(
-                fontSize: 8, color: PdfColor.fromInt(0xFF333333))),
+            style:
+                pw.TextStyle(fontSize: 8, color: PdfColor.fromInt(0xFF333333))),
       pw.Text("Document généré par Artisan 3.0",
           style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
     ]);

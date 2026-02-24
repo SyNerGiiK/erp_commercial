@@ -60,70 +60,77 @@ class CustomDrawer extends StatelessWidget {
 
                 // ── NAVIGATION ──
                 Expanded(
-                  child: ListView(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                    children: [
-                      _buildSectionLabel("ACTIVITÉ"),
-                      _buildItem(context, 0, "Tableau de Bord",
-                          Icons.grid_view_rounded, '/app/home'),
-                      _buildItem(context, 4, "Planning",
-                          Icons.calendar_month_rounded, '/app/planning'),
-                      _buildItem(context, 8, "Rentabilité",
-                          Icons.insights_rounded, '/app/rentabilite'),
-                      const SizedBox(height: 12),
-                      _buildSectionLabel("DOCUMENTS"),
-                      _buildItem(context, 1, "Devis",
-                          Icons.request_quote_rounded, '/app/devis'),
-                      _buildItem(context, 2, "Factures",
-                          Icons.receipt_long_rounded, '/app/factures'),
-                      _buildItem(context, 10, "Archives",
-                          Icons.inventory_2_rounded, '/app/archives'),
-                      _buildItem(
-                          context,
-                          11,
-                          "Relances",
-                          Icons.notification_important_rounded,
-                          '/app/relances'),
-                      _buildItem(context, 13, "Récurrentes",
-                          Icons.repeat_rounded, '/app/recurrentes'),
-                      const SizedBox(height: 12),
-                      _buildSectionLabel("GESTION"),
-                      _buildItem(context, 3, "Clients",
-                          Icons.people_alt_rounded, '/app/clients'),
-                      _buildItem(
-                          context,
-                          5,
-                          "Dépenses",
-                          Icons.account_balance_wallet_rounded,
-                          '/app/depenses'),
-                      _buildItem(context, 6, "Courses",
-                          Icons.shopping_bag_rounded, '/app/courses'),
-                      const SizedBox(height: 12),
-                      _buildSectionLabel("OUTILS"),
-                      _buildItem(context, 7, "Bibliothèque",
-                          Icons.auto_stories_rounded, '/app/bibliotheque'),
-                      _buildItem(context, 14, "Suivi du temps",
-                          Icons.timer_rounded, '/app/temps'),
-                      _buildItem(context, 15, "Rappels",
-                          Icons.notifications_active_rounded, '/app/rappels'),
-                      const SizedBox(height: 12),
-                      _buildSectionLabel("SUPPORT"),
-                      _buildItem(context, 16, "Centre d'aide I.A.",
-                          Icons.support_agent_rounded, '/app/support'),
-                      const SizedBox(height: 12),
-                      _buildSectionLabel("PARAMÈTRES"),
-                      _buildItem(context, 9, "Configuration",
-                          Icons.tune_rounded, '/app/parametres'),
-                      _buildItem(context, 12, "Corbeille",
-                          Icons.delete_outline_rounded, '/app/corbeille'),
-                      if (profil?.isAdmin == true) ...[
+                  child: Scrollbar(
+                    thumbVisibility: isPermanent,
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 8),
+                      children: [
+                        _buildSectionLabel("ACTIVITÉ"),
+                        _buildItem(context, 0, "Tableau de Bord",
+                            Icons.grid_view_rounded, '/app/home'),
+                        _buildItem(context, 4, "Planning",
+                            Icons.calendar_month_rounded, '/app/planning'),
+                        _buildItem(context, 8, "Rentabilité",
+                            Icons.insights_rounded, '/app/rentabilite'),
                         const SizedBox(height: 12),
-                        _buildSectionLabel("ADMINISTRATION"),
-                        _buildItem(context, 99, "Super-Cockpit",
-                            Icons.admin_panel_settings_rounded, '/admin-panel'),
+                        _buildSectionLabel("DOCUMENTS"),
+                        _buildItem(context, 1, "Devis",
+                            Icons.request_quote_rounded, '/app/devis'),
+                        _buildItem(context, 2, "Factures",
+                            Icons.receipt_long_rounded, '/app/factures'),
+                        _buildItem(context, 10, "Archives",
+                            Icons.inventory_2_rounded, '/app/archives'),
+                        _buildItem(
+                            context,
+                            11,
+                            "Relances",
+                            Icons.notification_important_rounded,
+                            '/app/relances'),
+                        _buildItem(context, 13, "Récurrentes",
+                            Icons.repeat_rounded, '/app/recurrentes'),
+                        const SizedBox(height: 12),
+                        _buildSectionLabel("GESTION"),
+                        _buildItem(context, 3, "Clients",
+                            Icons.people_alt_rounded, '/app/clients'),
+                        _buildItem(
+                            context,
+                            5,
+                            "Dépenses",
+                            Icons.account_balance_wallet_rounded,
+                            '/app/depenses'),
+                        _buildItem(context, 6, "Courses",
+                            Icons.shopping_bag_rounded, '/app/courses'),
+                        const SizedBox(height: 12),
+                        _buildSectionLabel("OUTILS"),
+                        _buildItem(context, 7, "Bibliothèque",
+                            Icons.auto_stories_rounded, '/app/bibliotheque'),
+                        _buildItem(context, 14, "Suivi du temps",
+                            Icons.timer_rounded, '/app/temps'),
+                        _buildItem(context, 15, "Rappels",
+                            Icons.notifications_active_rounded, '/app/rappels'),
+                        const SizedBox(height: 12),
+                        _buildSectionLabel("SUPPORT"),
+                        _buildItem(context, 16, "Centre d'aide I.A.",
+                            Icons.support_agent_rounded, '/app/support'),
+                        const SizedBox(height: 12),
+                        _buildSectionLabel("PARAMÈTRES"),
+                        _buildItem(context, 9, "Configuration",
+                            Icons.tune_rounded, '/app/parametres'),
+                        _buildItem(context, 12, "Corbeille",
+                            Icons.delete_outline_rounded, '/app/corbeille'),
+                        if (profil?.isAdmin == true) ...[
+                          const SizedBox(height: 12),
+                          _buildSectionLabel("ADMINISTRATION"),
+                          _buildItem(
+                              context,
+                              99,
+                              "Super-Cockpit",
+                              Icons.admin_panel_settings_rounded,
+                              '/admin-panel'),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
 
@@ -158,6 +165,7 @@ class CustomDrawer extends StatelessWidget {
 
     return InkWell(
       onTap: () => _navigate(context, '/app/parametres'),
+      hoverColor: AppTheme.primary.withValues(alpha: 0.04),
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.only(
@@ -296,6 +304,7 @@ class CustomDrawer extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
+          hoverColor: AppTheme.primary.withValues(alpha: 0.04),
           onTap: () {
             if (isSelected) {
               if (!isPermanent) Navigator.pop(context);
@@ -371,6 +380,7 @@ class CustomDrawer extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
+          hoverColor: AppTheme.error.withValues(alpha: 0.04),
           onTap: () {
             Provider.of<AuthViewModel>(context, listen: false).signOut();
           },

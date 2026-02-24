@@ -47,6 +47,7 @@ dependencies:
   file_saver: ^0.2.0   # REMPLAÇANT de path_provider pour le téléchargement
   image_picker: ^1.0.7
   http: ^1.6.0
+  permission_handler: ^11.3.0
   
   # --- ANIMATIONS ---
   flutter_animate: ^4.5.2

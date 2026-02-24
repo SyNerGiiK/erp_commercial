@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'pdf_theme_base.dart';
@@ -8,13 +9,13 @@ class MinimalistePdfTheme extends PdfThemeBase {
   String get name => 'minimaliste';
 
   @override
-  PdfColor get defaultPrimaryColor => const PdfColor.fromInt(0xFF555555);
+  PdfColor get defaultPrimaryColor => PdfColor.fromInt(0xFF555555);
   @override
-  PdfColor get accentColor => const PdfColor.fromInt(0xFF888888);
+  PdfColor get accentColor => PdfColor.fromInt(0xFF888888);
   @override
-  PdfColor get lightGrey => const PdfColor.fromInt(0xFFFAFAFA);
+  PdfColor get lightGrey => PdfColor.fromInt(0xFFFAFAFA);
   @override
-  PdfColor get darkGrey => const PdfColor.fromInt(0xFF444444);
+  PdfColor get darkGrey => PdfColor.fromInt(0xFF444444);
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,

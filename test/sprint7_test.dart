@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:erp_commercial/utils/validation_utils.dart';
+import 'package:decimal/decimal.dart';
 import 'package:erp_commercial/models/entreprise_model.dart';
 import 'package:erp_commercial/models/enums/entreprise_enums.dart';
 import 'package:erp_commercial/viewmodels/entreprise_viewmodel.dart';
@@ -77,7 +78,7 @@ void main() {
         pdfTheme: PdfTheme.classique,
         modeFacturation: ModeFacturation.detaille,
         modeDiscret: true,
-        tauxPenalitesRetard: 15.0,
+        tauxPenalitesRetard: Decimal.parse('15.0'),
         escompteApplicable: true,
         estImmatricule: true,
       );
@@ -87,7 +88,7 @@ void main() {
       expect(profil.pdfTheme, PdfTheme.classique);
       expect(profil.modeFacturation, ModeFacturation.detaille);
       expect(profil.modeDiscret, isTrue);
-      expect(profil.tauxPenalitesRetard, 15.0);
+      expect(profil.tauxPenalitesRetard, Decimal.parse('15.0'));
       expect(profil.escompteApplicable, isTrue);
       expect(profil.estImmatricule, isTrue);
     });
@@ -108,7 +109,7 @@ void main() {
       expect(profil.pdfTheme, PdfTheme.moderne);
       expect(profil.modeFacturation, ModeFacturation.global);
       expect(profil.modeDiscret, isFalse);
-      expect(profil.tauxPenalitesRetard, 11.62);
+      expect(profil.tauxPenalitesRetard, Decimal.parse('11.62'));
       expect(profil.escompteApplicable, isFalse);
       expect(profil.estImmatricule, isFalse);
       expect(profil.typeEntreprise, TypeEntreprise.microEntrepreneur);
@@ -133,7 +134,7 @@ void main() {
         pdfTheme: PdfTheme.minimaliste,
         modeFacturation: ModeFacturation.detaille,
         modeDiscret: true,
-        tauxPenalitesRetard: 12.5,
+        tauxPenalitesRetard: Decimal.parse('12.5'),
         escompteApplicable: true,
         estImmatricule: true,
         mentionsLegales: 'Mentions custom',
@@ -164,7 +165,7 @@ void main() {
         email: 'base@test.fr',
         tvaApplicable: false,
         pdfTheme: PdfTheme.moderne,
-        tauxPenalitesRetard: 11.62,
+        tauxPenalitesRetard: Decimal.parse('11.62'),
       );
 
       final updated = base.copyWith(tvaApplicable: true);
@@ -172,7 +173,7 @@ void main() {
       expect(updated.tvaApplicable, isTrue);
       expect(updated.nomEntreprise, 'Base'); // inchangé
       expect(updated.pdfTheme, PdfTheme.moderne); // inchangé
-      expect(updated.tauxPenalitesRetard, 11.62); // inchangé
+      expect(updated.tauxPenalitesRetard, Decimal.parse('11.62')); // inchangé
     });
   });
 

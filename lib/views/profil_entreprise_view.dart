@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:decimal/decimal.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
@@ -125,8 +126,8 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     final existingSignature = vm.profil?.signatureUrl;
 
     final tauxPenalites =
-        double.tryParse(_tauxPenalitesController.text.replaceAll(',', '.')) ??
-            11.62;
+        Decimal.tryParse(_tauxPenalitesController.text.replaceAll(',', '.')) ??
+            Decimal.parse('11.62');
 
     final profilToSave = ProfilEntreprise(
       id: existingId,

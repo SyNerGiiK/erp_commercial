@@ -98,18 +98,19 @@ class BaseScreen extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Column(
-                    children: [
-                      appBar,
-                      Expanded(child: bodyContent),
-                    ],
+                  child: Scaffold(
+                    backgroundColor: Colors.transparent,
+                    appBar: appBar,
+                    body: bodyContent,
+                    floatingActionButton: floatingActionButton,
+                    bottomSheet: bottomSheet,
                   ),
                 ),
               ],
             )
           : bodyContent,
-      floatingActionButton: floatingActionButton,
-      bottomSheet: bottomSheet,
+      floatingActionButton: isDesktop ? null : floatingActionButton,
+      bottomSheet: isDesktop ? null : bottomSheet,
     );
   }
 }

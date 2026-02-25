@@ -274,20 +274,21 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
         if (!widget.readOnly)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ElevatedButton.icon(
                   onPressed: _ajouterLigne,
                   icon: const Icon(Icons.add),
                   label: const Text("Article vide"),
                 ),
-                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: _importerArticle,
                   icon: const Icon(Icons.library_books),
                   label: const Text("Bibliothèque"),
                 ),
-                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: _showAitiseDialog,
                   icon: const Icon(Icons.auto_awesome),
@@ -297,10 +298,9 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
                     foregroundColor: Colors.purple,
                   ),
                 ),
-                const Spacer(),
                 if (_isAiGenerating)
                   const Padding(
-                    padding: EdgeInsets.only(right: 16.0),
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: SizedBox(
                         width: 20,
                         height: 20,

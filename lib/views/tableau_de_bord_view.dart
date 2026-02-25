@@ -451,16 +451,15 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       ),
     ];
 
-    final cols = isDesktop ? 4 : (isTablet ? 2 : 1);
     const spacing = 16.0;
 
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: cols,
-        crossAxisSpacing: spacing,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 350,
         mainAxisSpacing: spacing,
+        crossAxisSpacing: spacing,
         mainAxisExtent: 220,
       ),
       itemCount: cards.length,

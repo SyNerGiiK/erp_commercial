@@ -219,158 +219,169 @@ class _ParametresViewState extends State<ParametresView> {
           ),
           body: Form(
             key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Bandeau Sync info
-                  if (_lastSyncedAt != null || _sourceApi) _buildSyncBanner(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Bandeau Sync info
+                      if (_lastSyncedAt != null || _sourceApi)
+                        _buildSyncBanner(),
 
-                  _buildSection("1. Votre Statut", [
-                    _buildStatutSelector(),
-                  ]),
-                  _buildSection("2. Votre Activité", [
-                    _buildActiviteSelector(),
-                  ]),
-                  _buildSection("3. Options Fiscales & Sociales", [
-                    SwitchListTile(
-                      title: const Text("Versement Libératoire de l'Impôt"),
-                      subtitle: const Text(
-                          "Paiement de l'IR en même temps que les cotisations"),
-                      value: _versementLiberatoire,
-                      onChanged: (v) =>
-                          setState(() => _versementLiberatoire = v),
-                    ),
-                    SwitchListTile(
-                      title: const Text("Bénéficiaire ACRE"),
-                      subtitle: const Text(
-                          "Exonération partielle des charges en début d'activité"),
-                      value: _accreActive,
-                      onChanged: (v) => setState(() => _accreActive = v),
-                    ),
-                    if (_accreActive)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _accreAnnee,
-                          key: ValueKey(_accreAnnee),
-                          decoration:
-                              const InputDecoration(labelText: "Année ACRE"),
-                          items: [1, 2, 3]
-                              .map((y) => DropdownMenuItem(
-                                  value: y, child: Text("Année $y")))
-                              .toList(),
-                          onChanged: (v) => setState(() => _accreAnnee = v!),
+                      _buildSection("1. Votre Statut", [
+                        _buildStatutSelector(),
+                      ]),
+                      _buildSection("2. Votre Activité", [
+                        _buildActiviteSelector(),
+                      ]),
+                      _buildSection("3. Options Fiscales & Sociales", [
+                        SwitchListTile(
+                          title: const Text("Versement Libératoire de l'Impôt"),
+                          subtitle: const Text(
+                              "Paiement de l'IR en même temps que les cotisations"),
+                          value: _versementLiberatoire,
+                          onChanged: (v) =>
+                              setState(() => _versementLiberatoire = v),
                         ),
-                      ),
-                  ]),
-                  _buildSection("4. Taux Appliqués (2026)", [
-                    if (_sourceApi)
-                      Container(
-                        padding: const EdgeInsets.all(AppTheme.spacing12),
-                        margin:
-                            const EdgeInsets.only(bottom: AppTheme.spacing16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.infoSoft,
-                          borderRadius: AppTheme.borderRadiusSmall,
-                          border: Border.all(
-                              color: AppTheme.info.withValues(alpha: 0.3)),
+                        SwitchListTile(
+                          title: const Text("Bénéficiaire ACRE"),
+                          subtitle: const Text(
+                              "Exonération partielle des charges en début d'activité"),
+                          value: _accreActive,
+                          onChanged: (v) => setState(() => _accreActive = v),
                         ),
-                        child: Row(
+                        if (_accreActive)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _accreAnnee,
+                              key: ValueKey(_accreAnnee),
+                              decoration: const InputDecoration(
+                                  labelText: "Année ACRE"),
+                              items: [1, 2, 3]
+                                  .map((y) => DropdownMenuItem(
+                                      value: y, child: Text("Année $y")))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setState(() => _accreAnnee = v!),
+                            ),
+                          ),
+                      ]),
+                      _buildSection("4. Taux Appliqués (2026)", [
+                        if (_sourceApi)
+                          Container(
+                            padding: const EdgeInsets.all(AppTheme.spacing12),
+                            margin: const EdgeInsets.only(
+                                bottom: AppTheme.spacing16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.infoSoft,
+                              borderRadius: AppTheme.borderRadiusSmall,
+                              border: Border.all(
+                                  color: AppTheme.info.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.lock_outline,
+                                    size: 16,
+                                    color:
+                                        AppTheme.info.withValues(alpha: 0.8)),
+                                const SizedBox(width: AppTheme.spacing8),
+                                const Expanded(
+                                  child: Text(
+                                    "Taux verrouillés — synchronisés depuis l'API URSSAF. "
+                                    "Passez en mode manuel pour les modifier.",
+                                    style: TextStyle(
+                                        fontSize: 12, color: AppTheme.info),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() => _sourceApi = false);
+                                  },
+                                  child: const Text("Mode manuel",
+                                      style: TextStyle(fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          const Text(
+                            "Taux définis automatiquement selon votre statut, ajustables si nécessaire.",
+                            style: TextStyle(
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic),
+                          ),
+                        const SizedBox(height: 16),
+                        _buildRateRow("Vente (BIC)", _tauxVenteCtrl,
+                            _tauxCfpVenteCtrl, UrssafConfig.libVente),
+                        _buildRateRow("Prestation (BIC)", _tauxPrestaBICCtrl,
+                            _tauxCfpPrestaCtrl, UrssafConfig.libBIC),
+                        _buildRateRow("Prestation (BNC)", _tauxPrestaBNCCtrl,
+                            _tauxCfpLiberalCtrl, UrssafConfig.libBNC),
+                      ]),
+                      _buildSection("5. Taxes Frais de Chambre (TFC)", [
+                        const Text(
+                          "Taxe applicable aux artisans et commerçants (CMA/CCI).",
+                          style: TextStyle(
+                              color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            Icon(Icons.lock_outline,
-                                size: 16,
-                                color: AppTheme.info.withValues(alpha: 0.8)),
-                            const SizedBox(width: AppTheme.spacing8),
-                            const Expanded(
-                              child: Text(
-                                "Taux verrouillés — synchronisés depuis l'API URSSAF. "
-                                "Passez en mode manuel pour les modifier.",
-                                style: TextStyle(
-                                    fontSize: 12, color: AppTheme.info),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _tauxTfcServiceCtrl,
+                                readOnly: _sourceApi,
+                                decoration: InputDecoration(
+                                  labelText: "TFC Service %",
+                                  isDense: true,
+                                  suffixIcon: _sourceApi
+                                      ? const Icon(Icons.lock_outline, size: 16)
+                                      : null,
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
                               ),
                             ),
-                            TextButton(
-                              onPressed: () {
-                                setState(() => _sourceApi = false);
-                              },
-                              child: const Text("Mode manuel",
-                                  style: TextStyle(fontSize: 12)),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _tauxTfcVenteCtrl,
+                                readOnly: _sourceApi,
+                                decoration: InputDecoration(
+                                  labelText: "TFC Vente %",
+                                  isDense: true,
+                                  suffixIcon: _sourceApi
+                                      ? const Icon(Icons.lock_outline, size: 16)
+                                      : null,
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                              ),
                             ),
                           ],
                         ),
-                      )
-                    else
-                      const Text(
-                        "Taux définis automatiquement selon votre statut, ajustables si nécessaire.",
-                        style: TextStyle(
-                            color: Colors.grey, fontStyle: FontStyle.italic),
-                      ),
-                    const SizedBox(height: 16),
-                    _buildRateRow("Vente (BIC)", _tauxVenteCtrl,
-                        _tauxCfpVenteCtrl, UrssafConfig.libVente),
-                    _buildRateRow("Prestation (BIC)", _tauxPrestaBICCtrl,
-                        _tauxCfpPrestaCtrl, UrssafConfig.libBIC),
-                    _buildRateRow("Prestation (BNC)", _tauxPrestaBNCCtrl,
-                        _tauxCfpLiberalCtrl, UrssafConfig.libBNC),
-                  ]),
-                  _buildSection("5. Taxes Frais de Chambre (TFC)", [
-                    const Text(
-                      "Taxe applicable aux artisans et commerçants (CMA/CCI).",
-                      style: TextStyle(
-                          color: Colors.grey, fontStyle: FontStyle.italic),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _tauxTfcServiceCtrl,
-                            readOnly: _sourceApi,
-                            decoration: InputDecoration(
-                              labelText: "TFC Service %",
-                              isDense: true,
-                              suffixIcon: _sourceApi
-                                  ? const Icon(Icons.lock_outline, size: 16)
-                                  : null,
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
+                      ]),
+                      const SizedBox(height: 30),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _sauvegarder,
+                          icon: const Icon(Icons.save),
+                          label: const Text("Enregistrer la configuration"),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _tauxTfcVenteCtrl,
-                            readOnly: _sourceApi,
-                            decoration: InputDecoration(
-                              labelText: "TFC Vente %",
-                              isDense: true,
-                              suffixIcon: _sourceApi
-                                  ? const Icon(Icons.lock_outline, size: 16)
-                                  : null,
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ]),
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _sauvegarder,
-                      icon: const Icon(Icons.save),
-                      label: const Text("Enregistrer la configuration"),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

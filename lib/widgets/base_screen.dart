@@ -84,7 +84,7 @@ class BaseScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: appBar,
+      appBar: isDesktop ? null : appBar,
       drawer: isDesktop ? null : CustomDrawer(selectedIndex: menuIndex),
       body: isDesktop
           ? Row(
@@ -97,7 +97,14 @@ class BaseScreen extends StatelessWidget {
                     isPermanent: true,
                   ),
                 ),
-                Expanded(child: bodyContent),
+                Expanded(
+                  child: Column(
+                    children: [
+                      appBar,
+                      Expanded(child: bodyContent),
+                    ],
+                  ),
+                ),
               ],
             )
           : bodyContent,

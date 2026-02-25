@@ -35,40 +35,62 @@ class _AdminDashboardViewState extends State<AdminDashboardView>
   Widget build(BuildContext context) {
     final vm = context.watch<AdminViewModel>();
 
-    return Scaffold(
-      backgroundColor: Colors.black, // Dark mode strict for God Mode
-      appBar: AppBar(
-        title: const Text('SUPER-COCKPIT (God Mode)'),
-        backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => vm.refreshAll(),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppTheme.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppTheme.primary,
-          tabs: const [
-            Tab(icon: Icon(Icons.analytics), text: 'Data & Metrics'),
-            Tab(icon: Icon(Icons.view_kanban), text: 'Support Kanban'),
-            Tab(icon: Icon(Icons.bug_report), text: 'Crash Logs'),
-          ],
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final appBar = AppBar(
+      title: const Text('SUPER-COCKPIT (God Mode)'),
+      backgroundColor: Colors.black,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => vm.refreshAll(),
         ),
+      ],
+      bottom: TabBar(
+        controller: _tabController,
+        labelColor: AppTheme.primary,
+        unselectedLabelColor: Colors.grey,
+        indicatorColor: AppTheme.primary,
+        tabs: const [
+          Tab(icon: Icon(Icons.analytics), text: 'Data & Metrics'),
+          Tab(icon: Icon(Icons.view_kanban), text: 'Support Kanban'),
+          Tab(icon: Icon(Icons.bug_report), text: 'Crash Logs'),
+        ],
       ),
-      drawer: const CustomDrawer(selectedIndex: 99),
-      body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
+    );
+
+    final bodyContent = vm.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : TabBarView(
+            controller: _tabController,
+            children: [
+              _buildMetricsTab(vm),
+              _buildKanbanTab(vm),
+              _buildCrashLogsTab(vm),
+            ],
+          );
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: isDesktop ? null : appBar,
+      drawer: isDesktop ? null : const CustomDrawer(selectedIndex: 99),
+      body: isDesktop
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMetricsTab(vm),
-                _buildKanbanTab(vm),
-                _buildCrashLogsTab(vm),
+                const SizedBox(
+                  width: 260,
+                  child: CustomDrawer(selectedIndex: 99, isPermanent: true),
+                ),
+                Expanded(
+                  child: Scaffold(
+                    backgroundColor: Colors.transparent,
+                    appBar: appBar,
+                    body: bodyContent,
+                  ),
+                ),
               ],
-            ),
+            )
+          : bodyContent,
     );
   }
 

@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:go_router/go_router.dart';
 import '../viewmodels/editor_state_provider.dart';
 import '../config/theme.dart';
+import '../widgets/custom_drawer.dart';
 
 class SplitEditorScaffold extends StatefulWidget {
   final String title;

@@ -524,11 +524,17 @@ class _SettingsRootViewState extends State<SettingsRootView> {
         DropdownButtonFormField<ModeFacturation>(
           key: ValueKey(_modeFacturation),
           initialValue: _modeFacturation,
+          isExpanded: true,
           decoration: InputDecoration(
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: Colors.white,
           ),
+          selectedItemBuilder: (BuildContext context) {
+            return ModeFacturation.values.map<Widget>((ModeFacturation item) {
+              return Text(item.label, overflow: TextOverflow.ellipsis);
+            }).toList();
+          },
           items: ModeFacturation.values
               .map((m) => DropdownMenuItem(
                     value: m,
@@ -547,26 +553,10 @@ class _SettingsRootViewState extends State<SettingsRootView> {
           onChanged: (v) => setState(() => _modeFacturation = v!),
         ),
         const SizedBox(height: 20),
-        const Text("Thème PDF", style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        RadioGroup<PdfTheme>(
-          groupValue: _pdfTheme,
-          onChanged: (v) {
-            if (v != null) {
-              setState(() => _pdfTheme = v);
-            }
-          },
-          child: Column(
-            children: PdfTheme.values
-                .map((theme) => RadioListTile<PdfTheme>(
-                      title: Text(theme.label),
-                      subtitle: Text(theme.description),
-                      value: theme,
-                      activeColor: AppTheme.primary,
-                    ))
-                .toList(),
-          ),
-        ),
+        const Text("Thème PDF (Aperçu)",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        _buildPdfPreviews(),
         const SizedBox(height: 16),
         SwitchListTile(
           title: const Text("Mode Discret (Privacy)"),
@@ -577,5 +567,199 @@ class _SettingsRootViewState extends State<SettingsRootView> {
         ),
       ],
     );
+  }
+
+  Widget _buildPdfPreviews() {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      children: PdfTheme.values.map((theme) {
+        final isSelected = _pdfTheme == theme;
+        return GestureDetector(
+          onTap: () => setState(() => _pdfTheme = theme),
+          child: SizedBox(
+            width: 120,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 100,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color:
+                          isSelected ? AppTheme.primary : Colors.grey.shade300,
+                      width: isSelected ? 3 : 1,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1)
+                          ]
+                        : [
+                            const BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2))
+                          ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: _buildThemeThumbnail(theme),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  theme.label,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    color: isSelected ? AppTheme.primary : AppTheme.textDark,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  theme.description,
+                  style: const TextStyle(
+                      fontSize: 11, color: Colors.grey, height: 1.2),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                )
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildThemeThumbnail(PdfTheme theme) {
+    switch (theme) {
+      case PdfTheme.moderne:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(height: 25, color: AppTheme.primary),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 4, width: 40, color: AppTheme.primary),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                          height: 15, width: 35, color: Colors.grey.shade200),
+                      Container(
+                          height: 15, width: 20, color: Colors.grey.shade200),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                      height: 8,
+                      color: AppTheme.primary.withValues(alpha: 0.1)),
+                  const SizedBox(height: 2),
+                  Container(height: 4, color: Colors.grey.shade300),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                        height: 8, width: 25, color: AppTheme.primary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      case PdfTheme.classique:
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black54, width: 1.5),
+          ),
+          margin: const EdgeInsets.all(4),
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 6.0),
+                child: Text("FACTURE",
+                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
+              ),
+              const Divider(height: 1, color: Colors.black54, thickness: 1),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                            height: 15,
+                            width: 30,
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black12))),
+                        Container(
+                            height: 15,
+                            width: 25,
+                            decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black12))),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                        height: 25,
+                        decoration: BoxDecoration(
+                            border: Border.all(color: Colors.black45))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      case PdfTheme.minimaliste:
+        return Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Facture",
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 1)),
+              const SizedBox(height: 12),
+              Container(height: 4, width: 35, color: Colors.black87),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(height: 4, width: 25, color: Colors.grey),
+                  Container(height: 4, width: 12, color: Colors.grey),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(height: 4, width: 25, color: Colors.grey),
+                  Container(height: 4, width: 12, color: Colors.grey),
+                ],
+              ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(height: 6, width: 25, color: Colors.black),
+              ),
+            ],
+          ),
+        );
+    }
   }
 }

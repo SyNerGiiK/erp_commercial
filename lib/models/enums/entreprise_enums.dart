@@ -163,3 +163,79 @@ extension ModeFacturationExtension on ModeFacturation {
     }
   }
 }
+
+// === PDF DESIGN SYSTEM (V2) ===
+enum PdfFontPairing { modern, luxury, classic, tech }
+
+extension PdfFontPairingExtension on PdfFontPairing {
+  String get dbValue => name;
+
+  String get label {
+    switch (this) {
+      case PdfFontPairing.modern:
+        return "Moderne (Inter/Roboto)";
+      case PdfFontPairing.luxury:
+        return "Luxe (Playfair/Lato)";
+      case PdfFontPairing.classic:
+        return "Classique (Merriweather)";
+      case PdfFontPairing.tech:
+        return "Tech (Roboto Mono)";
+    }
+  }
+}
+
+enum PdfTableStyle { minimal, zebra, solid, rounded, filledHeader }
+
+extension PdfTableStyleExtension on PdfTableStyle {
+  String get dbValue {
+    if (this == PdfTableStyle.filledHeader) return 'filled_header';
+    return name;
+  }
+
+  String get label {
+    switch (this) {
+      case PdfTableStyle.minimal:
+        return "Minimaliste (Sans bordures)";
+      case PdfTableStyle.zebra:
+        return "Zébré (Lignes alternées)";
+      case PdfTableStyle.solid:
+        return "Solide (Grille complète)";
+      case PdfTableStyle.rounded:
+        return "Arrondi (Bords adoucis)";
+      case PdfTableStyle.filledHeader:
+        return "En-tête Coloré";
+    }
+  }
+
+  static PdfTableStyle fromDbValue(String? val) {
+    if (val == 'filled_header') return PdfTableStyle.filledHeader;
+    return PdfTableStyle.values
+        .firstWhere((e) => e.name == val, orElse: () => PdfTableStyle.minimal);
+  }
+}
+
+enum PdfLayoutVariant { standard, elegant, rightAligned }
+
+extension PdfLayoutVariantExtension on PdfLayoutVariant {
+  String get dbValue {
+    if (this == PdfLayoutVariant.rightAligned) return 'right_aligned';
+    return name;
+  }
+
+  String get label {
+    switch (this) {
+      case PdfLayoutVariant.standard:
+        return "Standard";
+      case PdfLayoutVariant.elegant:
+        return "Élégant (Centré)";
+      case PdfLayoutVariant.rightAligned:
+        return "Aligné à droite";
+    }
+  }
+
+  static PdfLayoutVariant fromDbValue(String? val) {
+    if (val == 'right_aligned') return PdfLayoutVariant.rightAligned;
+    return PdfLayoutVariant.values.firstWhere((e) => e.name == val,
+        orElse: () => PdfLayoutVariant.standard);
+  }
+}

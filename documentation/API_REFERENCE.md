@@ -1026,3 +1026,101 @@ Quand `facturesPrecedentes` n'est pas vide, le PDF affiche :
 | `validateCodePostal` | `static String? validateCodePostal(String? value)` | Code postal 5 chiffres |
 | `validateIban` | `static String? validateIban(String? value)` | Format IBAN |
 | `validateTvaIntra` | `static String? validateTvaIntra(String? value)` | Numéro TVA intracommunautaire |
+
+---
+
+## PDF Design Studio (Module 6)
+
+> Dernière mise à jour : 25/02/2026
+
+### PdfDesignConfig
+
+**Fichier :** `lib/models/pdf_design_config.dart`
+
+Modèle de configuration de design PDF par entreprise. Persist en BDD dans `pdf_design_configs`.
+
+| Propriété | Type | Description |
+|---|---|---|
+| `entrepriseId` | `String` | Clé étrangère vers `entreprises.id` |
+| `fontPairing` | `PdfFontPairing` | Enum : `modern`, `luxury`, `classic`, `tech` |
+| `primaryColor` | `String` | Couleur hex (ex: `#4F46E5`) appliquée sur TOUT le document |
+| `secondaryColor` | `String` | Couleur secondaire hex |
+| `tableStyle` | `PdfTableStyle` | Enum : `minimal`, `zebra`, `solid`, `rounded`, `filledHeader` |
+| `layoutVariant` | `PdfLayoutVariant` | Variante de layout |
+| `headerBannerUrl` | `String?` | URL bannière d'en-tête |
+| `watermarkText` | `String?` | Texte filigrane |
+| `watermarkImageUrl` | `String?` | URL image filigrane |
+| `watermarkOpacity` | `Decimal` | Opacité filigrane (0.0 → 1.0) |
+
+**Méthodes clés :**
+- `PdfDesignConfig.defaultConfig(entrepriseId)` — config par défaut
+- `config.toJson()` / `PdfDesignConfig.fromJson(map)` — sérialisation pour isolates
+- `config.copyWith(...)` — immutabilité
+
+---
+
+### PdfDesignRepository
+
+**Fichier :** `lib/repositories/pdf_design_repository.dart`
+
+| Méthode | Retour | Description |
+|---|---|---|
+| `getConfig(entrepriseId)` | `Future<PdfDesignConfig?>` | Charge la config depuis `pdf_design_configs` |
+| `saveConfig(config)` | `Future<void>` | **UPSERT** sur `entreprise_id` (crée ou met à jour) |
+| `uploadAsset(file, type)` | `Future<String>` | Upload bannière/watermark dans Supabase Storage |
+
+---
+
+### PdfStudioViewModel
+
+**Fichier :** `lib/viewmodels/pdf_studio_viewmodel.dart`
+
+ViewModel du PDF Design Studio. Hérite de `BaseViewModel`.
+
+| Propriété / Méthode | Type | Description |
+|---|---|---|
+| `config` | `PdfDesignConfig?` | Config active (chargée depuis BDD) |
+| `previewPdfBytes` | `Uint8List?` | Bytes du PDF généré pour l'aperçu live |
+| `isGeneratingPreview` | `bool` | `true` pendant la génération de l'aperçu |
+| `loadConfig([entrepriseId])` | `Future<void>` | Charge la config + déclenche preview initiale |
+| `saveConfig()` | `Future<bool>` | Sauvegarde via UPSERT → retourne `true` si succès |
+| `updateField({...})` | `void` | Mise à jour partielle de la config + debounce preview (800ms) |
+| `updateConfig(newConfig)` | `void` | Remplacement complet de la config |
+
+**Preview live :** à chaque `updateField()` → debounce 800ms → `compute(PdfService.generatePdfIsolate)` avec des données de démo → `previewPdfBytes` mis à jour → `PdfPreview` rechargé via `ValueKey(bytes.length)`.
+
+---
+
+### PdfGenerationMixin
+
+**Fichier :** `lib/core/pdf_generation_mixin.dart`
+
+Mixin utilisé par `DevisViewModel` et `FactureViewModel`.
+
+| Méthode | Description |
+|---|---|
+| `_loadPdfConfig(profil)` | Charge la `PdfDesignConfig` depuis Supabase + cache local. Résout l'`entrepriseId` depuis la table `entreprises` si non fourni par le profil. |
+| `triggerPdfUpdate(...)` | Génère le PDF en appelant `_loadPdfConfig` si aucune config fournie. Invalide le cache de polices si `fontPairing` change. |
+| `_cachedPdfConfig` | Cache de la config (évite les requêtes répétées) |
+| `_cachedFonts` | Cache des polices (invalidé si `fontPairing` change) |
+
+---
+
+### PdfService — Couleurs Dynamiques
+
+**Fichier :** `lib/services/pdf_service.dart`
+
+| Helper | Description |
+|---|---|
+| `_configPrimaryColor(config)` | Retourne la `PdfColor` de la couleur primaire de la config (ou le fallback `#1E5572`) |
+| `_configAccentLight(config)` | Retourne une version très claire (15% saturation) de la couleur primaire — utilisé pour les fonds de rows et sections |
+
+Ces helpers sont utilisés dans **tous** les composants PDF internes :
+
+| Composant | Application |
+|---|---|
+| `_buildChunkTable` | En-tête tableau (fond `primaryColor`), bordures teinte claire |
+| `_buildRow` | Fonds zebra / filledHeader (`accentLight`), textes titres (`primaryColor`) |
+| `_buildSectionTitle` | Fond (`accentLight`), texte (`primaryColor`) |
+| `_buildTotals` | Blocs situation (fond, bordure, textes), `Divider` colorés |
+| Thèmes (`buildAddresses`, `buildFooterMentions`) | `accentColor`, `primaryColor`, `darkGrey` depuis `PdfThemeBase` |

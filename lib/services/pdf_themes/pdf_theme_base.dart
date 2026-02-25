@@ -1,31 +1,42 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../../models/pdf_design_config.dart';
 
 /// Classe abstraite définissant le contrat pour tous les thèmes PDF.
-/// Chaque thème fournit ses propres couleurs, mise en page et styles.
+/// Chaque thème fournit ses propres couleurs, mise en page et styles basés sur la PdfDesignConfig.
 abstract class PdfThemeBase {
   /// Identifiant du thème
   String get name;
 
-  /// Couleur primaire personnalisée (override par l'utilisateur)
-  PdfColor? _customPrimaryColor;
+  /// La configuration graphique globale du document
+  final PdfDesignConfig config;
 
-  /// Applique une couleur primaire personnalisée au thème
-  void setCustomPrimaryColor(String? hexColor) {
-    if (hexColor != null && hexColor.isNotEmpty) {
-      try {
-        final hex = hexColor.replaceFirst('#', '');
-        final intColor = int.parse('FF$hex', radix: 16);
-        _customPrimaryColor = PdfColor.fromInt(intColor);
-      } catch (_) {
-        _customPrimaryColor = null;
-      }
+  PdfThemeBase(this.config);
+
+  /// Couleur primaire issue de la configuration
+  PdfColor get primaryColor {
+    try {
+      final hex = config.primaryColor.replaceFirst('#', '');
+      final intColor = int.parse('FF$hex', radix: 16);
+      return PdfColor.fromInt(intColor);
+    } catch (_) {
+      return defaultPrimaryColor;
     }
   }
 
-  // === COULEURS ===
+  /// Couleur secondaire issue de la configuration
+  PdfColor get secondaryColor {
+    try {
+      final hex = config.secondaryColor.replaceFirst('#', '');
+      final intColor = int.parse('FF$hex', radix: 16);
+      return PdfColor.fromInt(intColor);
+    } catch (_) {
+      return defaultPrimaryColor;
+    }
+  }
+
+  // === COULEURS PAR DEFAUT ===
   PdfColor get defaultPrimaryColor;
-  PdfColor get primaryColor => _customPrimaryColor ?? defaultPrimaryColor;
   PdfColor get accentColor;
   PdfColor get lightGrey;
   PdfColor get darkGrey;
@@ -36,7 +47,7 @@ abstract class PdfThemeBase {
 
   // === HEADER ===
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
-      DateTime date, pw.MemoryImage? logo);
+      DateTime date, pw.MemoryImage? logo, pw.MemoryImage? bannerImage);
 
   // === ADRESSES ===
   pw.Widget buildAddresses(

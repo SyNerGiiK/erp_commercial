@@ -1,100 +1,77 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
+import 'package:erp_commercial/models/pdf_design_config.dart';
 import 'package:erp_commercial/services/pdf_themes/moderne_theme.dart';
 import 'package:erp_commercial/services/pdf_themes/classique_theme.dart';
 import 'package:erp_commercial/services/pdf_themes/minimaliste_theme.dart';
 import 'package:erp_commercial/services/pdf_themes/pdf_theme_base.dart';
 
 void main() {
-  group('PdfThemeBase — setCustomPrimaryColor (Sprint 9.3)', () {
+  group('PdfThemeBase — custom colors via PdfDesignConfig', () {
     late PdfThemeBase theme;
 
     setUp(() {
-      theme = ModernePdfTheme();
+      final config = PdfDesignConfig.defaultConfig('test_id')
+          .copyWith(primaryColor: '#FF5733');
+      theme = ModernePdfTheme(config);
     });
 
-    test('primaryColor retourne defaultPrimaryColor si pas de custom', () {
-      expect(theme.primaryColor, theme.defaultPrimaryColor);
-    });
-
-    test('setCustomPrimaryColor applique une couleur hex valide', () {
-      theme.setCustomPrimaryColor('FF5733');
-
-      // Le primaryColor ne doit plus être le default
-      expect(theme.primaryColor, isNot(theme.defaultPrimaryColor));
+    test('primaryColor utilise la configuration fournie', () {
       // Vérifier la couleur parsée (FFFF5733)
       expect(theme.primaryColor, const PdfColor.fromInt(0xFFFF5733));
     });
 
-    test('setCustomPrimaryColor gère le préfixe #', () {
-      theme.setCustomPrimaryColor('#2E86C1');
+    test('primaryColor gère le préfixe #', () {
+      final config = PdfDesignConfig.defaultConfig('test_id')
+          .copyWith(primaryColor: '#2E86C1');
+      theme = ModernePdfTheme(config);
       expect(theme.primaryColor, const PdfColor.fromInt(0xFF2E86C1));
     });
 
-    test('setCustomPrimaryColor null → garde le default', () {
-      theme.setCustomPrimaryColor(null);
+    test('primaryColor hex invalide → fallback vers default', () {
+      final config = PdfDesignConfig.defaultConfig('test_id')
+          .copyWith(primaryColor: 'ZZZZZZ');
+      theme = ModernePdfTheme(config);
       expect(theme.primaryColor, theme.defaultPrimaryColor);
     });
 
-    test('setCustomPrimaryColor chaîne vide → garde le default', () {
-      theme.setCustomPrimaryColor('');
-      expect(theme.primaryColor, theme.defaultPrimaryColor);
-    });
-
-    test('setCustomPrimaryColor hex invalide → garde le default', () {
-      theme.setCustomPrimaryColor('ZZZZZZ');
-      expect(theme.primaryColor, theme.defaultPrimaryColor);
-    });
-
-    test('tableHeaderBg utilise primaryColor (custom ou default)', () {
-      // Par défaut
-      expect(theme.tableHeaderBg, theme.defaultPrimaryColor);
-
-      // Après custom
-      theme.setCustomPrimaryColor('E74C3C');
-      expect(theme.tableHeaderBg, const PdfColor.fromInt(0xFFE74C3C));
+    test('tableHeaderBg utilise primaryColor', () {
+      expect(theme.tableHeaderBg, const PdfColor.fromInt(0xFFFF5733));
     });
   });
 
-  group('Chaque thème concret fournit un nom et des couleurs', () {
+  group('Chaque thème concret nécessite une config locale', () {
+    final defaultConfig = PdfDesignConfig.defaultConfig('test_id');
     test('ModernePdfTheme', () {
-      final theme = ModernePdfTheme();
+      final theme = ModernePdfTheme(defaultConfig);
       expect(theme.name, 'moderne');
       expect(theme.defaultPrimaryColor, isA<PdfColor>());
       expect(theme.accentColor, isA<PdfColor>());
     });
 
     test('ClassiquePdfTheme', () {
-      final theme = ClassiquePdfTheme();
+      final theme = ClassiquePdfTheme(defaultConfig);
       expect(theme.name, 'classique');
       expect(theme.defaultPrimaryColor, isA<PdfColor>());
     });
 
     test('MinimalistePdfTheme', () {
-      final theme = MinimalistePdfTheme();
+      final theme = MinimalistePdfTheme(defaultConfig);
       expect(theme.name, 'minimaliste');
       expect(theme.defaultPrimaryColor, isA<PdfColor>());
     });
   });
 
   group('Custom color fonctionne identiquement sur chaque thème', () {
+    final config = PdfDesignConfig.defaultConfig('test_id')
+        .copyWith(primaryColor: '#27AE60');
     for (final entry in {
-      'moderne': ModernePdfTheme(),
-      'classique': ClassiquePdfTheme(),
-      'minimaliste': MinimalistePdfTheme(),
+      'moderne': ModernePdfTheme(config),
+      'classique': ClassiquePdfTheme(config),
+      'minimaliste': MinimalistePdfTheme(config),
     }.entries) {
-      test('${entry.key} — custom override puis reset', () {
+      test('${entry.key} — custom override', () {
         final theme = entry.value;
-
-        theme.setCustomPrimaryColor('27AE60');
-        expect(theme.primaryColor, const PdfColor.fromInt(0xFF27AE60));
-
-        // On ne peut pas "reset" → on peut renvoyer null
-        // mais vu l'implémentation, un setCustomPrimaryColor(null) ne remet pas
-        // car le code ne set pas _customPrimaryColor = null si hexColor est null.
-        // Vérifions que c'est cohérent
-        theme.setCustomPrimaryColor(null);
-        // Le custom précédent reste en place (design actuel)
         expect(theme.primaryColor, const PdfColor.fromInt(0xFF27AE60));
       });
     }

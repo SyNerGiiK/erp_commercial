@@ -818,7 +818,51 @@ Les tables `clients`, `devis`, `factures`, `depenses`, `temps_activites`, `factu
 
 ---
 
-## 9. Numérotation Séquentielle (Conformité Anti-Fraude)
+## 9. Table `pdf_design_configs`
+Configuration de design PDF par entreprise (1 ligne par `entreprise_id`).
+
+| Colonne | Type | Nullable | Défaut | Description |
+|---------|------|----------|--------|-------------|
+| `id` | UUID | NON | `gen_random_uuid()` | PK |
+| `entreprise_id` | UUID | NON | — | FK → `entreprises.id` — **UNIQUE** |
+| `user_id` | UUID | NON | — | FK → `auth.users.id` (dénormalisé pour RLS) |
+| `font_pairing` | TEXT | OUI | `'modern'` | Pairing typographique (`modern`, `luxury`, `classic`, `tech`) |
+| `primary_color` | TEXT | OUI | `'#1E5572'` | Couleur primaire hex (ex: `#4F46E5`) |
+| `secondary_color` | TEXT | OUI | `'#2A769E'` | Couleur secondaire hex |
+| `table_style` | TEXT | OUI | `'minimal'` | Style tableau (`minimal`, `zebra`, `solid`, `rounded`, `filledHeader`) |
+| `layout_variant` | TEXT | OUI | `'standard'` | Variante de layout PDF |
+| `header_banner_url` | TEXT | OUI | — | URL de la bannière d'en-tête |
+| `watermark_text` | TEXT | OUI | — | Texte filigrane |
+| `watermark_image_url` | TEXT | OUI | — | URL image filigrane |
+| `watermark_opacity` | NUMERIC | OUI | `0.10` | Opacité filigrane (0.0 → 1.0) |
+| `created_at` | TIMESTAMPTZ | OUI | `now()` | Création |
+| `updated_at` | TIMESTAMPTZ | OUI | `now()` | Dernière modification |
+
+**Contrainte :** `UNIQUE (entreprise_id)` — une seule config de design par entreprise.
+
+**RLS :** Utilisateur ne voit et ne modifie que sa propre configuration (`user_id = auth.uid()`).
+
+**Persistence :** Le repository utilise `UPSERT ON CONFLICT (entreprise_id)` pour créer ou mettre à jour en une seule requête.
+
+**Pipeline de customisation :**
+```
+pdf_design_configs (BDD)
+      ↓ PdfDesignRepository.getConfig(entrepriseId)
+      ↓ PdfGenerationMixin._loadPdfConfig()   — cache local
+      ↓ PdfGenerationRequest.configJson        — sérialisé pour isolate
+      ↓ PdfService.generatePdfIsolate()        — reconstruit PdfDesignConfig
+      ↓ _configPrimaryColor(config)            — appliqué à TOUT le PDF
+         ├── En-tête tableau (header row)
+         ├── Bordures de colonnes / lignes zebra
+         ├── Titres de sections
+         ├── Blocs totaux et dividers
+         ├── Footer des thèmes (buildFooterMentions)
+         └── buildAddresses (buildAddresses)
+```
+
+---
+
+## 10. Numérotation Séquentielle (Conformité Anti-Fraude)
 
 Le système garantit la numérotation strictement séquentielle par :
 
@@ -831,7 +875,7 @@ Le système garantit la numérotation strictement séquentielle par :
 
 ---
 
-## 10. Extensions PostgreSQL utilisées
+## 11. Extensions PostgreSQL utilisées
 
 ```sql
 -- Vérifier les extensions actives :

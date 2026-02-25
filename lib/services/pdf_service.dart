@@ -14,6 +14,7 @@ import '../models/entreprise_model.dart';
 import '../models/paiement_model.dart';
 import '../models/enums/entreprise_enums.dart'; // IMPORT ADDED
 import '../utils/format_utils.dart';
+import '../models/pdf_design_config.dart';
 import 'pdf_themes/pdf_themes.dart';
 
 class PdfGenerationRequest {
@@ -23,6 +24,9 @@ class PdfGenerationRequest {
   final Map<String, dynamic>? profil;
   final String docTypeLabel;
   final bool isTvaApplicable;
+  final String? fontPairing; // added to propagate the choice
+  /// La configuration de design PDF sérialisée (JSON) — transmise à l'isolate
+  final Map<String, dynamic>? configJson;
   // Font bytes passed from main isolate
   final Uint8List? fontRegular;
   final Uint8List? fontBold;
@@ -39,6 +43,8 @@ class PdfGenerationRequest {
     required this.profil,
     required this.docTypeLabel,
     required this.isTvaApplicable,
+    this.fontPairing,
+    this.configJson,
     this.fontRegular,
     this.fontBold,
     this.fontItalic,
@@ -48,26 +54,81 @@ class PdfGenerationRequest {
 }
 
 class PdfService {
-  // Couleurs par défaut (fallback quand pas de profil)
+  // Couleurs par défaut (fallback quand pas de config)
   static final PdfColor _primaryColor = PdfColor.fromInt(0xFF1E5572);
   static final PdfColor _lightGrey = PdfColor.fromInt(0xFFF8F8F8);
 
-  /// Résout le thème PDF à utiliser depuis le profil entreprise
-  static PdfThemeBase _resolveTheme(ProfilEntreprise? entreprise) {
+  /// Retourne la couleur primaire depuis la config ou le fallback
+  static PdfColor _configPrimaryColor(PdfDesignConfig? config) {
+    if (config == null) return _primaryColor;
+    try {
+      final hex = config.primaryColor.replaceFirst('#', '');
+      return PdfColor.fromInt(int.parse('FF$hex', radix: 16));
+    } catch (_) {
+      return _primaryColor;
+    }
+  }
+
+  /// Retourne une version très claire de la couleur primaire pour les fonds (10% opacité)
+  static PdfColor _configAccentLight(PdfDesignConfig? config) {
+    if (config == null) return _lightGrey;
+    try {
+      final hex = config.primaryColor.replaceFirst('#', '');
+      final base = PdfColor.fromInt(int.parse('FF$hex', radix: 16));
+      // Mélange avec blanc : 90% blanc + 10% couleur
+      return PdfColor(
+        base.red * 0.15 + 0.85,
+        base.green * 0.15 + 0.85,
+        base.blue * 0.15 + 0.85,
+      );
+    } catch (_) {
+      return _lightGrey;
+    }
+  }
+
+  /// Résout le thème PDF à utiliser depuis le profil entreprise et la configuration
+  static PdfThemeBase _resolveTheme(ProfilEntreprise? entreprise,
+      {PdfDesignConfig? config}) {
     final pdfTheme = entreprise?.pdfTheme ?? PdfTheme.moderne;
-    final theme = PdfThemeFactory.resolve(pdfTheme);
-    // Appliquer la couleur primaire personnalisée si définie
-    theme.setCustomPrimaryColor(entreprise?.pdfPrimaryColor);
-    return theme;
+
+    // Si aucune config n'est fournie, on crée une default pour éviter les crashs
+    final activeConfig =
+        config ?? PdfDesignConfig.defaultConfig(entreprise?.id ?? 'default');
+
+    return PdfThemeFactory.resolve(activeConfig, pdfTheme);
   }
 
   // Preload fonts in main isolate
-  static Future<Map<String, Uint8List>> prepareFonts() async {
-    // PdfGoogleFonts returns Future<Font>, but implementation is TtfFont
-    // We cast to dynamic to access .data safely without importing explicit TtfFont if obscured
-    final regular = await PdfGoogleFonts.openSansRegular();
-    final bold = await PdfGoogleFonts.openSansBold();
-    final italic = await PdfGoogleFonts.openSansItalic();
+  static Future<Map<String, Uint8List>> prepareFonts(
+      PdfFontPairing pairing) async {
+    pw.Font regular;
+    pw.Font bold;
+    pw.Font italic;
+
+    switch (pairing) {
+      case PdfFontPairing.luxury:
+        regular = await PdfGoogleFonts.playfairDisplayRegular();
+        bold = await PdfGoogleFonts.playfairDisplayBold();
+        italic = await PdfGoogleFonts.playfairDisplayItalic();
+        break;
+      case PdfFontPairing.classic:
+        regular = await PdfGoogleFonts.merriweatherRegular();
+        bold = await PdfGoogleFonts.merriweatherBold();
+        italic = await PdfGoogleFonts.merriweatherItalic();
+        break;
+      case PdfFontPairing.tech:
+        regular = await PdfGoogleFonts.robotoMonoRegular();
+        bold = await PdfGoogleFonts.robotoMonoBold();
+        italic = await PdfGoogleFonts.robotoMonoItalic();
+        break;
+      case PdfFontPairing.modern:
+        regular = await PdfGoogleFonts.interRegular();
+        bold = await PdfGoogleFonts.interBold();
+        // Inter italic not always available in standard bundle, fallback to OpenSans if needed, but let's try
+        italic = await PdfGoogleFonts
+            .openSansItalic(); // Using OpenSans Italic as safe fallback for Modern
+        break;
+    }
 
     return {
       'regular': (regular as dynamic).data.buffer.asUint8List(),
@@ -76,24 +137,53 @@ class PdfService {
     };
   }
 
-  static Future<pw.ThemeData> _loadTheme(
+  static Future<pw.ThemeData> _loadTheme(PdfDesignConfig? config,
       {Uint8List? regularBytes,
       Uint8List? boldBytes,
       Uint8List? italicBytes}) async {
+    final pairing = config?.fontPairing ?? PdfFontPairing.modern;
+
+    pw.Font? fallbackRegular, fallbackBold, fallbackItalic;
+
+    if (regularBytes == null || boldBytes == null || italicBytes == null) {
+      switch (pairing) {
+        case PdfFontPairing.luxury:
+          fallbackRegular = await PdfGoogleFonts.playfairDisplayRegular();
+          fallbackBold = await PdfGoogleFonts.playfairDisplayBold();
+          fallbackItalic = await PdfGoogleFonts.playfairDisplayItalic();
+          break;
+        case PdfFontPairing.classic:
+          fallbackRegular = await PdfGoogleFonts.merriweatherRegular();
+          fallbackBold = await PdfGoogleFonts.merriweatherBold();
+          fallbackItalic = await PdfGoogleFonts.merriweatherItalic();
+          break;
+        case PdfFontPairing.tech:
+          fallbackRegular = await PdfGoogleFonts.robotoMonoRegular();
+          fallbackBold = await PdfGoogleFonts.robotoMonoBold();
+          fallbackItalic = await PdfGoogleFonts.robotoMonoItalic();
+          break;
+        case PdfFontPairing.modern:
+          fallbackRegular = await PdfGoogleFonts.interRegular();
+          fallbackBold = await PdfGoogleFonts.interBold();
+          fallbackItalic = await PdfGoogleFonts.openSansItalic();
+          break;
+      }
+    }
+
     final pw.Font fontRegular = regularBytes != null
         ? pw.Font.ttf(regularBytes.buffer
             .asByteData(regularBytes.offsetInBytes, regularBytes.lengthInBytes))
-        : await PdfGoogleFonts.openSansRegular();
+        : fallbackRegular!;
 
     final pw.Font fontBold = boldBytes != null
         ? pw.Font.ttf(boldBytes.buffer
             .asByteData(boldBytes.offsetInBytes, boldBytes.lengthInBytes))
-        : await PdfGoogleFonts.openSansBold();
+        : fallbackBold!;
 
     final pw.Font fontItalic = italicBytes != null
         ? pw.Font.ttf(italicBytes.buffer
             .asByteData(italicBytes.offsetInBytes, italicBytes.lengthInBytes))
-        : await PdfGoogleFonts.openSansItalic();
+        : fallbackItalic!;
 
     return pw.ThemeData.withFont(
       base: fontRegular,
@@ -120,16 +210,11 @@ class PdfService {
   static Future<Uint8List> generatePdfIsolate(
       PdfGenerationRequest request) async {
     // Reconstruct objects from Maps
-    // Client
     final client =
         request.client != null ? Client.fromMap(request.client!) : null;
-
-    // Entreprise
     final profil = request.profil != null
         ? ProfilEntreprise.fromMap(request.profil!)
         : null;
-
-    // Document (Devis or Facture)
     dynamic document;
     if (request.documentType == 'facture') {
       document = Facture.fromMap(request.document!);
@@ -137,12 +222,31 @@ class PdfService {
       document = Devis.fromMap(request.document!);
     }
 
+    // Reconstruire la PdfDesignConfig depuis le JSON transmis
+    PdfDesignConfig config;
+    if (request.configJson != null) {
+      try {
+        config = PdfDesignConfig.fromJson(request.configJson!);
+      } catch (_) {
+        config = PdfDesignConfig.defaultConfig(profil?.id ?? 'default');
+      }
+    } else {
+      // Fallback : construire une config minimale avec le fontPairing
+      final fontPairingEnum = request.fontPairing != null
+          ? PdfFontPairing.values.firstWhere(
+              (e) => e.name == request.fontPairing,
+              orElse: () => PdfFontPairing.modern)
+          : PdfFontPairing.modern;
+      config = PdfDesignConfig.defaultConfig(profil?.id ?? 'default')
+          .copyWith(fontPairing: fontPairingEnum);
+    }
+
     return await generateDocument(document, client, profil,
         docType: request.docTypeLabel,
         isTvaApplicable: request.isTvaApplicable,
         factureSourceNumero: request.factureSourceNumero,
         facturesPrecedentes: request.facturesPrecedentes,
-        // Pass fonts
+        config: config,
         fontRegular: request.fontRegular,
         fontBold: request.fontBold,
         fontItalic: request.fontItalic);
@@ -155,6 +259,7 @@ class PdfService {
       bool isTvaApplicable = true,
       String? factureSourceNumero,
       List<Map<String, dynamic>>? facturesPrecedentes,
+      PdfDesignConfig? config,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
@@ -163,6 +268,7 @@ class PdfService {
         isTvaApplicable: isTvaApplicable,
         factureSourceNumero: factureSourceNumero,
         facturesPrecedentes: facturesPrecedentes,
+        config: config,
         fontRegular: fontRegular,
         fontBold: fontBold,
         fontItalic: fontItalic);
@@ -175,10 +281,11 @@ class PdfService {
       bool isTvaApplicable = true,
       String? factureSourceNumero,
       List<Map<String, dynamic>>? facturesPrecedentes,
+      PdfDesignConfig? config,
       Uint8List? fontRegular,
       Uint8List? fontBold,
       Uint8List? fontItalic}) async {
-    final theme = await _loadTheme(
+    final theme = await _loadTheme(config,
         regularBytes: fontRegular,
         boldBytes: fontBold,
         italicBytes: fontItalic);
@@ -186,6 +293,8 @@ class PdfService {
     final logoBytes = await _downloadImage(entreprise?.logoUrl);
     final signatureEntBytes = await _downloadImage(entreprise?.signatureUrl);
     final logoFooterBytes = await _downloadImage(entreprise?.logoFooterUrl);
+    final bannerImageBytes = await _downloadImage(config?.headerBannerUrl);
+    final watermarkImageBytes = await _downloadImage(config?.watermarkImageUrl);
 
     final pdf = pw.Document(theme: theme);
 
@@ -254,13 +363,62 @@ class PdfService {
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          buildBackground: (context) {
+            if (config != null) {
+              if (watermarkImageBytes != null) {
+                return pw.FullPage(
+                  ignoreMargins: true,
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: config.watermarkOpacity.toDouble(),
+                      child: pw.Image(
+                        pw.MemoryImage(watermarkImageBytes),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                );
+              } else if (config.watermarkText?.isNotEmpty ?? false) {
+                return pw.FullPage(
+                  ignoreMargins: true,
+                  child: pw.Center(
+                    child: pw.Transform.rotateBox(
+                      angle: 0.785398, // 45 degrees
+                      child: pw.Opacity(
+                        opacity: config.watermarkOpacity.toDouble(),
+                        child: pw.Text(
+                          config.watermarkText!,
+                          style: pw.TextStyle(
+                            fontSize: 100,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey300,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            }
+            return pw.Container();
+          },
+        ),
         build: (context) {
-          final theme = _resolveTheme(entreprise);
+          final theme = _resolveTheme(entreprise, config: config);
           return [
-            theme.buildHeader(entreprise?.nomEntreprise, docType, numero, date,
-                logoBytes != null ? pw.MemoryImage(logoBytes) : null),
+            theme.buildHeader(
+              entreprise?.nomEntreprise,
+              docType,
+              numero,
+              date,
+              logoBytes != null ? pw.MemoryImage(logoBytes) : null,
+              bannerImageBytes != null
+                  ? pw.MemoryImage(bannerImageBytes)
+                  : null,
+            ),
             pw.SizedBox(height: 30),
             theme.buildAddresses(
               entreprise?.nomEntreprise,
@@ -278,7 +436,9 @@ class PdfService {
             theme.buildTitle(objet),
             pw.SizedBox(height: 20),
             _buildLignesTable(lignes,
-                isSituation: isSituation, showTva: isTvaApplicable),
+                isSituation: isSituation,
+                showTva: isTvaApplicable,
+                config: config),
             pw.SizedBox(height: 20),
             _buildTotals(totalHt, remiseTaux, acompte, totalTva, netAPayer,
                 isDevis: isDevis,
@@ -291,7 +451,8 @@ class PdfService {
                     : null,
                 deductions: isSituation
                     ? _buildDeductionsFromMaps(facturesPrecedentes)
-                    : null),
+                    : null,
+                config: config),
             pw.SizedBox(height: 30),
             if (isFacture) _buildPaiementsTable(paiements, netAPayer, acompte),
             pw.SizedBox(height: 20),
@@ -315,7 +476,7 @@ class PdfService {
           ];
         },
         footer: (context) {
-          final theme = _resolveTheme(entreprise);
+          final theme = _resolveTheme(entreprise, config: config);
           return theme.buildFooterMentions(
             entreprise?.nomEntreprise,
             entreprise?.siret,
@@ -335,7 +496,10 @@ class PdfService {
   // --- COMPOSANTS PDF ---
 
   static pw.Widget _buildLignesTable(List<dynamic> lignes,
-      {bool isSituation = false, bool isBL = false, bool showTva = true}) {
+      {bool isSituation = false,
+      bool isBL = false,
+      bool showTva = true,
+      PdfDesignConfig? config}) {
     final chunks = <List<dynamic>>[];
     var currentChunk = <dynamic>[];
 
@@ -384,7 +548,10 @@ class PdfService {
       }
 
       final table = _buildChunkTable(tableRows,
-          isSituation: isSituation, isBL: isBL, showTva: showTva);
+          isSituation: isSituation,
+          isBL: isBL,
+          showTva: showTva,
+          config: config);
 
       return pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 10),
@@ -400,48 +567,91 @@ class PdfService {
     }));
   }
 
-  static pw.Widget _buildSectionTitle(String title) {
+  static pw.Widget _buildSectionTitle(String title, {PdfDesignConfig? config}) {
+    final primary = _configPrimaryColor(config);
+    final bg = _configAccentLight(config);
     return pw.Container(
         width: double.infinity,
-        color: _lightGrey,
+        color: bg,
         padding: const pw.EdgeInsets.all(5),
         margin: const pw.EdgeInsets.only(top: 10),
         child: pw.Text(title.toUpperCase(),
             style: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                color: _primaryColor,
-                fontSize: 10)));
+                fontWeight: pw.FontWeight.bold, color: primary, fontSize: 10)));
   }
 
   static pw.Widget _buildChunkTable(List<dynamic> chunk,
-      {bool isSituation = false, bool isBL = false, bool showTva = true}) {
-    return pw.Table(
-        border: pw.TableBorder(
-            bottom: pw.BorderSide(color: _lightGrey, width: 0.5)),
-        columnWidths: {
-          0: const pw.FlexColumnWidth(4),
-          1: const pw.FlexColumnWidth(1),
-          2: const pw.FlexColumnWidth(1),
-          3: const pw.FlexColumnWidth(1),
-          if (showTva && !isBL && !isSituation) 4: const pw.FlexColumnWidth(1),
-        },
-        children: [
-          pw.TableRow(
-              decoration: pw.BoxDecoration(color: _primaryColor),
-              children: [
-                _buildHeaderCell("Désignation",
-                    alignment: pw.Alignment.centerLeft),
-                _buildHeaderCell(isSituation ? "Marché" : "Qté"),
-                if (!isBL)
-                  _buildHeaderCell(isSituation
-                      ? "Avct %"
-                      : (showTva ? "P.U. HT" : "Prix Unit.")),
-                if (showTva && !isBL && !isSituation) _buildHeaderCell("TVA"),
-                if (!isBL) _buildHeaderCell(showTva ? "Total HT" : "Total Net"),
-              ]),
-          ...chunk.map((l) => _buildRow(l,
-              isSituation: isSituation, isBL: isBL, showTva: showTva)),
-        ]);
+      {bool isSituation = false,
+      bool isBL = false,
+      bool showTva = true,
+      PdfDesignConfig? config}) {
+    final tableStyle = config?.tableStyle ?? PdfTableStyle.minimal;
+    final primary = _configPrimaryColor(config);
+    final accentLight = _configAccentLight(config);
+
+    pw.TableBorder? tableBorder;
+    bool hasOuterBorder = false;
+
+    switch (tableStyle) {
+      case PdfTableStyle.minimal:
+        tableBorder = pw.TableBorder(
+            bottom: pw.BorderSide(color: primary.shade(0.2), width: 0.5));
+        break;
+      case PdfTableStyle.zebra:
+        tableBorder = pw.TableBorder(
+            bottom: pw.BorderSide(color: primary.shade(0.2), width: 0.5),
+            horizontalInside: pw.BorderSide(color: accentLight, width: 0.3));
+        break;
+      case PdfTableStyle.solid:
+        tableBorder = pw.TableBorder.all(color: primary.shade(0.3), width: 0.5);
+        hasOuterBorder = true;
+        break;
+      case PdfTableStyle.rounded:
+        tableBorder = pw.TableBorder.all(color: primary.shade(0.3), width: 0.5);
+        break;
+      case PdfTableStyle.filledHeader:
+        tableBorder = pw.TableBorder(
+            bottom: pw.BorderSide(color: primary.shade(0.2), width: 0.5),
+            horizontalInside: pw.BorderSide(color: accentLight, width: 0.3));
+        break;
+    }
+
+    final table = pw.Table(border: tableBorder, columnWidths: {
+      0: const pw.FlexColumnWidth(4),
+      1: const pw.FlexColumnWidth(1),
+      2: const pw.FlexColumnWidth(1),
+      3: const pw.FlexColumnWidth(1),
+      if (showTva && !isBL && !isSituation) 4: const pw.FlexColumnWidth(1),
+    }, children: [
+      pw.TableRow(decoration: pw.BoxDecoration(color: primary), children: [
+        _buildHeaderCell("Désignation", alignment: pw.Alignment.centerLeft),
+        _buildHeaderCell(isSituation ? "Marché" : "Qté"),
+        if (!isBL)
+          _buildHeaderCell(
+              isSituation ? "Avct %" : (showTva ? "P.U. HT" : "Prix Unit.")),
+        if (showTva && !isBL && !isSituation) _buildHeaderCell("TVA"),
+        if (!isBL) _buildHeaderCell(showTva ? "Total HT" : "Total Net"),
+      ]),
+      ...chunk.asMap().entries.map((entry) => _buildRow(
+            entry.value,
+            isSituation: isSituation,
+            isBL: isBL,
+            showTva: showTva,
+            rowIndex: entry.key,
+            tableStyle: tableStyle,
+            config: config,
+          )),
+    ]);
+
+    if (hasOuterBorder) {
+      return pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: primary.shade(0.3), width: 0.5),
+        ),
+        child: table,
+      );
+    }
+    return table;
   }
 
   static pw.Widget _buildHeaderCell(String text,
@@ -458,16 +668,36 @@ class PdfService {
   }
 
   static pw.TableRow _buildRow(dynamic l,
-      {bool isSituation = false, bool isBL = false, bool showTva = true}) {
+      {bool isSituation = false,
+      bool isBL = false,
+      bool showTva = true,
+      int rowIndex = 0,
+      PdfTableStyle tableStyle = PdfTableStyle.minimal,
+      PdfDesignConfig? config}) {
     final bool isSpecial = ['titre', 'sous-titre', 'texte'].contains(l.type);
+    final primary = _configPrimaryColor(config);
+    final accentLight = _configAccentLight(config);
+
+    // Zebra striping avec la couleur accent
+    pw.BoxDecoration? zebraDecoration;
+    if (!isSpecial && tableStyle == PdfTableStyle.zebra && rowIndex.isOdd) {
+      zebraDecoration = pw.BoxDecoration(color: accentLight);
+    }
+    // FilledHeader : alterner sur rows paires (exclusion row 0 = header)
+    if (!isSpecial &&
+        tableStyle == PdfTableStyle.filledHeader &&
+        rowIndex.isEven &&
+        rowIndex > 0) {
+      zebraDecoration = pw.BoxDecoration(color: accentLight);
+    }
 
     pw.TextStyle? style;
     pw.BoxDecoration? decoration;
 
     if (l.type == 'titre') {
       style = pw.TextStyle(
-          fontWeight: pw.FontWeight.bold, color: _primaryColor, fontSize: 12);
-      decoration = pw.BoxDecoration(color: _lightGrey);
+          fontWeight: pw.FontWeight.bold, color: primary, fontSize: 12);
+      decoration = pw.BoxDecoration(color: accentLight);
     }
     if (l.type == 'sous-titre') {
       style = pw.TextStyle(
@@ -482,7 +712,7 @@ class PdfService {
     final label = l.description ?? "";
 
     if (isSpecial) {
-      return pw.TableRow(decoration: decoration, children: [
+      return pw.TableRow(decoration: decoration ?? zebraDecoration, children: [
         pw.Padding(
             padding: const pw.EdgeInsets.all(5),
             child: pw.Text(label, style: style)),
@@ -505,7 +735,7 @@ class PdfService {
       col2 = FormatUtils.currency(l.prixUnitaire);
     }
 
-    return pw.TableRow(children: [
+    return pw.TableRow(decoration: zebraDecoration, children: [
       pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(label)),
       pw.Padding(
           padding: const pw.EdgeInsets.all(5),
@@ -532,9 +762,12 @@ class PdfService {
       bool showTva = true,
       bool isSituation = false,
       Decimal? totalMarche,
-      List<Map<String, dynamic>>? deductions}) {
+      List<Map<String, dynamic>>? deductions,
+      PdfDesignConfig? config}) {
     final remiseRational = (totalHt * remise) / Decimal.fromInt(100);
     final remiseMontant = remiseRational.toDecimal();
+    final primary = _configPrimaryColor(config);
+    final accentLight = _configAccentLight(config);
 
     return pw.Container(
       alignment: pw.Alignment.centerRight,
@@ -547,12 +780,12 @@ class PdfService {
               totalMarche > Decimal.zero) ...[
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(color: _lightGrey),
+              decoration: pw.BoxDecoration(color: accentLight),
               child: pw.Column(children: [
                 pw.Text("ÉTAT D'AVANCEMENT",
                     style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
-                        color: _primaryColor,
+                        color: primary,
                         fontSize: 9)),
                 pw.SizedBox(height: 4),
                 _buildTotalRow("Total Marché HT", totalMarche),
@@ -570,13 +803,13 @@ class PdfService {
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
               decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: _primaryColor, width: 0.5),
+                border: pw.Border.all(color: primary, width: 0.5),
               ),
               child: pw.Column(children: [
                 pw.Text("RÉCAPITULATIF FINANCIER",
                     style: pw.TextStyle(
                         fontWeight: pw.FontWeight.bold,
-                        color: _primaryColor,
+                        color: primary,
                         fontSize: 9)),
                 pw.SizedBox(height: 4),
                 _buildTotalRow(
@@ -586,11 +819,9 @@ class PdfService {
                       isNegative: true),
                 if (showTva) ...[
                   _buildTotalRow("TVA", totalTva),
-                  pw.Divider(),
+                  pw.Divider(color: primary.shade(0.3)),
                   _buildTotalRow("Total brut TTC", netAPayer),
                 ],
-
-                // Déductions détaillées par facture précédente
                 if (deductions != null && deductions.isNotEmpty) ...[
                   pw.SizedBox(height: 6),
                   pw.Text("Déductions :",
@@ -602,14 +833,12 @@ class PdfService {
                         d['montant'] as Decimal,
                         isNegative: true,
                       )),
-                  pw.Divider(),
+                  pw.Divider(color: primary.shade(0.3)),
                 ] else if (acompte > Decimal.zero) ...[
                   pw.SizedBox(height: 4),
                   _buildTotalRow("Déjà réglé", acompte, isNegative: true),
-                  pw.Divider(),
+                  pw.Divider(color: primary.shade(0.3)),
                 ],
-
-                // Net à payer final
                 _buildTotalRow(
                   "NET À PAYER",
                   _calculateNetSituation(netAPayer, acompte, deductions),
@@ -624,21 +853,17 @@ class PdfService {
               _buildTotalRow("Remise ($remise%)", remiseMontant,
                   isNegative: true),
             if (showTva) ...[
-              pw.Divider(),
+              pw.Divider(color: primary.shade(0.2)),
               _buildTotalRow("Total TVA", totalTva),
             ],
-            pw.Divider(),
+            pw.Divider(color: primary.shade(0.2)),
             _buildTotalRow(showTva ? "Total TTC" : "NET À PAYER", netAPayer,
                 isBold: acompte <= Decimal.zero),
-
-            // Déduction acompte/situations précédentes
             if (!isDevis && acompte > Decimal.zero) ...[
               _buildTotalRow("Déjà réglé", acompte, isNegative: true),
-              pw.Divider(),
+              pw.Divider(color: primary.shade(0.2)),
               _buildTotalRow("NET À PAYER", netAPayer - acompte, isBold: true),
             ],
-
-            // Pour DEVIS uniquement : Acompte demandé
             if (isDevis && acompte > Decimal.zero) ...[
               pw.SizedBox(height: 5),
               _buildTotalRow("Acompte demandé", acompte),

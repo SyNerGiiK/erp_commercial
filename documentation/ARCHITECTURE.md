@@ -147,26 +147,27 @@ lib/
 │   ├── temps_repository.dart          # ITempsRepository + TempsRepository
 │   ├── rappel_repository.dart         # IRappelRepository + RappelRepository
 │   └── shopping_repository.dart       # IShoppingRepository + ShoppingRepository
-├── services/                          # Services métier + thèmes PDF
-│   ├── gemini_service.dart            # Intégration Gemini 2.0 Flash (OCR, AI Quotes)
-│   ├── ai_support_service.dart        # Liaison Edge Functions pour le SAV
-│   ├── tva_service.dart               # Analyse TVA, seuils franchise
-│   ├── relance_service.dart           # Analyse relances multi-niveaux
-│   ├── archivage_service.dart         # Détection factures archivables
-│   ├── email_service.dart             # Envoi via mailto: ou API Resend
-│   ├── audit_service.dart             # Logs audit (loi anti-fraude)
-│   ├── export_service.dart            # Export CSV comptabilité
-│   ├── pdf_service.dart               # Génération PDF isolate-ready + QR Code SEPA
-│   ├── local_storage_service.dart     # Brouillons SharedPreferences / Mode Offline
-│   ├── preferences_service.dart       # Préférences charges sociales
-│   ├── echeance_service.dart          # Rappels fiscaux auto (URSSAF, CFE, TVA, Impôts)
-│   └── pdf_themes/
-│       ├── pdf_theme_base.dart        # Classe abstraite (Strategy Pattern)
-│       ├── classique_theme.dart       # Thème classique sobre
-│       ├── moderne_theme.dart         # Thème moderne coloré
-│       ├── minimaliste_theme.dart     # Thème épuré minimal
-│       └── pdf_themes.dart            # Barrel export
-├── viewmodels/                        # 20 ViewModels
+│   ├── services/
+│   │   ├── gemini_service.dart            # Intégration Gemini 2.0 Flash (OCR, AI Quotes)
+│   │   ├── ai_support_service.dart        # Liaison Edge Functions pour le SAV
+│   │   ├── tva_service.dart               # Analyse TVA, seuils franchise
+│   │   ├── relance_service.dart           # Analyse relances multi-niveaux
+│   │   ├── archivage_service.dart         # Détection factures archivables
+│   │   ├── email_service.dart             # Envoi via mailto: ou API Resend
+│   │   ├── audit_service.dart             # Logs audit (loi anti-fraude)
+│   │   ├── export_service.dart            # Export CSV comptabilité
+│   │   ├── pdf_service.dart               # Génération PDF isolate-ready + QR Code SEPA
+│   │   │                                  #  → _configPrimaryColor / _configAccentLight dynamiques
+│   │   ├── local_storage_service.dart     # Brouillons SharedPreferences / Mode Offline
+│   │   ├── preferences_service.dart       # Préférences charges sociales
+│   │   ├── echeance_service.dart          # Rappels fiscaux auto (URSSAF, CFE, TVA, Impôts)
+│   │   └── pdf_themes/
+│   │       ├── pdf_theme_base.dart        # PdfThemeBase : primaryColor / secondaryColor / accentColor dynamiques
+│   │       ├── classique_theme.dart       # Thème classique sobre (couleurs config)
+│   │       ├── moderne_theme.dart         # Thème moderne coloré (couleurs config)
+│   │       ├── minimaliste_theme.dart     # Thème épuré minimal
+│   │       └── pdf_themes.dart            # Barrel export
+├── viewmodels/                        # 21 ViewModels
 │   ├── facture_viewmodel.dart         # Cycle facture complet (458 lignes)
 │   ├── devis_viewmodel.dart           # Cycle devis complet (458 lignes)
 │   ├── dashboard_viewmodel.dart       # KPI, graphiques, alertes (390 lignes)
@@ -185,6 +186,7 @@ lib/
 │   ├── temps_viewmodel.dart           # Suivi du temps
 │   ├── rappel_viewmodel.dart          # Rappels & échéances
 │   ├── rentabilite_viewmodel.dart     # Progress billing + auto-save (298 lignes)
+│   ├── pdf_studio_viewmodel.dart      # PDF Design Studio : config + preview live (compute)
 │   └── editor_state_provider.dart     # État éditeur partagé
 ├── views/                             # ~26 vues
 │   ├── tableau_de_bord_view.dart      # Dashboard principal
@@ -200,6 +202,7 @@ lib/
 │   ├── profil_entreprise_view.dart    # Configuration entreprise
 │   ├── parametres_view.dart           # Paramètres application
 │   ├── settings_root_view.dart        # Menu paramètres (hub)
+│   ├── pdf_studio_view.dart           # PDF Design Studio (split view + live preview)
 │   ├── relances_view.dart             # Gestion relances
 │   ├── archives_view.dart             # Documents archivés
 │   ├── rentabilite_view.dart          # Analyse rentabilité
@@ -235,7 +238,7 @@ lib/
     └── validation_utils.dart          # Validations formulaires
 ```
 
-**Total : ~155+ fichiers Dart**
+**Total : ~165+ fichiers Dart**
 
 ---
 

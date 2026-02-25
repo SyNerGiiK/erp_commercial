@@ -5,6 +5,8 @@ import 'pdf_theme_base.dart';
 
 /// Thème minimaliste : épuré, beaucoup de blanc, lignes fines.
 class MinimalistePdfTheme extends PdfThemeBase {
+  MinimalistePdfTheme(super.config);
+
   @override
   String get name => 'minimaliste';
 
@@ -19,7 +21,7 @@ class MinimalistePdfTheme extends PdfThemeBase {
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
-      DateTime date, pw.MemoryImage? logo) {
+      DateTime date, pw.MemoryImage? logo, pw.MemoryImage? bannerImage) {
     return pw.Column(children: [
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

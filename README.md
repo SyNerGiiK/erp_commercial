@@ -57,8 +57,14 @@ L'application couvre 8 modules fondamentaux allant de l'acquisition web au CRM i
 - Gère la comptabilité sans y penser.
 - **Sélecteur Régime Fiscal** et **Assistant Échéances** avec injection de rappels automatiques (URSSAF, CFE, TVA).
 
-### 🎨 MODULE 6 : Génération PDF & Encaissement Premium
-- Rendu digne d'une multinationale avec 3 thèmes interchangeables.
+### 🎨 MODULE 6 : PDF Design Studio & Encaissement Premium
+- **PDF Design Studio** : Personnalisation complète en split view (desktop) avec aperçu PDF live qui se met à jour en temps réel (debounce 800ms, isolate `compute`).
+  - 🎨 Palette de 8 couleurs primaires appliquées à **TOUT** le document : en-tête tableau, bordures, lignes zebra, titres de section, blocs totaux, dividers, footer
+  - 🔤 4 typographies interchangeables (`Inter`, `Playfair Display`, `Merriweather`, `Roboto Mono`)
+  - 📊 5 styles de tableau (`minimal`, `zébré`, `solid`, `rounded`, `filledHeader`)
+  - 📌 Filigrane (texte ou image, opacité configurable) et Bannière d'en-tête personnalisée
+  - 💾 Sauvegarde UPSERT dans `pdf_design_configs` en BDD (1 config par entreprise)
+- **3 thèmes PDF** interchangeables (`Moderne`, `Classique`, `Minimaliste`) — 100% dynamiques
 - **QR Code SEPA (EPC)** : Généré via `qr_flutter` pour un paiement en 1 clic.
 - **Badges de Réassurance** : Insertion dynamique RGE / Décennale en bas de facture.
 

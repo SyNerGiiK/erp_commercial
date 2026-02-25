@@ -37,6 +37,7 @@ import '../views/suivi_temps_view.dart';
 import '../views/rappels_echeances_view.dart';
 import '../views/support_center_view.dart';
 import '../views/admin/admin_dashboard_view.dart'; // GOD MODE
+import '../views/pdf_studio_view.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthViewModel authViewModel) {
@@ -169,6 +170,10 @@ class AppRouter {
         GoRoute(
           path: '/app/support',
           builder: (_, __) => const SupportCenterView(),
+        ),
+        GoRoute(
+          path: '/app/pdf-studio',
+          builder: (_, __) => const PdfStudioView(),
         ),
         GoRoute(
           path: '/admin-panel',

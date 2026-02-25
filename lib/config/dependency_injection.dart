@@ -23,6 +23,7 @@ import '../viewmodels/rappel_viewmodel.dart';
 import '../viewmodels/rentabilite_viewmodel.dart';
 import '../viewmodels/support_viewmodel.dart';
 import '../viewmodels/admin_viewmodel.dart'; // Added
+import '../viewmodels/pdf_studio_viewmodel.dart';
 
 class DependencyInjection {
   static List<SingleChildWidget> get providers {
@@ -48,6 +49,7 @@ class DependencyInjection {
       ChangeNotifierProvider(create: (_) => RentabiliteViewModel()),
       ChangeNotifierProvider(create: (_) => SupportViewModel()),
       ChangeNotifierProvider(create: (_) => AdminViewModel()),
+      ChangeNotifierProvider(create: (_) => PdfStudioViewModel()),
     ];
   }
 }

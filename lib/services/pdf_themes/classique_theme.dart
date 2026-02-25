@@ -5,6 +5,8 @@ import 'pdf_theme_base.dart';
 
 /// Thème classique : look traditionnel, couleur sobre, encadrements nets.
 class ClassiquePdfTheme extends PdfThemeBase {
+  ClassiquePdfTheme(super.config);
+
   @override
   String get name => 'classique';
 
@@ -19,7 +21,7 @@ class ClassiquePdfTheme extends PdfThemeBase {
 
   @override
   pw.Widget buildHeader(String? nomEntreprise, String docType, String ref,
-      DateTime date, pw.MemoryImage? logo) {
+      DateTime date, pw.MemoryImage? logo, pw.MemoryImage? bannerImage) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
@@ -151,9 +153,7 @@ class ClassiquePdfTheme extends PdfThemeBase {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 5),
       decoration: pw.BoxDecoration(
-          border: pw.Border(
-              top: pw.BorderSide(
-                  color: PdfColor.fromInt(0xFF2C3E50), width: 1))),
+          border: pw.Border(top: pw.BorderSide(color: primaryColor, width: 1))),
       child: pw.Column(children: [
         if (logoFooter != null)
           pw.Padding(
@@ -162,20 +162,18 @@ class ClassiquePdfTheme extends PdfThemeBase {
           ),
         pw.Text(
           "${nomEntreprise ?? ''} | SIRET: ${siret ?? ''}",
-          style: pw.TextStyle(fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50)),
+          style: pw.TextStyle(fontSize: 8, color: darkGrey),
         ),
         if (iban != null)
           pw.Text("IBAN: $iban | BIC: $bic",
-              style: pw.TextStyle(
-                  fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50))),
+              style: pw.TextStyle(fontSize: 8, color: darkGrey)),
         if (mentions != null)
           pw.Text(mentions,
               style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey),
               textAlign: pw.TextAlign.center),
         if (isTvaApplicable && numeroTvaIntra != null)
           pw.Text("TVA Intracommunautaire : $numeroTvaIntra",
-              style: pw.TextStyle(
-                  fontSize: 8, color: PdfColor.fromInt(0xFF2C3E50))),
+              style: pw.TextStyle(fontSize: 8, color: darkGrey)),
         pw.Text("Document généré par Artisan 3.0",
             style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey)),
       ]),

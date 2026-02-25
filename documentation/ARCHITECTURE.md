@@ -1,6 +1,6 @@
 # Architecture — CraftOS
 
-> Document de référence architecture — Dernière mise à jour : 24/02/2026
+> Document de référence architecture — Dernière mise à jour : 25/02/2026
 
 ---
 

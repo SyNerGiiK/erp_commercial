@@ -511,4 +511,4 @@ flutter analyze                 # Analyse statique (0 issues)
 flutter clean                   # Si fichiers éphémères corrompus
 ```
 
-*CraftOS — Dernière mise à jour : 24 février 2026*
+*CraftOS — Dernière mise à jour : 25 février 2026*

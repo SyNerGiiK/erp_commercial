@@ -1,7 +1,7 @@
 # DATABASE.md — Base de Données ERP Artisan
 
 > **Projet Supabase cible :** `Cap'Tech Project` — ID : `phfkebkwlhqizgizqlhu` — Région : `eu-west-1`
-> **Moteur :** PostgreSQL 17 | **Dernière mise à jour :** 2026-02-24
+> **Moteur :** PostgreSQL 17 | **Dernière mise à jour :** 2026-02-25
 
 ---
 
@@ -176,6 +176,7 @@ Lignes de détail des devis.
 | `est_souligne` | BOOLEAN | OUI | `false` | Formatage souligné |
 | `ordre` | INTEGER | OUI | `0` | Ordre d'affichage |
 | `taux_tva` | NUMERIC | OUI | `0` | Taux TVA de la ligne (%) |
+| `is_ai_estimated` | BOOLEAN | OUI | `false` | Ligne estimée par l'intelligence artificielle |
 
 ---
 

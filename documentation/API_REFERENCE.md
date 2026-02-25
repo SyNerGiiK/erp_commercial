@@ -1,6 +1,6 @@
 # Référence API — CraftOS
 
-> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 24/02/2026
+> Référence complète de l'API publique de toutes les couches — Dernière mise à jour : 25/02/2026
 
 ---
 

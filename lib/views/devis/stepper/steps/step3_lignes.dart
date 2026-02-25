@@ -140,15 +140,36 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
                 ElevatedButton.icon(
                   onPressed: () async {
                     if (!_isListening) {
-                      bool available = await _speech.initialize();
+                      bool available = await _speech.initialize(
+                        onStatus: (status) {
+                          if (status == 'done' || status == 'notListening') {
+                            setDialogState(() => _isListening = false);
+                          }
+                        },
+                      );
                       if (available) {
                         setDialogState(() => _isListening = true);
-                        _speech.listen(onResult: (val) {
-                          setDialogState(() {
-                            _recognizedText = val.recognizedWords;
-                            currentTextCtrl.text = _recognizedText;
-                          });
-                        });
+                        final previousText = currentTextCtrl.text.trim();
+                        _speech.listen(
+                          listenOptions: stt.SpeechListenOptions(
+                            listenMode: stt.ListenMode.dictation,
+                          ),
+                          pauseFor: const Duration(seconds: 10),
+                          onResult: (val) {
+                            setDialogState(() {
+                              final textToAppend = val.recognizedWords.trim();
+                              _recognizedText = previousText.isEmpty
+                                  ? textToAppend
+                                  : "$previousText $textToAppend";
+                              currentTextCtrl.text = _recognizedText;
+                              currentTextCtrl.selection =
+                                  TextSelection.fromPosition(
+                                TextPosition(
+                                    offset: currentTextCtrl.text.length),
+                              );
+                            });
+                          },
+                        );
                       } else {
                         if (!ctx.mounted) return;
                         ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(

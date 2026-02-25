@@ -6,8 +6,7 @@ import '../../models/enums/entreprise_enums.dart';
 import '../../models/urssaf_model.dart';
 import '../../services/tva_service.dart';
 import '../../services/urssaf_sync_service.dart';
-import 'plafonds_card.dart';
-import 'suivi_seuil_tva_card.dart';
+import 'seuils_et_plafonds_card.dart';
 import 'vl_vs_ir_card.dart';
 import 'cotisation_detail_card.dart';
 
@@ -86,19 +85,13 @@ class RegimeBlock extends StatelessWidget {
   Widget _buildMicroBlock(BuildContext context) {
     return Column(
       children: [
-        // Plafonds CA
-        if (urssafConfig != null)
-          PlafondsCard(
-            caVente: caVente,
-            caPrestaBIC: caPrestaBIC,
-            caPrestaBNC: caPrestaBNC,
-            type: typeEntreprise,
-            config: urssafConfig!,
-          ),
-        if (bilanTva != null) ...[
-          const SizedBox(height: AppTheme.spacing16),
-          SuiviSeuilTvaCard(bilan: bilanTva!),
-        ],
+        SeuilsEtPlafondsCard(
+          type: typeEntreprise,
+          caVente: caVente,
+          caService: caPrestaBIC + caPrestaBNC,
+          config: urssafConfig,
+          bilanTva: bilanTva,
+        ),
         if (vlVsIrSimulation != null) ...[
           const SizedBox(height: AppTheme.spacing16),
           VlVsIrCard(simulation: vlVsIrSimulation!),
@@ -119,6 +112,14 @@ class RegimeBlock extends StatelessWidget {
   Widget _buildTNSBlock(BuildContext context) {
     return Column(
       children: [
+        SeuilsEtPlafondsCard(
+          type: typeEntreprise,
+          caVente: caVente,
+          caService: caPrestaBIC + caPrestaBNC,
+          bilanTva: bilanTva,
+        ),
+        if (bilanTva != null) const SizedBox(height: AppTheme.spacing16),
+
         // Cotisations TNS détaillées
         if (cotisationBreakdown.isNotEmpty)
           CotisationDetailCard(
@@ -157,10 +158,6 @@ class RegimeBlock extends StatelessWidget {
             ),
           ],
         ),
-        if (bilanTva != null) ...[
-          const SizedBox(height: AppTheme.spacing16),
-          SuiviSeuilTvaCard(bilan: bilanTva!),
-        ],
       ],
     );
   }
@@ -169,6 +166,14 @@ class RegimeBlock extends StatelessWidget {
   Widget _buildAssimileSalarieBlock(BuildContext context) {
     return Column(
       children: [
+        SeuilsEtPlafondsCard(
+          type: typeEntreprise,
+          caVente: caVente,
+          caService: caPrestaBIC + caPrestaBNC,
+          bilanTva: bilanTva,
+        ),
+        if (bilanTva != null) const SizedBox(height: AppTheme.spacing16),
+
         _buildFinanceSummaryCard(
           context,
           title: 'Synthèse ${typeEntreprise.label}',
@@ -201,10 +206,6 @@ class RegimeBlock extends StatelessWidget {
         const SizedBox(height: AppTheme.spacing16),
         // Top catégories de dépenses
         if (expenseBreakdown.isNotEmpty) _buildExpenseMiniChart(context),
-        if (bilanTva != null) ...[
-          const SizedBox(height: AppTheme.spacing16),
-          SuiviSeuilTvaCard(bilan: bilanTva!),
-        ],
       ],
     );
   }

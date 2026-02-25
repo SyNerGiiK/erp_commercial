@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'dart:typed_data';
 import 'package:go_router/go_router.dart';
 import '../viewmodels/editor_state_provider.dart';
+import '../config/theme.dart';
 
 class SplitEditorScaffold extends StatefulWidget {
   final String title;
@@ -77,7 +78,17 @@ class _SplitEditorScaffoldState extends State<SplitEditorScaffold> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(widget.title, overflow: TextOverflow.ellipsis, maxLines: 1),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {

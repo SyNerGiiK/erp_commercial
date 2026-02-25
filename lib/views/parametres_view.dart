@@ -191,7 +191,19 @@ class _ParametresViewState extends State<ParametresView> {
       builder: (context, vm, _) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Configuration Micro-Entreprise"),
+            title: const Text("Configuration Micro-Entreprise",
+                overflow: TextOverflow.ellipsis, maxLines: 1),
+            flexibleSpace: Container(
+              decoration:
+                  const BoxDecoration(gradient: AppTheme.primaryGradient),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+            titleTextStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {

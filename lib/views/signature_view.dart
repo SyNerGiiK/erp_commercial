@@ -36,9 +36,18 @@ class _SignatureViewState extends State<SignatureView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Signature Client"),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
+        title: const Text("Signature Client",
+            overflow: TextOverflow.ellipsis, maxLines: 1),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {

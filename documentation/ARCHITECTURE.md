@@ -1,6 +1,6 @@
 # Architecture — CraftOS
 
-> Document de référence architecture — Dernière mise à jour : 25/02/2026
+> Document de référence architecture — Dernière mise à jour : 26/02/2026
 
 ---
 
@@ -51,7 +51,7 @@
 | Routing | GoRouter | 14.x |
 | PDF | pdf + printing | 3.x |
 | Monétaire | decimal (package) | 3.x |
-| Tests | flutter_test + mocktail | 662 tests |
+| Tests | flutter_test + mocktail | 761 tests (100% pass) |
 | Fonts | google_fonts | 6.x |
 | Charts | fl_chart | 0.x |
 | UUID | uuid | 4.x |
@@ -104,7 +104,7 @@ lib/
 │   ├── dependency_injection.dart      # 18 Providers enregistrés (MultiProvider)
 │   ├── router.dart                    # ~30 routes GoRouter + auth guard
 │   ├── supabase_config.dart           # URL + anon key Supabase
-│   └── theme.dart                     # AppTheme Aurora 2030 : design tokens + glassmorphism
+│   └── theme.dart                     # AppTheme Artisan Forge 2030 : design tokens + glassmorphism dark mode
 ├── core/
 │   ├── base_viewmodel.dart            # BaseViewModel : loading réentrant
 │   ├── base_repository.dart           # BaseRepository : CRUD helpers Supabase
@@ -230,7 +230,7 @@ lib/
 │   ├── article_selection_dialog.dart  # Sélection article catalogue
 │   ├── client_selection_dialog.dart   # Sélection client existant
 │   ├── dashboard/                     # 11 widgets dashboard (KPI, charts...)
-│   ├── aurora/                         # 3 widgets Aurora 2030 (glass, background, glow)
+│   ├── aurora/                         # Widgets Artisan Forge 2030 (glass, ForgeBackground Concept)
 │   └── dialogs/                       # 5 dialogs (paiement, signature, chiffrage, etc.)
 └── utils/
     ├── calculations_utils.dart        # Calculs financiers 100% Decimal
@@ -628,12 +628,8 @@ Personnalisation : `setCustomPrimaryColor(String hex)` change la couleur primair
 | `SuiviSeuilTvaCard` | Suivi seuils franchise TVA |
 | `ArchivageSuggestionCard` | Suggestions d'archivage |
 
-### Widgets Aurora 2030 (3)
-
-| Widget | Fichier | Rôle |
-|---|---|---|
-| `GlassContainer` | `widgets/aurora/glass_container.dart` | Conteneur givré réutilisable (BackdropFilter optionnel, ombre colorée, bordure lumineuse) |
-| `AuroraBackground` | `widgets/aurora/aurora_background.dart` | Fond mesh gradient ambiant avec 3 orbes décoratives (Indigo, Cyan, Violet) |
+| `GlassContainer` | `widgets/aurora/glass_container.dart` | Conteneur givré réutilisable (BackdropFilter optionnel, ombre colorée, bordure lumineuse adaptative) |
+| `AuroraBackground` | `widgets/aurora/aurora_background.dart` | Fond Mesh animée Artisan Forge (Orbes Fire, Gold, Tech Indigo sur Dark Stone) |
 | `GlowIcon` | `widgets/aurora/glow_icon.dart` | Icône avec halo lumineux contextuel (actif/inactif, rayon et couleur configurables) |
 
 ### Widgets réutilisables (19+)
@@ -701,17 +697,17 @@ GoRouter avec ~30 routes et un auth guard :
 
 ### Theme (`lib/config/theme.dart`)
 
-`AppTheme` — Design system **Aurora 2030** complet :
+`AppTheme` — Design system **Artisan Forge 2030** complet :
 
-- **Palette chromatique** : Indigo Électrique (#6366F1), Violet Cosmique (#8B5CF6), Émeraude (#10B981), Cyan (#06B6D4), Rose (#F43F5E)
+- **Palette chromatique Forge** : Dark Stone (#0F172A), Vivid Fire (#EA580C), Radiant Gold (#F59E0B), Tech Indigo (#6366F1)
 - **Surfaces glass** : `surfaceGlass` (72% opacité), `surfaceGlassBright` (85%), `surfaceGlassSubtle` (50%)
 - **Spacing grid** : base 4px (`spacing4=4, spacing8=8, spacing16=16, spacing24=24, spacing32=32, spacing48=48`)
 - **Border radius** : `small=12, medium=16, large=20, xlarge=28` (généreux, organique)
-- **Ombres colorées** : teintées par `primary` — `shadowSmall` (6%), `shadowMedium` (8%), `shadowLarge` (12%), `shadowGlow` (18%)
-- **Dégradés** : `primaryGradient` (Indigo→Violet), `accentGradient` (Cyan→Émeraude), `auroraGradient` (maille ambiante)
-- **Glass decorations** : `glassDecoration`, `glassDecorationSubtle` — BoxDecoration réutilisables
+- **Ombres "Forge Glow"** : teintées par `primary` — `shadowSmall` (6%), `shadowMedium` (8%), `shadowLarge` (12%), `shadowGlow` (18%)
+- **Dégradés** : `forgeGradient` (Fire→Gold), `primaryGradient` (Indigo→Violet), `goldGradient`
+- **Glass decorations** : `glassDecoration`, `glassDecorationSubtle` — BoxDecoration réutilisables dark-first
 - **Typographie** : Space Grotesk (titres, weight 700, letter-spacing -0.5) + Inter (corps, weight 400-500)
-- **ThemeData** : Material 3, zero-elevation cards, bordures glass
+- **ThemeData** : Material 3, Dark Mode par défaut, bouton Forge adaptatifs, inputs glow.
 
 ---
 

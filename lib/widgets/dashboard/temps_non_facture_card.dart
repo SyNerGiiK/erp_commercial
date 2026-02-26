@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 
@@ -47,11 +49,11 @@ class TempsNonFactureCard extends StatelessWidget {
                     color: AppTheme.secondary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.timer_outlined,
+                  child: Icon(Icons.timer_outlined,
                       color: AppTheme.secondary, size: 18),
                 ),
-                const SizedBox(width: AppTheme.spacing8),
-                const Expanded(
+                SizedBox(width: AppTheme.spacing8),
+                Expanded(
                   child: Text(
                     'Temps à facturer',
                     style: TextStyle(
@@ -63,10 +65,10 @@ class TempsNonFactureCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppTheme.spacing16),
+            SizedBox(height: AppTheme.spacing16),
 
             if (nbEntrees == 0)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Tout est facturé ✓',
@@ -79,24 +81,24 @@ class TempsNonFactureCard extends StatelessWidget {
                 children: [
                   Text(
                     dureeFormatee,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.secondary,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     '$nbEntrees entrée${nbEntrees > 1 ? 's' : ''}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       color: AppTheme.textLight,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppTheme.spacing8),
+              SizedBox(height: AppTheme.spacing8),
               // Montant facturable
               Container(
                 padding:
@@ -108,12 +110,11 @@ class TempsNonFactureCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.euro_rounded,
-                        size: 14, color: AppTheme.accent),
-                    const SizedBox(width: 4),
+                    Icon(Icons.euro_rounded, size: 14, color: AppTheme.accent),
+                    SizedBox(width: 4),
                     Text(
                       '${montantFacturable.toDouble().toStringAsFixed(0)} € facturables',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.accent,

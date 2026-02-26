@@ -92,7 +92,7 @@ class AppCard extends StatelessWidget {
             children: [
               if (title != null)
                 DefaultTextStyle(
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                     color: AppTheme.textDark,
@@ -103,7 +103,7 @@ class AppCard extends StatelessWidget {
               if (title != null && subtitle != null) const SizedBox(height: 4),
               if (subtitle != null)
                 DefaultTextStyle(
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.textLight,
                   ),

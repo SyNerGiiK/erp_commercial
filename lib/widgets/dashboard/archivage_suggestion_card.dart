@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/facture_model.dart';
@@ -53,12 +55,12 @@ class ArchivageSuggestionCard extends StatelessWidget {
               size: 24,
             ),
           ),
-          const SizedBox(width: AppTheme.spacing12),
+          SizedBox(width: AppTheme.spacing12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Archivage suggéré',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
@@ -66,7 +68,7 @@ class ArchivageSuggestionCard extends StatelessWidget {
                     color: AppTheme.textDark,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   label,
                   style: TextStyle(
@@ -85,7 +87,7 @@ class ArchivageSuggestionCard extends StatelessWidget {
               splashRadius: 18,
               color: AppTheme.textLight,
             ),
-          const SizedBox(width: AppTheme.spacing4),
+          SizedBox(width: AppTheme.spacing4),
           FilledButton.icon(
             onPressed: onArchiver,
             icon: const Icon(Icons.archive_rounded, size: 18),

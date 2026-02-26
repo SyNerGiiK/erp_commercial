@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 
@@ -100,8 +102,8 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
                 ),
                 child: Icon(globalIcon, color: globalColor, size: 24),
               ),
-              const SizedBox(width: AppTheme.spacing12),
-              const Expanded(
+              SizedBox(width: AppTheme.spacing12),
+              Expanded(
                 child: Text(
                   "Seuils & Plafonds",
                   style: TextStyle(
@@ -130,7 +132,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.spacing24),
+          SizedBox(height: AppTheme.spacing24),
 
           // ── PLAFONDS CA (MIE ONLY) ──
           if (isMicro && config != null) ...[
@@ -140,7 +142,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
               max: config!.plafondCaMicroVente,
               baseColor: AppTheme.primary,
             ),
-            const SizedBox(height: AppTheme.spacing16),
+            SizedBox(height: AppTheme.spacing16),
             _buildModernGauge(
               title: "Plafond CA (Service)",
               current: caService,
@@ -148,7 +150,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
               baseColor: AppTheme.secondary,
             ),
             if (bilanTva != null)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: AppTheme.spacing16),
                 child: Divider(height: 1),
               ),
@@ -161,7 +163,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
               analyse: bilanTva!.vente,
               baseColor: AppTheme.info,
             ),
-            const SizedBox(height: AppTheme.spacing16),
+            SizedBox(height: AppTheme.spacing16),
             _buildTvaGauge(
               label: 'Seuils TVA (Service)',
               analyse: bilanTva!.service,
@@ -170,7 +172,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
 
             // ALERT MESSAGES
             if (bilanTva!.requiresAlert) ...[
-              const SizedBox(height: AppTheme.spacing16),
+              SizedBox(height: AppTheme.spacing16),
               Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppTheme.spacing12),
@@ -188,12 +190,12 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.warning_amber_rounded,
+                                  Icon(Icons.warning_amber_rounded,
                                       size: 16, color: AppTheme.error),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Expanded(
                                       child: Text(msg,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 12,
                                               color: AppTheme.textMedium))),
                                 ],
@@ -232,7 +234,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: AppTheme.textDark)),
@@ -246,7 +248,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppTheme.spacing8),
+        SizedBox(height: AppTheme.spacing8),
         Stack(
           children: [
             Container(
@@ -281,20 +283,20 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppTheme.spacing8),
+        SizedBox(height: AppTheme.spacing8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               "${current.toDouble().toStringAsFixed(0)} €",
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textMedium),
             ),
             Text(
               "Max: ${max.toDouble().toStringAsFixed(0)} €",
-              style: const TextStyle(fontSize: 12, color: AppTheme.textLight),
+              style: TextStyle(fontSize: 12, color: AppTheme.textLight),
             ),
           ],
         ),
@@ -326,7 +328,7 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                   color: AppTheme.textDark),
@@ -346,48 +348,48 @@ class SeuilsEtPlafondsCard extends StatelessWidget {
             padding: const EdgeInsets.only(top: 2, bottom: 6),
             child: Text(
               'Marge restante : ${analyse.margeBase.toDouble().toStringAsFixed(0)} €',
-              style: const TextStyle(fontSize: 11, color: AppTheme.textLight),
+              style: TextStyle(fontSize: 11, color: AppTheme.textLight),
             ),
           )
         else
-          const SizedBox(height: AppTheme.spacing8),
+          SizedBox(height: AppTheme.spacing8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 50,
               child: Text('Base',
                   style: TextStyle(fontSize: 11, color: AppTheme.textMedium)),
             ),
             Expanded(child: _buildProgressBar(progressBase, colorBase)),
-            const SizedBox(width: AppTheme.spacing12),
+            SizedBox(width: AppTheme.spacing12),
             SizedBox(
               width: 60,
               child: Text(
                 '${analyse.seuilBase.toDouble().toStringAsFixed(0)} €',
                 textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textLight),
+                style: TextStyle(fontSize: 11, color: AppTheme.textLight),
               ),
             )
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 50,
               child: Text('Majoré',
                   style: TextStyle(fontSize: 11, color: AppTheme.textMedium)),
             ),
             Expanded(child: _buildProgressBar(progressMaj, colorBase)),
-            const SizedBox(width: AppTheme.spacing12),
+            SizedBox(width: AppTheme.spacing12),
             SizedBox(
               width: 60,
               child: Text(
                 '${analyse.seuilMajore.toDouble().toStringAsFixed(0)} €',
                 textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textLight),
+                style: TextStyle(fontSize: 11, color: AppTheme.textLight),
               ),
             )
           ],

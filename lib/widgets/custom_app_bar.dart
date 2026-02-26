@@ -2,7 +2,7 @@
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 
-/// AppBar Aurora 2030 — gradient signature Indigo→Violet
+/// AppBar Forge 2030 — gradient fire→gold signature
 /// avec recherche intégrée en pilule glass.
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -65,11 +65,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       flexibleSpace: Container(
         decoration: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
+          gradient: AppTheme.forgeGradient,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primary.withValues(alpha: 0.25),
-              blurRadius: 16,
+              color: AppTheme.primary.withValues(alpha: 0.30),
+              blurRadius: 20,
               offset: const Offset(0, 4),
               spreadRadius: -4,
             ),

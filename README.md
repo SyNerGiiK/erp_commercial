@@ -3,10 +3,10 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.38.9-blue?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.10.8-blue?logo=dart)](https://dart.dev)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-green?logo=supabase)](https://supabase.com)
-[![Tests](https://img.shields.io/badge/Tests-662%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-761%20passed-brightgreen)]()
 [![Analyze](https://img.shields.io/badge/Analyze-0%20issues-brightgreen)]()
 
-**CraftOS** est la source de vérité absolue pour la gestion des artisans, avec un design "Apple", une automatisation "Tesla", et une infrastructure "Zéro" (Full Free Tiers).
+**CraftOS** est la source de vérité absolue pour la gestion des artisans, avec un design "Artisan Forge 2030" premium, une automatisation "Tesla", et une infrastructure "Zéro" (Full Free Tiers).
 
 L'application couvre 8 modules fondamentaux allant de l'acquisition web au CRM intelligent (OCR, Pappers), la vente "Magique" assistée par l'I.A. Gemini 2.0 Flash, l'encaissement via QR Code SEPA, le pilotage chantier (Progress Billing), jusqu'à l'automatisation intégrale du SAV et de l'infrastructure via Supabase Edge Functions.
 
@@ -32,7 +32,7 @@ L'application couvre 8 modules fondamentaux allant de l'acquisition web au CRM i
 
 ### 🌐 MODULE 0 : L'Écosystème Web (Acquisition)
 - Site vitrine **craftos.fr** (Cloudflare Pages / Vercel en Free Tier).
-- UX/UI au design System Aurora (Glassmorphism), animations Lottie.
+- UX/UI au design System Artisan Forge 2030 (Dark, Glassmorphism), animations GSAP/Three.js.
 
 ### 🤖 MODULE 1 : Support Client (SAV) Autonome par I.A.
 - Support 24/7 in-app via **Gemini 2.0 Flash**.
@@ -133,7 +133,7 @@ lib/                          (155+ fichiers Dart)
 │   ├── dependency_injection.dart   # 20 Providers enregistrés
 │   ├── router.dart                 # ~28 routes (GoRouter + auth guard)
 │   ├── supabase_config.dart        # Connexion Supabase
-│   └── theme.dart                  # AppTheme Aurora 2030 (glassmorphism + design tokens)
+│   └── theme.dart                  # AppTheme Artisan Forge 2030 (dark mesh background + gold/fire tokens)
 │
 ├── core/                     # Classes de base (5 fichiers)
 │   ├── base_viewmodel.dart         # ChangeNotifier + _loadingDepth + executeOperation
@@ -246,9 +246,9 @@ lib/                          (155+ fichiers Dart)
 │   └── ...                         # Autres vues (client, dépense, login, etc.)
 │
 ├── widgets/                  # Composants réutilisables (33 fichiers)
-│   ├── aurora/                     # Widgets Aurora 2030
+│   ├── aurora/                     # Widgets Artisan Forge 2030
 │   │   ├── glass_container.dart    # Conteneur givré réutilisable (BackdropFilter)
-│   │   ├── aurora_background.dart  # Fond mesh gradient ambiant (3 orbes)
+│   │   ├── aurora_background.dart  # Fond Mesh animée (Fire, Gold, Tech Indigo)
 │   │   └── glow_icon.dart          # Icône à halo lumineux contextuel
 │   ├── base_screen.dart            # Layout responsive avec drawer + AuroraBackground
 │   ├── custom_drawer.dart          # Sidebar glassmorphique (BackdropFilter, glow)
@@ -461,10 +461,10 @@ Formatage locale française (`fr_FR`) :
 
 ## ✅ Tests
 
-**662 tests — 100% passés** | **0 issue d'analyse statique**
+**761 tests — 100% passés** | **0 issue d'analyse statique**
 
 ```bash
-flutter test    → 662 tests passed
+flutter test    → 761 tests passed
 flutter analyze → No issues found!
 ```
 
@@ -473,7 +473,7 @@ flutter analyze → No issues found!
 | Catégorie | Fichiers | Tests | Détail |
 |-----------|----------|-------|--------|
 | **ViewModels** | 18 | ~420 | CRUD, logique métier, duplication, avoir, relance, dashboard, archivage, corbeille, récurrence, temps, rappels |
-| **Services** | 8 | ~100 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, EcheanceService, design system Aurora, PDF themes |
+| **Services** | 8 | ~100 | RelanceService, TvaService, EmailService, AuditService, ArchivageService, EcheanceService, design system Artisan Forge 2030, PDF themes |
 | **Models** | 6 | ~75 | `fromMap`, `toMap`, `copyWith`, getters calculés, champs complets, FactureRecurrente, TempsActivite, Rappel |
 | **Utils** | 3 | ~35 | Calculs Decimal, formatage FR, validation (Luhn SIRET, TVA, etc.) |
 | **Widgets** | 3 | ~12 | FacturesRetardCard, ListeClientsView, LoginView |

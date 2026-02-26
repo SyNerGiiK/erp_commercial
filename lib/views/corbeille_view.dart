@@ -343,7 +343,7 @@ class _CorbeilleViewState extends State<CorbeilleView>
         subtitle: subtitle.isNotEmpty
             ? Text(
                 subtitle,
-                style: const TextStyle(fontSize: 12, color: AppTheme.textLight),
+                style: TextStyle(fontSize: 12, color: AppTheme.textLight),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               )
@@ -353,7 +353,7 @@ class _CorbeilleViewState extends State<CorbeilleView>
           children: [
             Text(
               trailing,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 13,
                 color: AppTheme.textLight,

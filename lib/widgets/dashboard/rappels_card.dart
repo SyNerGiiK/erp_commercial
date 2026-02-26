@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 
 import '../../config/theme.dart';
@@ -51,8 +53,8 @@ class RappelsCard extends StatelessWidget {
                     size: 18,
                   ),
                 ),
-                const SizedBox(width: AppTheme.spacing8),
-                const Expanded(
+                SizedBox(width: AppTheme.spacing8),
+                Expanded(
                   child: Text(
                     'Échéances',
                     style: TextStyle(
@@ -72,7 +74,7 @@ class RappelsCard extends StatelessWidget {
                     ),
                     child: Text(
                       '$enRetard en retard',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.error,
@@ -81,10 +83,10 @@ class RappelsCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: AppTheme.spacing12),
+            SizedBox(height: AppTheme.spacing12),
 
             if (display.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Aucune échéance prochaine',
@@ -120,7 +122,7 @@ class RappelsCard extends StatelessWidget {
         children: [
           // Icône type
           Text(rappel.typeRappel.icon, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               rappel.titre,
@@ -147,7 +149,7 @@ class RappelsCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           _buildPriorityDot(rappel.priorite),
         ],
       ),

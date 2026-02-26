@@ -40,7 +40,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // ASSERT
       expect(find.text('Clients'), findsAtLeastNWidgets(1));
@@ -53,7 +53,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // ASSERT
       expect(find.byType(TextField), findsOneWidget);
@@ -67,7 +67,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // ASSERT
       expect(find.byType(FloatingActionButton), findsOneWidget);
@@ -104,7 +104,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // ASSERT
       expect(find.text('Dupont Jean'), findsOneWidget);
@@ -141,7 +141,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Taper "Dupont" dans la recherche
       await tester.enterText(find.byType(TextField), 'Dupont');
@@ -182,7 +182,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Rechercher par ville
       await tester.enterText(find.byType(TextField), 'Lyon');
@@ -200,7 +200,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // ASSERT: Vérifier qu'il n'y a pas de clients affichés
       expect(find.byType(ListTile), findsNothing);
@@ -238,7 +238,7 @@ void main() {
 
       // ACT
       await tester.pumpWidget(createListeClientsView());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Rechercher
       await tester.enterText(find.byType(TextField), 'Dupont');

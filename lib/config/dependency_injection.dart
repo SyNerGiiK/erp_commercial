@@ -1,6 +1,9 @@
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
+// Config
+import 'theme_notifier.dart';
+
 // ViewModels
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/client_viewmodel.dart';
@@ -28,6 +31,7 @@ import '../viewmodels/pdf_studio_viewmodel.dart';
 class DependencyInjection {
   static List<SingleChildWidget> get providers {
     return [
+      ChangeNotifierProvider(create: (_) => ThemeNotifier()),
       ChangeNotifierProvider(create: (_) => AuthViewModel()),
       ChangeNotifierProvider(create: (_) => ClientViewModel()),
       ChangeNotifierProvider(create: (_) => EntrepriseViewModel()),

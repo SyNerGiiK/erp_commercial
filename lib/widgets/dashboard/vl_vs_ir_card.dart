@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 
@@ -38,14 +40,14 @@ class VlVsIrCard extends StatelessWidget {
                     color: AppTheme.secondary.withValues(alpha: 0.1),
                     borderRadius: AppTheme.borderRadiusSmall,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.compare_arrows_rounded,
                     color: AppTheme.secondary,
                     size: 22,
                   ),
                 ),
-                const SizedBox(width: AppTheme.spacing12),
-                const Expanded(
+                SizedBox(width: AppTheme.spacing12),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -69,7 +71,7 @@ class VlVsIrCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: AppTheme.spacing20),
+            SizedBox(height: AppTheme.spacing20),
 
             // Comparaison côte à côte
             Row(
@@ -83,16 +85,16 @@ class VlVsIrCard extends StatelessWidget {
                     color: AppTheme.accent,
                   ),
                 ),
-                const SizedBox(width: AppTheme.spacing12),
+                SizedBox(width: AppTheme.spacing12),
                 Column(
                   children: [
-                    const Text('VS',
+                    Text('VS',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textLight,
                           fontSize: 12,
                         )),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Icon(
                       Icons.swap_horiz,
                       color: AppTheme.textLight.withValues(alpha: 0.5),
@@ -100,7 +102,7 @@ class VlVsIrCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(width: AppTheme.spacing12),
+                SizedBox(width: AppTheme.spacing12),
                 Expanded(
                   child: _buildScenarioColumn(
                     title: 'Sans VL (IR)',
@@ -113,7 +115,7 @@ class VlVsIrCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: AppTheme.spacing16),
+            SizedBox(height: AppTheme.spacing16),
 
             // Verdict
             Container(
@@ -134,7 +136,7 @@ class VlVsIrCard extends StatelessWidget {
                     size: 18,
                     color: isVlBetter ? AppTheme.accent : AppTheme.info,
                   ),
-                  const SizedBox(width: AppTheme.spacing8),
+                  SizedBox(width: AppTheme.spacing8),
                   Expanded(
                     child: RichText(
                       text: TextSpan(
@@ -162,11 +164,11 @@ class VlVsIrCard extends StatelessWidget {
             ),
 
             // Note plafond
-            const SizedBox(height: AppTheme.spacing8),
+            SizedBox(height: AppTheme.spacing8),
             Text(
               'Plafond RFR : ${simulation.plafondVlRfr.toDouble().toStringAsFixed(0)} €/part '
               '• CA simulé : ${simulation.caTotal.toDouble().toStringAsFixed(0)} €',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 color: AppTheme.textLight,
               ),
@@ -204,7 +206,7 @@ class VlVsIrCard extends StatelessWidget {
             children: [
               if (isHighlighted)
                 Icon(Icons.check_circle, size: 14, color: color),
-              if (isHighlighted) const SizedBox(width: 4),
+              if (isHighlighted) SizedBox(width: 4),
               Text(
                 title,
                 style: TextStyle(
@@ -215,7 +217,7 @@ class VlVsIrCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.spacing8),
+          SizedBox(height: AppTheme.spacing8),
           Text(
             '${revenuNet.toDouble().toStringAsFixed(0)} €',
             style: TextStyle(
@@ -224,10 +226,10 @@ class VlVsIrCard extends StatelessWidget {
               color: isHighlighted ? color : AppTheme.textMedium,
             ),
           ),
-          const SizedBox(height: AppTheme.spacing4),
+          SizedBox(height: AppTheme.spacing4),
           Text(
             'Taux effectif ${tauxEffectif.toDouble().toStringAsFixed(1)}%',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               color: AppTheme.textLight,
             ),

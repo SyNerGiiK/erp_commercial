@@ -11,6 +11,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 // CONFIG
 import 'config/supabase_config.dart';
 import 'config/theme.dart';
+import 'config/theme_notifier.dart';
 import 'config/dependency_injection.dart';
 import 'config/router.dart';
 
@@ -77,21 +78,32 @@ class ArtisanApp extends StatelessWidget {
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
     final router = AppRouter.createRouter(authViewModel);
 
-    return MaterialApp.router(
-      title: 'Artisan 3.0',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      scrollBehavior: AppScrollBehavior(),
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, _) {
+        // Synchroniser la brightness statique d'AppTheme
+        AppTheme.setBrightness(
+          themeNotifier.isDark ? Brightness.dark : Brightness.light,
+        );
 
-      // Configuration GoRouter
-      routerConfig: router,
+        return MaterialApp.router(
+          title: 'CraftOS — Gestion Artisan',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeNotifier.themeMode,
+          scrollBehavior: AppScrollBehavior(),
 
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('fr', 'FR')],
+          // Configuration GoRouter
+          routerConfig: router,
+
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('fr', 'FR')],
+        );
+      },
     );
   }
 }

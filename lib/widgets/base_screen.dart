@@ -1,10 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../widgets/aurora/aurora_background.dart';
 import 'custom_drawer.dart';
 import 'custom_app_bar.dart';
 
-/// Écran de base Aurora 2030 — fond ambiant + sidebar glass + contenu centré.
+/// �cran de base Aurora 2030 � fond ambiant + sidebar glass + contenu centr�.
 class BaseScreen extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -57,7 +57,7 @@ class BaseScreen extends StatelessWidget {
               ),
               child: Text(
                 subtitle.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: AppTheme.textLight,
                   fontWeight: FontWeight.w600,

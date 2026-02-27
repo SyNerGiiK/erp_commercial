@@ -1,6 +1,4 @@
-﻿// ignore_for_file: prefer_const_constructors
-
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
@@ -104,11 +102,11 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // --- HEADER ----------------------------
+                            // ─── HEADER ────────────────────────────
                             _buildHeader(context, vm),
-                            SizedBox(height: AppTheme.spacing24),
+                            const SizedBox(height: AppTheme.spacing24),
 
-                            // --- ALERTES (retard + archivage) ------
+                            // ─── ALERTES (retard + archivage) ──────
                             AlertesBanner(
                               relances: vm.relances,
                               facturesArchivables: vm.showArchivageSuggestion
@@ -120,9 +118,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
-                                    title: Text('Archiver les factures'),
+                                    title: const Text('Archiver les factures'),
                                     content: Text(
-                                      'Archiver $count facture${count > 1 ? 's' : ''} sold�e${count > 1 ? 's' : ''} depuis plus d\'un an ?',
+                                      'Archiver $count facture${count > 1 ? 's' : ''} soldée${count > 1 ? 's' : ''} depuis plus d\'un an ?',
                                     ),
                                     actions: [
                                       TextButton(
@@ -145,28 +143,28 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                               onDismissArchivage: vm.dismissArchivageSuggestion,
                             ),
 
-                            // --- 5 KPI CARDS ----------------------
+                            // ─── 5 KPI CARDS ──────────────────────
                             _buildKpiRow(context, vm, isDesktop, isTablet),
-                            SizedBox(height: AppTheme.spacing24),
+                            const SizedBox(height: AppTheme.spacing24),
 
-                            // --- ZONE PRINCIPALE 2 COLONNES -------
+                            // ─── ZONE PRINCIPALE 2 COLONNES ───────
                             if (isDesktop)
                               _buildDesktopMainSection(context, vm)
                             else
                               _buildMobileMainSection(context, vm),
 
-                            SizedBox(height: AppTheme.spacing20),
+                            const SizedBox(height: AppTheme.spacing20),
 
-                            // --- 4 MINI-CARDS (infos compl�mentaires) -
+                            // ─── 4 MINI-CARDS (infos complémentaires) ─
                             _buildMiniCardsRow(
                                 context, vm, isDesktop, isTablet),
 
-                            SizedBox(height: AppTheme.spacing20),
+                            const SizedBox(height: AppTheme.spacing20),
 
-                            // --- ACTIVIT� R�CENTE ------------------
+                            // ─── ACTIVITÉ RÉCENTE ──────────────────
                             if (vm.recentActivity.isNotEmpty) ...[
-                              SectionHeader(
-                                title: 'Activit� R�cente',
+                              const SectionHeader(
+                                title: 'Activité Récente',
                                 icon: Icons.history_rounded,
                               ),
                               SizedBox(
@@ -187,7 +185,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                                 ),
                               ),
                             ],
-                            SizedBox(height: AppTheme.spacing16),
+                            const SizedBox(height: AppTheme.spacing16),
                           ],
                         ),
                       ),
@@ -200,9 +198,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // KPI ROW � 5 cartes avec gradient Aurora
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
+  // KPI ROW — 5 cartes avec gradient Aurora
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildKpiRow(BuildContext context, DashboardViewModel vm,
       bool isDesktop, bool isTablet) {
@@ -215,7 +213,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     final kpiCards = <Widget>[
       GradientKpiCard(
         title: "Chiffre d'Affaires",
-        value: "${ca.toDouble().toStringAsFixed(2)} �",
+        value: "${ca.toDouble().toStringAsFixed(2)} €",
         subtitle:
             "${vm.caVariation >= 0 ? '+' : ''}${vm.caVariation.toStringAsFixed(1)}% vs N-1",
         variation: vm.caVariation,
@@ -223,8 +221,8 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
         gradientColors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
       ),
       GradientKpiCard(
-        title: "B�n�fice Net",
-        value: "${benef.toDouble().toStringAsFixed(2)} �",
+        title: "Bénéfice Net",
+        value: "${benef.toDouble().toStringAsFixed(2)} €",
         subtitle:
             "${vm.beneficeVariation >= 0 ? '+' : ''}${vm.beneficeVariation.toStringAsFixed(1)}% vs N-1",
         variation: vm.beneficeVariation,
@@ -233,26 +231,26 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       ),
       GradientKpiCard(
         title: vm.isAssimileSalarie ? "Charges Sociales" : "Cotisations",
-        value: "${cotis.toDouble().toStringAsFixed(2)} �",
+        value: "${cotis.toDouble().toStringAsFixed(2)} €",
         subtitle: vm.isMicro
-            ? "Estim� sur le CA"
+            ? "Estimé sur le CA"
             : vm.isTNS
-                ? "Estim� sur le b�n�fice"
+                ? "Estimé sur le bénéfice"
                 : "Via fiches de paie",
         icon: Icons.account_balance_outlined,
         gradientColors: const [Color(0xFFF43F5E), Color(0xFFF59E0B)],
       ),
       GradientKpiCard(
-        title: "D�penses",
-        value: "${dep.toDouble().toStringAsFixed(2)} �",
-        subtitle: "Charges d�ductibles",
+        title: "Dépenses",
+        value: "${dep.toDouble().toStringAsFixed(2)} €",
+        subtitle: "Charges déductibles",
         variation: vm.depensesVariation,
         icon: Icons.shopping_bag_outlined,
         gradientColors: const [Color(0xFF818CF8), Color(0xFF475569)],
       ),
       GradientKpiCard(
-        title: "Tr�sorerie Pr�v.",
-        value: "${treso.toDouble().toStringAsFixed(2)} �",
+        title: "Trésorerie Prév.",
+        value: "${treso.toDouble().toStringAsFixed(2)} €",
         subtitle: "${vm.facturesImpayees.length} facture(s) en attente",
         icon: Icons.account_balance_wallet_outlined,
         gradientColors: const [Color(0xFF0EA5E9), Color(0xFF6366F1)],
@@ -292,16 +290,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     );
   }
 
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
   // DESKTOP : 2 colonnes (Graphiques + Pipeline | RegimeBlock)
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildDesktopMainSection(BuildContext context, DashboardViewModel vm) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // -- Colonne gauche : CA Chart + D�penses + Pipeline --
+          // ── Colonne gauche : CA Chart + Dépenses + Pipeline ──
           Expanded(
             flex: 3,
             child: Column(
@@ -311,13 +309,13 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
                   year: DateTime.now().year,
                   compact: true,
                 ),
-                SizedBox(height: AppTheme.spacing16),
+                const SizedBox(height: AppTheme.spacing16),
                 Row(
                   children: [
                     Expanded(
                       child: _buildExpenseMiniCard(vm),
                     ),
-                    SizedBox(width: AppTheme.spacing16),
+                    const SizedBox(width: AppTheme.spacing16),
                     Expanded(
                       child: DevisPipelineCard(
                         tauxConversion: vm.tauxConversion,
@@ -331,9 +329,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
               ],
             ),
           ),
-          SizedBox(width: AppTheme.spacing20),
+          const SizedBox(width: AppTheme.spacing20),
 
-          // -- Colonne droite : Bloc R�gime adaptatif --
+          // ── Colonne droite : Bloc Régime adaptatif ──
           Expanded(
             flex: 2,
             child: RegimeBlock(
@@ -371,9 +369,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
             curve: Curves.easeOutCubic);
   }
 
-  // -------------------------------------------------------------------
-  // MOBILE/TABLET : empil� verticalement
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
+  // MOBILE/TABLET : empilé verticalement
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildMobileMainSection(BuildContext context, DashboardViewModel vm) {
     return Column(
@@ -382,16 +380,16 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
           monthlyRevenue: vm.monthlyRevenue,
           year: DateTime.now().year,
         ),
-        SizedBox(height: AppTheme.spacing16),
+        const SizedBox(height: AppTheme.spacing16),
         _buildExpenseMiniCard(vm),
-        SizedBox(height: AppTheme.spacing16),
+        const SizedBox(height: AppTheme.spacing16),
         DevisPipelineCard(
           tauxConversion: vm.tauxConversion,
           devisEnCours: vm.devisEnCours,
           montantPipeline: vm.montantPipeline,
           totalDevisYear: vm.totalDevisYear,
         ),
-        SizedBox(height: AppTheme.spacing16),
+        const SizedBox(height: AppTheme.spacing16),
         RegimeBlock(
           typeEntreprise: vm.profilEntreprise?.typeEntreprise ??
               TypeEntreprise.microEntrepreneur,
@@ -425,9 +423,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
             curve: Curves.easeOutCubic);
   }
 
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
   // 4 MINI-CARDS ROW
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildMiniCardsRow(BuildContext context, DashboardViewModel vm,
       bool isDesktop, bool isTablet) {
@@ -484,9 +482,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // EXPENSE MINI CARD � pie chart compact dans un glass container
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
+  // EXPENSE MINI CARD — pie chart compact dans un glass container
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildExpenseMiniCard(DashboardViewModel vm) {
     return Container(
@@ -504,13 +502,13 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.pie_chart_outline_rounded,
                   size: 16, color: AppTheme.primary),
               SizedBox(width: 6),
               Text(
-                'R�partition D�penses',
+                'Répartition Dépenses',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -519,7 +517,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Expanded(
             child: ExpensePieChart(data: vm.expenseBreakdown),
           ),
@@ -528,9 +526,9 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
     );
   }
 
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
   // HEADER
-  // -------------------------------------------------------------------
+  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildHeader(BuildContext context, DashboardViewModel vm) {
     final dateStr =
@@ -544,14 +542,14 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
           children: [
             Text(
               dateStr.toUpperCase(),
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppTheme.textLight,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.5,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             const WeatherWidget(),
           ],
         ),
@@ -571,7 +569,7 @@ class _TableauDeBordViewState extends State<TableauDeBordView> {
               _buildPeriodTab(context, vm, DashboardPeriod.mois, "Mois"),
               _buildPeriodTab(
                   context, vm, DashboardPeriod.trimestre, "Trimestre"),
-              _buildPeriodTab(context, vm, DashboardPeriod.annee, "Ann�e"),
+              _buildPeriodTab(context, vm, DashboardPeriod.annee, "Année"),
             ],
           ),
         ),

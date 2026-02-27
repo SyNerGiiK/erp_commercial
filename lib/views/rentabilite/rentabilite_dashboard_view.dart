@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -36,13 +34,13 @@ class _RentabiliteDashboardViewState extends State<RentabiliteDashboardView> {
       menuIndex: 8,
       title: "Cockpit Chantier",
       child: vm.isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     "Chantiers Actifs",
                     style: TextStyle(
                       fontSize: 24,
@@ -50,7 +48,7 @@ class _RentabiliteDashboardViewState extends State<RentabiliteDashboardView> {
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   Expanded(
                     child: vm.devisList.isEmpty
                         ? const Center(
@@ -118,14 +116,15 @@ class _ChantierCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   "Réf. ${devis.numeroDevis}",
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12),
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -146,18 +145,18 @@ class _ChantierCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   FormatUtils.currency(devis.totalHt),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.primary,
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios,
+                const Icon(Icons.arrow_forward_ios,
                     size: 16, color: AppTheme.primary),
               ],
             ),
@@ -214,10 +213,10 @@ class _KpiGauge extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],

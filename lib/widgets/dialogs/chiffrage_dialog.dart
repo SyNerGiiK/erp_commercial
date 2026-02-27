@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
@@ -107,7 +105,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
             color: AppTheme.primary,
             size: 22,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(isEditing ? "Modifier le coût" : "Ajouter un coût interne"),
         ],
       ),
@@ -168,7 +166,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
                                           : Colors.blue.shade700)
                                       : Colors.grey,
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Text(
                                   type.label,
                                   style: TextStyle(
@@ -298,7 +296,8 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("Total achat :", style: TextStyle(fontSize: 13)),
+                          const Text("Total achat :",
+                              style: TextStyle(fontSize: 13)),
                           Text(_calculerTotalAchat(),
                               style:
                                   const TextStyle(fontWeight: FontWeight.w600)),
@@ -308,12 +307,12 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("Budget ligne devis :",
+                          const Text("Budget ligne devis :",
                               style: TextStyle(
                                   fontSize: 13, color: AppTheme.textLight)),
                           Text(
                             "${widget.prixTotalLigne.toDouble().toStringAsFixed(2)} €",
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontSize: 13, color: AppTheme.textLight),
                           ),
                         ],
@@ -329,7 +328,7 @@ class _ChiffrageDialogState extends State<ChiffrageDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text("Annuler"),
+          child: const Text("Annuler"),
         ),
         ElevatedButton.icon(
           onPressed: _submit,

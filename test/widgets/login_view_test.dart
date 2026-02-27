@@ -100,8 +100,7 @@ void main() {
       final submitButton = find.text('Se connecter');
       if (submitButton.evaluate().isNotEmpty) {
         await tester.tap(submitButton);
-        await tester.pump(
-            const Duration(milliseconds: 500)); // Attend toutes les animations
+        await tester.pumpAndSettle(); // Attend toutes les animations
 
         // ASSERT
         verify(() =>
@@ -126,7 +125,7 @@ void main() {
       final submitButton = find.text('Se connecter');
       if (submitButton.evaluate().isNotEmpty) {
         await tester.tap(submitButton);
-        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
 
         // ASSERT: Message d'erreur visible
         expect(find.textContaining('erreur'), findsAtLeastNWidgets(1));
@@ -172,7 +171,7 @@ void main() {
       final submitButton = find.text('Se connecter');
       if (submitButton.evaluate().isNotEmpty) {
         await tester.tap(submitButton);
-        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
 
         // ASSERT: Pourrait vérifier un message de validation
         // (dépend de l'implémentation de CustomTextField)

@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -125,8 +123,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       {bool isPercent = false}) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary)),
-        SizedBox(height: 8),
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
+        const SizedBox(height: 8),
         Text(
           isPercent
               ? "${value.toDouble().toStringAsFixed(1)} %"
@@ -185,7 +183,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                   Expanded(
                     child: Text(
                       state.ligne.description,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
                       ),
@@ -201,7 +199,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                   ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               LinearProgressIndicator(
                 minHeight: 8,
                 value: state.avancement.toDouble() / 100.0,
@@ -209,18 +207,18 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 valueColor: AlwaysStoppedAnimation(
                     state.isComplete ? AppTheme.accent : AppTheme.warning),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Ligne: ${FormatUtils.currency(state.prixTotal)}',
-                style: TextStyle(color: AppTheme.textSecondary),
+                style: const TextStyle(color: AppTheme.textSecondary),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
 
               // Ventilation Matériel / MO
               if (state.ligne.id != null) ...[
                 Text(
                   'Matériel ${ratioMateriel.toDouble().toStringAsFixed(0)}% • MO ${ratioMo.toDouble().toStringAsFixed(0)}%',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textSecondary,
                     fontSize: 13,
@@ -230,7 +228,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                   value: ratioMateriel.toDouble(),
                   min: 0,
                   max: 100,
-                  label: '${ratioMateriel.toDouble().toStringAsFixed(0)}%',
+                  label:
+                      '${ratioMateriel.toDouble().toStringAsFixed(0)}%',
                   onChanged: (value) {
                     vm.updateVentilationForLigne(
                       state.ligne.id!,
@@ -238,7 +237,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                     );
                   },
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
               ],
 
               ...chiffrages.map((c) {
@@ -275,7 +274,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                     children: [
                       Text(
                         'Main d\'œuvre • ${FormatUtils.currency(c.prixVenteInterne)}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -316,13 +315,13 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
               Expanded(
                 child: Text(
                   '${vm.depenses.length} dépense(s) rattachée(s) • Total ${FormatUtils.currency(vm.depenses.fold(Decimal.zero, (s, d) => s + d.montant))}',
-                  style: TextStyle(color: AppTheme.textSecondary),
+                  style: const TextStyle(color: AppTheme.textSecondary),
                 ),
               ),
               FilledButton.icon(
                 onPressed: () => context.push('/app/ajout_depense'),
                 icon: const Icon(Icons.add),
-                label: Text('Ajouter une dépense'),
+                label: const Text('Ajouter une dépense'),
               ),
             ],
           ),
@@ -355,7 +354,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                         ),
                         trailing: Text(
                           FormatUtils.currency(depense.montant),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.warning,
                             fontWeight: FontWeight.bold,
                           ),
@@ -372,7 +371,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
   Widget _buildBilanFinancierTab(RentabiliteViewModel vm) {
     final devis = vm.selectedDevis;
     if (devis == null) {
-      return Center(child: Text('Aucun devis sélectionné.'));
+      return const Center(child: Text('Aucun devis sélectionné.'));
     }
 
     final caHt = devis.totalHt;
@@ -428,7 +427,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ...waterfallCommun,
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -438,14 +437,15 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppTheme.info, size: 24),
-                  SizedBox(width: 12),
+                  const Icon(Icons.info_outline,
+                      color: AppTheme.info, size: 24),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Le calcul des charges sociales n\'est pas encore disponible '
                       'pour le régime ${vm.typeEntreprise.label}.\n'
                       'Les résultats nets ne tiennent pas compte des cotisations sociales.',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppTheme.info,
                         fontSize: 13,
                       ),
@@ -475,7 +475,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
             const Divider(height: 24),
 
             // Cotisations TNS
-            Padding(
+            const Padding(
               padding: EdgeInsets.only(bottom: 8),
               child: Text(
                 'Cotisations TNS (sur bénéfice)',
@@ -523,7 +523,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
                 label: 'CFP (0.25%)',
                 montant: detail['cfp'] ?? Decimal.zero,
               ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             _buildWaterfallRow(
               icon: Icons.summarize_outlined,
               label: 'Total Cotisations TNS',
@@ -532,7 +532,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
               prefix: '-',
               bold: true,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             // Résultat net prévisionnel
             _buildFinalResult(
@@ -564,7 +564,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
     if (caVente > Decimal.zero && caPrestation > Decimal.zero) {
       tauxSocialLabel = 'mixte';
     } else if (caVente > Decimal.zero) {
-      tauxSocialLabel = '${vm.urssafConfig.tauxMicroVente.toStringAsFixed(1)}%';
+      tauxSocialLabel =
+          '${vm.urssafConfig.tauxMicroVente.toStringAsFixed(1)}%';
     } else {
       tauxSocialLabel =
           '${vm.urssafConfig.tauxMicroPrestationBIC.toStringAsFixed(1)}%';
@@ -579,8 +580,8 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
           const Divider(height: 24),
 
           // Cotisations sociales micro
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
             child: Text(
               'Cotisations Sociales',
               style: TextStyle(
@@ -609,7 +610,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
               label: 'Versement Libératoire',
               montant: detail['liberatoire'] ?? Decimal.zero,
             ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           _buildWaterfallRow(
             icon: Icons.summarize_outlined,
             label: 'Total Cotisations',
@@ -618,7 +619,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
             prefix: '-',
             bold: true,
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
 
           // Résultat net prévisionnel
           _buildFinalResult(
@@ -683,11 +684,11 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       padding: const EdgeInsets.only(top: 6, bottom: 2),
       child: Row(
         children: [
-          SizedBox(width: 32),
+          const SizedBox(width: 32),
           Expanded(
             child: Text(
               '= $label',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 fontStyle: FontStyle.italic,
@@ -720,7 +721,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
               ),
@@ -728,7 +729,7 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
           ),
           Text(
             '- ${FormatUtils.currency(montant)}',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
               color: AppTheme.textSecondary,
             ),
@@ -782,4 +783,5 @@ class _ChantierDetailViewState extends State<ChantierDetailView> {
       ),
     );
   }
+
 }

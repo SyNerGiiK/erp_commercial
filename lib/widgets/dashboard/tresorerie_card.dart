@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import 'package:intl/intl.dart';
@@ -58,11 +56,11 @@ class TresorerieCard extends StatelessWidget {
                     color: AppTheme.info.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.account_balance_wallet_outlined,
+                  child: const Icon(Icons.account_balance_wallet_outlined,
                       color: AppTheme.info, size: 18),
                 ),
-                SizedBox(width: AppTheme.spacing8),
-                Expanded(
+                const SizedBox(width: AppTheme.spacing8),
+                const Expanded(
                   child: Text(
                     'Trésorerie prévue',
                     style: TextStyle(
@@ -74,30 +72,30 @@ class TresorerieCard extends StatelessWidget {
                 ),
                 Text(
                   '$nbFacturesImpayees fact.',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppTheme.textLight,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacing12),
+            const SizedBox(height: AppTheme.spacing12),
 
             // Total
             Text(
               '${tresoreriePrev.toDouble().toStringAsFixed(0)} €',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.info,
                 letterSpacing: -0.5,
               ),
             ),
-            Text(
+            const Text(
               'encaissements attendus',
               style: TextStyle(fontSize: 11, color: AppTheme.textLight),
             ),
-            SizedBox(height: AppTheme.spacing12),
+            const SizedBox(height: AppTheme.spacing12),
 
             // Barres par mois
             ...entries.map((entry) {
@@ -112,7 +110,7 @@ class TresorerieCard extends StatelessWidget {
                       width: 40,
                       child: Text(
                         monthLabel,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.textMedium,
@@ -131,13 +129,13 @@ class TresorerieCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     SizedBox(
                       width: 55,
                       child: Text(
                         '${value.toStringAsFixed(0)} €',
                         textAlign: TextAlign.right,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,

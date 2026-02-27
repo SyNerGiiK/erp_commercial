@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -47,11 +45,11 @@ class FacturesRecurrentesCard extends StatelessWidget {
                     color: AppTheme.highlight.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.autorenew_rounded,
+                  child: const Icon(Icons.autorenew_rounded,
                       color: AppTheme.highlight, size: 18),
                 ),
-                SizedBox(width: AppTheme.spacing8),
-                Expanded(
+                const SizedBox(width: AppTheme.spacing8),
+                const Expanded(
                   child: Text(
                     'Récurrentes',
                     style: TextStyle(
@@ -70,7 +68,7 @@ class FacturesRecurrentesCard extends StatelessWidget {
                   ),
                   child: Text(
                     '${facturesRecurrentes.length}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.highlight,
@@ -79,11 +77,11 @@ class FacturesRecurrentesCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacing12),
+            const SizedBox(height: AppTheme.spacing12),
 
             // Liste des prochaines émissions
             if (actives.isEmpty)
-              Padding(
+              const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Aucune facture récurrente',
@@ -128,14 +126,14 @@ class FacturesRecurrentesCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   fr.objet,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.textDark,
@@ -144,14 +142,15 @@ class FacturesRecurrentesCard extends StatelessWidget {
                 ),
                 Text(
                   fr.frequence.label,
-                  style: TextStyle(fontSize: 10, color: AppTheme.textLight),
+                  style:
+                      const TextStyle(fontSize: 10, color: AppTheme.textLight),
                 ),
               ],
             ),
           ),
           Text(
             '${fr.totalTtc.toDouble().toStringAsFixed(0)} €',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppTheme.textDark,

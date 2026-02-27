@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 
@@ -95,11 +93,11 @@ class RegimeBlock extends StatelessWidget {
           bilanTva: bilanTva,
         ),
         if (vlVsIrSimulation != null) ...[
-          SizedBox(height: AppTheme.spacing16),
+          const SizedBox(height: AppTheme.spacing16),
           VlVsIrCard(simulation: vlVsIrSimulation!),
         ],
         if (cotisationBreakdown.isNotEmpty) ...[
-          SizedBox(height: AppTheme.spacing16),
+          const SizedBox(height: AppTheme.spacing16),
           CotisationDetailCard(
             breakdown: cotisationBreakdown,
             total: totalCotisations,
@@ -120,7 +118,7 @@ class RegimeBlock extends StatelessWidget {
           caService: caPrestaBIC + caPrestaBNC,
           bilanTva: bilanTva,
         ),
-        if (bilanTva != null) SizedBox(height: AppTheme.spacing16),
+        if (bilanTva != null) const SizedBox(height: AppTheme.spacing16),
 
         // Cotisations TNS détaillées
         if (cotisationBreakdown.isNotEmpty)
@@ -129,7 +127,7 @@ class RegimeBlock extends StatelessWidget {
             total: totalCotisations,
             repartition: cotisationRepartition,
           ),
-        SizedBox(height: AppTheme.spacing16),
+        const SizedBox(height: AppTheme.spacing16),
         // Synthèse financière TNS
         _buildFinanceSummaryCard(
           context,
@@ -174,7 +172,7 @@ class RegimeBlock extends StatelessWidget {
           caService: caPrestaBIC + caPrestaBNC,
           bilanTva: bilanTva,
         ),
-        if (bilanTva != null) SizedBox(height: AppTheme.spacing16),
+        if (bilanTva != null) const SizedBox(height: AppTheme.spacing16),
 
         _buildFinanceSummaryCard(
           context,
@@ -205,7 +203,7 @@ class RegimeBlock extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: AppTheme.spacing16),
+        const SizedBox(height: AppTheme.spacing16),
         // Top catégories de dépenses
         if (expenseBreakdown.isNotEmpty) _buildExpenseMiniChart(context),
       ],
@@ -265,15 +263,16 @@ class RegimeBlock extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.analytics_outlined, color: AppTheme.primary, size: 20),
-              SizedBox(width: AppTheme.spacing8),
+              const Icon(Icons.analytics_outlined,
+                  color: AppTheme.primary, size: 20),
+              const SizedBox(width: AppTheme.spacing8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textDark,
@@ -281,7 +280,7 @@ class RegimeBlock extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color: AppTheme.textLight,
                       ),
@@ -291,7 +290,7 @@ class RegimeBlock extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: AppTheme.spacing16),
+          const SizedBox(height: AppTheme.spacing16),
           ...items.map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: AppTheme.spacing12),
                 child: Row(
@@ -304,11 +303,11 @@ class RegimeBlock extends StatelessWidget {
                       ),
                       child: Icon(item.icon, color: item.color, size: 18),
                     ),
-                    SizedBox(width: AppTheme.spacing12),
+                    const SizedBox(width: AppTheme.spacing12),
                     Expanded(
                       child: Text(
                         item.label,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppTheme.textMedium,
                         ),
@@ -358,7 +357,7 @@ class RegimeBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Top Dépenses',
             style: TextStyle(
               fontSize: 14,
@@ -366,7 +365,7 @@ class RegimeBlock extends StatelessWidget {
               color: AppTheme.textDark,
             ),
           ),
-          SizedBox(height: AppTheme.spacing12),
+          const SizedBox(height: AppTheme.spacing12),
           ...List.generate(top.length, (i) {
             final entry = top[i];
             final pct = entry.value / total;
@@ -381,7 +380,7 @@ class RegimeBlock extends StatelessWidget {
                       Expanded(
                         child: Text(
                           entry.key,
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 12, color: AppTheme.textMedium),
                           overflow: TextOverflow.ellipsis,
                         ),

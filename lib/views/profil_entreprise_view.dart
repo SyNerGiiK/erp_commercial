@@ -1,4 +1,4 @@
-import 'package:decimal/decimal.dart';
+﻿import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,8 +13,8 @@ import '../widgets/base_screen.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/dialogs/signature_dialog.dart';
 
-/// Vue profil entreprise compl�te � toutes les donn�es du [ProfilEntreprise].
-/// Sections : Identit�, Adresse, Facturation, TVA, Mentions l�gales,
+/// Vue profil entreprise complète — toutes les données du [ProfilEntreprise].
+/// Sections : Identité, Adresse, Facturation, TVA, Mentions légales,
 /// Personnalisation PDF, Signature, Logo.
 class ProfilEntrepriseView extends StatefulWidget {
   const ProfilEntrepriseView({super.key});
@@ -27,7 +27,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
-  // -- Contr�leurs texte --
+  // ── Contrôleurs texte ──
   final _nomEntController = TextEditingController();
   final _nomGerantController = TextEditingController();
   final _adresseController = TextEditingController();
@@ -42,7 +42,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
   final _numeroTvaIntraController = TextEditingController();
   final _tauxPenalitesController = TextEditingController();
 
-  // -- �tat dropdowns / toggles --
+  // ── État dropdowns / toggles ──
   FrequenceCotisation _frequenceCotisation = FrequenceCotisation.mensuelle;
   TypeEntreprise _typeEntreprise = TypeEntreprise.microEntrepreneur;
   RegimeFiscal? _regimeFiscal;
@@ -115,7 +115,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     super.dispose();
   }
 
-  // -- Sauvegarde --
+  // ── Sauvegarde ──
 
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
@@ -166,13 +166,13 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(success
-          ? "Profil enregistr� avec succ�s !"
+          ? "Profil enregistré avec succès !"
           : "Erreur lors de l'enregistrement"),
       backgroundColor: success ? Colors.green.shade700 : AppTheme.error,
     ));
   }
 
-  // -- Upload images --
+  // ── Upload images ──
 
   Future<void> _pickAndUpload(String type) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -183,7 +183,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(success ? "Image mise � jour !" : "Erreur upload"),
+      content: Text(success ? "Image mise à jour !" : "Erreur upload"),
     ));
   }
 
@@ -199,11 +199,11 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(success ? "Signature mise � jour !" : "Erreur upload"),
+      content: Text(success ? "Signature mise à jour !" : "Erreur upload"),
     ));
   }
 
-  // -- Auto-fill mentions l�gales --
+  // ── Auto-fill mentions légales ──
 
   void _regenererMentions() {
     final vm = Provider.of<EntrepriseViewModel>(context, listen: false);
@@ -216,9 +216,9 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     });
   }
 
-  // ------------------------------------------------------------------------
+  // ────────────────────────────────────────────────────────────────────────
   // BUILD
-  // ------------------------------------------------------------------------
+  // ────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -237,14 +237,14 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // -- LOGO --
+                    // ── LOGO ──
                     _buildLogoSection(profil),
                     const SizedBox(height: 28),
 
-                    // -- 1. IDENTIT� --
+                    // ── 1. IDENTITÉ ──
                     _buildSectionCard(
                       icon: Icons.badge_rounded,
-                      title: "Identit�",
+                      title: "Identité",
                       children: [
                         CustomTextField(
                           label: "Nom de l'entreprise (Raison Sociale)",
@@ -253,7 +253,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(
-                          label: "Nom du G�rant",
+                          label: "Nom du Gérant",
                           controller: _nomGerantController,
                           validator: (v) => v!.isEmpty ? "Nom requis" : null,
                         ),
@@ -286,7 +286,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(
-                          label: "T�l�phone",
+                          label: "Téléphone",
                           controller: _telController,
                           keyboardType: TextInputType.phone,
                           validator: ValidationUtils.validatePhone,
@@ -295,13 +295,13 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 2. ADRESSE --
+                    // ── 2. ADRESSE ──
                     _buildSectionCard(
                       icon: Icons.location_on_rounded,
                       title: "Adresse",
                       children: [
                         CustomTextField(
-                          label: "Adresse compl�te",
+                          label: "Adresse complète",
                           controller: _adresseController,
                           validator: (v) => v!.isEmpty ? "Requis" : null,
                         ),
@@ -332,7 +332,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 3. FACTURATION & BANCAIRE --
+                    // ── 3. FACTURATION & BANCAIRE ──
                     _buildSectionCard(
                       icon: Icons.account_balance_rounded,
                       title: "Facturation & Bancaire",
@@ -344,7 +344,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                             label: "BIC", controller: _bicController),
                         const SizedBox(height: 16),
                         _buildDropdown<FrequenceCotisation>(
-                          label: "Fr�quence d�claration URSSAF",
+                          label: "Fréquence déclaration URSSAF",
                           value: _frequenceCotisation,
                           items: FrequenceCotisation.values,
                           itemLabel: (e) => e.label,
@@ -353,8 +353,8 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         ),
                         const SizedBox(height: 12),
                         _buildDropdownNullable<RegimeFiscal>(
-                          label: "R�gime fiscal",
-                          hint: "D�termin� automatiquement",
+                          label: "Régime fiscal",
+                          hint: "Déterminé automatiquement",
                           value: _regimeFiscal,
                           items: RegimeFiscal.values,
                           itemLabel: (e) => e.label,
@@ -373,17 +373,17 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 4. TVA --
+                    // ── 4. TVA ──
                     _buildSectionCard(
                       icon: Icons.percent_rounded,
                       title: "TVA",
                       children: [
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text("Assujetti � la TVA"),
+                          title: const Text("Assujetti à la TVA"),
                           subtitle: Text(
                             _tvaApplicable
-                                ? "TVA collect�e et d�ductible"
+                                ? "TVA collectée et déductible"
                                 : "Franchise en base (art. 293 B du CGI)",
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
@@ -395,7 +395,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         if (_tvaApplicable) ...[
                           const SizedBox(height: 12),
                           CustomTextField(
-                            label: "N� TVA Intracommunautaire",
+                            label: "N° TVA Intracommunautaire",
                             controller: _numeroTvaIntraController,
                             validator: ValidationUtils.validateTvaIntra,
                           ),
@@ -404,18 +404,18 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 5. MENTIONS L�GALES --
+                    // ── 5. MENTIONS LÉGALES ──
                     _buildSectionCard(
                       icon: Icons.gavel_rounded,
-                      title: "Mentions L�gales",
+                      title: "Mentions Légales",
                       children: [
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text("Immatricul� RCS / RM"),
+                          title: const Text("Immatriculé RCS / RM"),
                           subtitle: Text(
                             _estImmatricule
-                                ? "Num�ro d'immatriculation affich� sur les PDF"
-                                : "Mention � Dispens� d'immatriculation � sur les PDF",
+                                ? "Numéro d'immatriculation affiché sur les PDF"
+                                : "Mention « Dispensé d'immatriculation » sur les PDF",
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
                           ),
@@ -426,11 +426,11 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         const SizedBox(height: 12),
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text("Escompte pour paiement anticip�"),
+                          title: const Text("Escompte pour paiement anticipé"),
                           subtitle: Text(
                             _escompteApplicable
-                                ? "Escompte mentionn� sur les factures"
-                                : "Pas d'escompte � mention obligatoire � Pas d'escompte �",
+                                ? "Escompte mentionné sur les factures"
+                                : "Pas d'escompte — mention obligatoire « Pas d'escompte »",
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
                           ),
@@ -441,7 +441,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                         ),
                         const SizedBox(height: 12),
                         CustomTextField(
-                          label: "Taux p�nalit�s de retard (%)",
+                          label: "Taux pénalités de retard (%)",
                           controller: _tauxPenalitesController,
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
@@ -452,7 +452,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                           children: [
                             Expanded(
                               child: CustomTextField(
-                                label: "Mentions l�gales libres",
+                                label: "Mentions légales libres",
                                 controller: _mentionsController,
                                 maxLines: 3,
                               ),
@@ -466,28 +466,28 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                             onPressed: _regenererMentions,
                             icon: const Icon(Icons.auto_fix_high_rounded,
                                 size: 18),
-                            label: const Text("R�g�n�rer automatiquement"),
+                            label: const Text("Régénérer automatiquement"),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 6. PERSONNALISATION PDF --
+                    // ── 6. PERSONNALISATION PDF ──
                     _buildSectionCard(
                       icon: Icons.palette_rounded,
                       title: "Personnalisation PDF",
                       children: [
                         _buildDropdown<PdfTheme>(
-                          label: "Th�me PDF",
+                          label: "Thème PDF",
                           value: _pdfTheme,
                           items: PdfTheme.values,
-                          itemLabel: (e) => "${e.label} � ${e.description}",
+                          itemLabel: (e) => "${e.label} — ${e.description}",
                           onChanged: (v) => setState(() => _pdfTheme = v!),
                         ),
                         const SizedBox(height: 16),
 
-                        // Couleur primaire personnalis�e
+                        // Couleur primaire personnalisée
                         Text("Couleur primaire du PDF",
                             style: TextStyle(
                                 fontSize: 13, color: Colors.grey.shade700)),
@@ -498,7 +498,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                           label: "Mode de facturation",
                           value: _modeFacturation,
                           items: ModeFacturation.values,
-                          itemLabel: (e) => "${e.label} � ${e.description}",
+                          itemLabel: (e) => "${e.label} — ${e.description}",
                           onChanged: (v) =>
                               setState(() => _modeFacturation = v!),
                         ),
@@ -507,7 +507,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                           contentPadding: EdgeInsets.zero,
                           title: const Text("Mode discret"),
                           subtitle: Text(
-                            "Masque le r�sum� financier dans l'�diteur",
+                            "Masque le résumé financier dans l'éditeur",
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey.shade600),
                           ),
@@ -519,7 +519,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // -- 7. SIGNATURE --
+                    // ── 7. SIGNATURE ──
                     _buildSectionCard(
                       icon: Icons.draw_rounded,
                       title: "Signature / Tampon",
@@ -593,7 +593,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
 
                     const SizedBox(height: 32),
 
-                    // -- BOUTON ENREGISTRER --
+                    // ── BOUTON ENREGISTRER ──
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -614,23 +614,23 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     );
   }
 
-  // ------------------------------------------------------------------------
+  // ────────────────────────────────────────────────────────────────────────
   // WIDGETS HELPERS
-  // ------------------------------------------------------------------------
+  // ────────────────────────────────────────────────────────────────────────
 
-  /// S�lecteur de couleur primaire pour les PDF
+  /// Sélecteur de couleur primaire pour les PDF
   Widget _buildColorPicker() {
-    // Palette de couleurs pr�d�finies
+    // Palette de couleurs prédéfinies
     const presetColors = <String, String>{
-      '1E5572': 'Bleu P�trole',
+      '1E5572': 'Bleu Pétrole',
       '2C3E50': 'Bleu Nuit',
       '2A769E': 'Bleu Acier',
       '3498DB': 'Bleu Ciel',
       '1ABC9C': 'Turquoise',
-      '27AE60': 'Vert �meraude',
+      '27AE60': 'Vert Émeraude',
       '8E44AD': 'Violet',
       'E74C3C': 'Rouge Brique',
-      'D35400': 'Orange Br�l�',
+      'D35400': 'Orange Brûlé',
       '555555': 'Gris Anthracite',
     };
 
@@ -638,8 +638,8 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
       spacing: 10,
       runSpacing: 10,
       children: [
-        // Bouton "Par d�faut"
-        _buildColorChip(null, 'D�faut du th�me'),
+        // Bouton "Par défaut"
+        _buildColorChip(null, 'Défaut du thème'),
         ...presetColors.entries.map((e) => _buildColorChip(e.key, e.value)),
       ],
     );
@@ -749,7 +749,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     );
   }
 
-  /// Dropdown g�n�rique non-nullable.
+  /// Dropdown générique non-nullable.
   Widget _buildDropdown<T>({
     required String label,
     required T value,
@@ -774,7 +774,7 @@ class _ProfilEntrepriseViewState extends State<ProfilEntrepriseView> {
     );
   }
 
-  /// Dropdown g�n�rique nullable (avec option "Auto").
+  /// Dropdown générique nullable (avec option "Auto").
   Widget _buildDropdownNullable<T>({
     required String label,
     required String hint,

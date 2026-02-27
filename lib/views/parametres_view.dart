@@ -413,7 +413,8 @@ class _ParametresViewState extends State<ParametresView> {
                 if (dateStr != null)
                   Text(
                     'Dernière synchronisation : $dateStr',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textLight),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textLight),
                   ),
               ],
             ),

@@ -88,12 +88,12 @@ class _WeatherWidgetState extends State<WeatherWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(temp,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       color: AppTheme.textPrimary)),
               Text(desc.length > 15 ? '${desc.substring(0, 15)}...' : desc,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 12, color: AppTheme.textSecondary)),
             ],
           ),

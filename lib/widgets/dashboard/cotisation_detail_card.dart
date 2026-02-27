@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 
@@ -61,7 +59,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   "Transparence URSSAF",
                   style: TextStyle(
                     fontSize: 18,
@@ -218,8 +216,8 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                   size: 20,
                   color: AppTheme.textMedium,
                 ),
-                SizedBox(width: AppTheme.spacing8),
-                Text(
+                const SizedBox(width: AppTheme.spacing8),
+                const Text(
                   'Répartition par branche',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -230,7 +228,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                 const Spacer(),
                 Text(
                   '${totalRepartition.toDouble().toStringAsFixed(2)} €',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: AppTheme.textLight,
@@ -266,7 +264,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                   child: Row(
                     children: [
                       Icon(icon, size: 16, color: color),
-                      SizedBox(width: AppTheme.spacing8),
+                      const SizedBox(width: AppTheme.spacing8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +273,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                               info['label'] as String,
                               style: const TextStyle(fontSize: 12),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             LinearProgressIndicator(
                               value: pct / 100,
                               color: color,
@@ -286,7 +284,7 @@ class _CotisationDetailCardState extends State<CotisationDetailCard> {
                           ],
                         ),
                       ),
-                      SizedBox(width: AppTheme.spacing8),
+                      const SizedBox(width: AppTheme.spacing8),
                       SizedBox(
                         width: 75,
                         child: Text(

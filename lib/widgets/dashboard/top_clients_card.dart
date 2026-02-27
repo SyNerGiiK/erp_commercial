@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 
@@ -39,11 +37,11 @@ class TopClientsCard extends StatelessWidget {
                     color: AppTheme.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.people_outline_rounded,
+                  child: const Icon(Icons.people_outline_rounded,
                       color: AppTheme.accent, size: 18),
                 ),
-                SizedBox(width: AppTheme.spacing8),
-                Expanded(
+                const SizedBox(width: AppTheme.spacing8),
+                const Expanded(
                   child: Text(
                     'Top Clients',
                     style: TextStyle(
@@ -55,10 +53,10 @@ class TopClientsCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: AppTheme.spacing12),
+            const SizedBox(height: AppTheme.spacing12),
 
             if (display.isEmpty)
-              Padding(
+              const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Aucun encaissement',
@@ -107,21 +105,21 @@ class TopClientsCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               c['label']?.toString() ?? 'Client',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textDark,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            SizedBox(height: 3),
+                            const SizedBox(height: 3),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(2),
                               child: LinearProgressIndicator(
@@ -137,7 +135,7 @@ class TopClientsCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         '${ca.toStringAsFixed(0)} €',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textDark,

@@ -77,7 +77,7 @@ class RentabiliteCard extends StatelessWidget {
                   const Text("TOTAL VENTE (HT)", style: TextStyle(fontSize: 9)),
                   Text(
                     FormatUtils.currency(ca),
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: AppTheme.textDark),

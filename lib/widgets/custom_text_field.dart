@@ -51,7 +51,7 @@ class CustomTextField extends StatelessWidget {
       maxLines: maxLines,
       obscureText: isPassword,
       style: style ??
-          TextStyle(
+          const TextStyle(
             fontWeight: FontWeight.w500,
             color: AppTheme.textDark,
           ),
@@ -80,7 +80,7 @@ class CustomTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.primary, width: 2),
         ),
-        labelStyle: TextStyle(color: AppTheme.textLight),
+        labelStyle: const TextStyle(color: AppTheme.textLight),
       ),
     );
   }

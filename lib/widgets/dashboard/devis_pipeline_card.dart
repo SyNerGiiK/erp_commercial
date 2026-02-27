@@ -49,7 +49,7 @@ class DevisPipelineCard extends StatelessWidget {
                     color: AppTheme.primary, size: 18),
               ),
               const SizedBox(width: AppTheme.spacing8),
-              Expanded(
+              const Expanded(
                 child: Text(
                   'Pipeline Devis',
                   style: TextStyle(
@@ -139,7 +139,7 @@ class DevisPipelineCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textLight,

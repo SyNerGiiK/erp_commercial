@@ -121,7 +121,7 @@ class _SuccessOverlayWidgetState extends State<_SuccessOverlayWidget> {
           // Titre
           Text(
             widget.title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppTheme.textDark,

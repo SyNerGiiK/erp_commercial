@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/facture_model.dart';
 import '../models/devis_model.dart';
@@ -192,43 +194,77 @@ $nomEntreprise''';
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  /// Lance l'URI mailto:
+  /// Lance l'URI mailto: via url_launcher (ShellExecuteW sur Windows).
+  ///
+  /// Encodage RFC 6068 : `Uri.encodeComponent()` produit `%20` pour les espaces
+  /// (et non `+`), seul format reconnu par tous les clients mail (Thunderbird,
+  /// Outlook, Apple Mail…).
+  ///
+  /// `LaunchMode.externalApplication` garantit que sur Windows, url_launcher
+  /// appelle `ShellExecuteW`, qui dispatche correctement vers le client mail
+  /// enregistré dans le registre (Thunderbird, Outlook, etc.).
+  /// Sur le Web, `platformDefault` est utilisé pour rester dans le contexte
+  /// de l'onglet courant.
   static Future<EmailResult> _launchMailto({
     required String to,
     required String subject,
     required String body,
   }) async {
-    // Construire le mailto: manuellement pour éviter les problèmes d'encodage
-    final queryParams = _encodeQueryParameters({
-      'subject': subject,
-      'body': body,
-    });
-    final uri = Uri.parse('mailto:$to?$queryParams');
+    // RFC 6068 : %20 pour les espaces (pas +)
+    String _enc(String value) => Uri.encodeComponent(value);
+
+    String _buildUriString(String bodyText) {
+      final buf = StringBuffer('mailto:$to?subject=${_enc(subject)}');
+      if (bodyText.isNotEmpty) buf.write('&body=${_enc(bodyText)}');
+      return buf.toString();
+    }
+
+    // Tronquer si besoin (limite ShellExecuteW ~2 000 chars)
+    String uriString = _buildUriString(body);
+    if (uriString.length > 1800) {
+      final surplus = uriString.length - 1800;
+      final truncatedBody = body.length > surplus + 20
+          ? '${body.substring(0, body.length - surplus - 20)}…'
+          : '';
+      uriString = _buildUriString(truncatedBody);
+    }
+
+    debugPrint('[EmailService] URI mailto : $uriString');
 
     try {
-      // Sur Flutter Web, canLaunchUrl retourne souvent false pour mailto:
-      // On tente directement le lancement avec mode externe
-      await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-      return EmailResult.ok();
-    } catch (e) {
-      // Fallback : tenter sans mode spécifique
-      try {
-        await launchUrl(uri);
-        return EmailResult.ok();
-      } catch (e2) {
-        return EmailResult.error("Impossible d'ouvrir le client email: $e2");
+      // Windows desktop : l'URI est passée via une variable d'environnement
+      // (_MAILTO) pour éviter tout problème d'échappement (&, %, ?, =).
+      // PowerShell lit $env:_MAILTO et appelle Start-Process qui invoke
+      // ShellExecuteW → dispatche vers le client mail par défaut du registre.
+      if (!kIsWeb && Platform.isWindows) {
+        final result = await Process.run(
+          'powershell',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            r'Start-Process $env:_MAILTO',
+          ],
+          environment: {'_MAILTO': uriString},
+          runInShell: false,
+        );
+        debugPrint(
+            '[EmailService] PowerShell exitCode=${result.exitCode} stderr=${result.stderr}');
+        if (result.exitCode == 0) return EmailResult.ok();
+        return EmailResult.error(
+            "Impossible d'ouvrir le client email (code ${result.exitCode}).");
       }
-    }
-  }
 
-  /// Encode les query parameters pour mailto: correctement
-  static String _encodeQueryParameters(Map<String, String> params) {
-    return params.entries
-        .map((e) =>
-            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-        .join('&');
+      // Web / macOS / Linux : url_launcher standard
+      final uri = Uri.parse(uriString);
+      final mode =
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication;
+      final launched = await launchUrl(uri, mode: mode);
+      if (launched) return EmailResult.ok();
+      return EmailResult.error("Le client email n'a pas pu être ouvert.");
+    } catch (e) {
+      debugPrint('[EmailService] Exception : $e');
+      return EmailResult.error("Impossible d'ouvrir le client email : $e");
+    }
   }
 }

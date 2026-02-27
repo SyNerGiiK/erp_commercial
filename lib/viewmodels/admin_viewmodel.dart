@@ -12,9 +12,7 @@ class AdminViewModel extends BaseViewModel {
   List<Map<String, dynamic>> get tickets => _tickets;
   List<Map<String, dynamic>> get crashLogs => _crashLogs;
 
-  AdminViewModel() {
-    refreshAll();
-  }
+  AdminViewModel();
 
   Future<void> refreshAll() async {
     await executeOperation(() async {

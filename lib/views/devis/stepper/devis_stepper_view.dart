@@ -16,9 +16,7 @@ import '../../../widgets/success_overlay.dart';
 import '../../../utils/calculations_utils.dart';
 import '../../../utils/format_utils.dart';
 import '../../../services/pdf_service.dart';
-import '../../../services/edge_email_service.dart';
 import '../../../services/email_service.dart';
-import '../../../services/audit_service.dart';
 
 // Steps
 import 'steps/step1_client.dart';
@@ -278,25 +276,13 @@ class _DevisStepperViewState extends State<DevisStepperView> {
     final updatedDevis = vm.devis.where((d) => d.id == devisId).firstOrNull;
 
     if (updatedDevis != null && _selectedClient != null) {
-      final pdfBytes = await PdfService.generateDocument(
-          updatedDevis, _selectedClient!, entVM.profil,
-          docType: "DEVIS", isTvaApplicable: entVM.isTvaApplicable);
-
-      final emailResult = await EdgeEmailService.envoyerDevis(
+      // Ouvre le client email natif avec sujet/corps pré-remplis.
+      // L'audit est géré en interne par EmailService.
+      await EmailService.envoyerDevis(
         devis: updatedDevis,
         client: _selectedClient!,
         profil: entVM.profil,
-        pdfBytes: pdfBytes,
       );
-
-      if (emailResult.success && updatedDevis.id != null) {
-        AuditService.logEnvoiEmail(
-          tableName: 'devis',
-          recordId: updatedDevis.id!,
-          destinataire: _selectedClient!.email,
-          numeroDocument: updatedDevis.numeroDevis,
-        );
-      }
     }
 
     if (!mounted) return;

@@ -7,9 +7,11 @@ import 'dart:ui'; // Added for PlatformDispatcher
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 // CONFIG
 import 'config/supabase_config.dart';
+import 'services/offline_sync_service.dart';
 import 'config/theme.dart';
 import 'config/dependency_injection.dart';
 import 'config/router.dart';
@@ -59,6 +61,22 @@ Future<void> main() async {
   } catch (e) {
     debugPrint("Aucun fichier .env trouvé ou erreur de chargement: $e");
   }
+
+  // Listener de reconnexion — vide la file d'attente des mutations hors-ligne
+  // dès que le réseau est de nouveau disponible.
+  Connectivity().onConnectivityChanged.listen((results) {
+    final isConnected = results.any((r) => r != ConnectivityResult.none);
+    if (isConnected) {
+      OfflineSyncService.syncUp().then((errors) {
+        if (errors > 0) {
+          debugPrint(
+              '⚠️ Sync hors-ligne partielle : $errors éléments en attente');
+        } else {
+          debugPrint('✅ Sync hors-ligne : tout synchronisé');
+        }
+      });
+    }
+  });
 
   runApp(
     MultiProvider(

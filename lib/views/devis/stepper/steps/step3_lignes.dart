@@ -41,7 +41,14 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _isAiGenerating = false;
-  String _recognizedText = "";
+
+  // --- DICTÉE VOCALE ROBUSTE ---
+  // Variables persistantes pour éviter les doublons/pertes entre segments.
+  // Sur Windows, chaque utterance (segment entre silences) repart de zéro dans
+  // val.recognizedWords. On accumulera ici les segments finaux confirmés.
+  String _speechPreviousText =
+      ""; // Texte dans le champ AVANT le listen() courant
+  String _speechSessionText = ""; // Segments finaux accumulés de la session
 
   // --- ACTIONS LIGNES ---
 
@@ -105,101 +112,222 @@ class _DevisStep3LignesState extends State<DevisStep3Lignes> {
   }
 
   Future<void> _showAitiseDialog() async {
-    _recognizedText = "";
+    // Réinitialiser l'état de la session de dictée
+    _speechPreviousText = "";
+    _speechSessionText = "";
     final currentTextCtrl = TextEditingController();
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(builder: (context, setDialogState) {
         return AlertDialog(
           title: const Row(
             children: [
               Icon(Icons.auto_awesome, color: Colors.purple),
               SizedBox(width: 8),
-              Text("AITISE TON DEVIS"),
+              Flexible(child: Text("AITISE TON DEVIS")),
             ],
           ),
           content: SizedBox(
-            width: 500,
+            width: 520,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                    "Décrivez les travaux à réaliser (ou dictez-les), l'I.A. s'occupera du reste."),
+                  "Décrivez les travaux à réaliser (ou dictez-les), l'I.A. structurera automatiquement vos lignes de devis.",
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: currentTextCtrl,
-                  maxLines: 4,
+                  maxLines: 5,
+                  onChanged: (_) => setDialogState(() {}),
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     hintText:
-                        "Ex: Je veux refaire une salle de bain de 5m2, avec pose de baignoire...",
+                        "Ex: Refaire salle de bain 5m², pose baignoire, carrelage, robinetterie...",
                   ),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    if (!_isListening) {
-                      bool available = await _speech.initialize(
-                        onStatus: (status) {
-                          if (status == 'done' || status == 'notListening') {
-                            setDialogState(() => _isListening = false);
-                          }
-                        },
-                      );
-                      if (available) {
-                        setDialogState(() => _isListening = true);
-                        final previousText = currentTextCtrl.text.trim();
-                        _speech.listen(
-                          listenOptions: stt.SpeechListenOptions(
-                            listenMode: stt.ListenMode.dictation,
+                const SizedBox(height: 12),
+                // Indicateur d'écoute active
+                if (_isListening)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red.shade600,
                           ),
-                          pauseFor: const Duration(seconds: 10),
-                          onResult: (val) {
-                            setDialogState(() {
-                              final textToAppend = val.recognizedWords.trim();
-                              _recognizedText = previousText.isEmpty
-                                  ? textToAppend
-                                  : "$previousText $textToAppend";
-                              currentTextCtrl.text = _recognizedText;
-                              currentTextCtrl.selection =
-                                  TextSelection.fromPosition(
-                                TextPosition(
-                                    offset: currentTextCtrl.text.length),
-                              );
-                            });
-                          },
-                        );
-                      } else {
-                        if (!ctx.mounted) return;
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                            content: Text("Micro non disponible")));
-                      }
-                    } else {
-                      setDialogState(() => _isListening = false);
-                      _speech.stop();
-                    }
-                  },
-                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                  label: Text(_isListening
-                      ? "Écoute en cours..."
-                      : "Dicter vocalement"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isListening ? Colors.red.shade50 : null,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Écoute en cours — parlez clairement",
+                          style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
                   ),
+                // Boutons dictée / effacer
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        if (!_isListening) {
+                          // --- DÉMARRAGE DE L'ÉCOUTE ---
+                          bool available = await _speech.initialize(
+                            onStatus: (status) {
+                              if (status == 'done' ||
+                                  status == 'notListening') {
+                                setDialogState(() => _isListening = false);
+                              }
+                            },
+                            onError: (err) {
+                              setDialogState(() => _isListening = false);
+                            },
+                          );
+                          if (available) {
+                            // Capturer le texte existant AVANT la session
+                            _speechPreviousText = currentTextCtrl.text.trim();
+                            _speechSessionText = "";
+                            setDialogState(() => _isListening = true);
+                            _speech.listen(
+                              listenOptions: stt.SpeechListenOptions(
+                                listenMode: stt.ListenMode.dictation,
+                                partialResults: true,
+                                cancelOnError: false,
+                              ),
+                              pauseFor: const Duration(seconds: 5),
+                              listenFor: const Duration(minutes: 5),
+                              onResult: (val) {
+                                final words = val.recognizedWords.trim();
+
+                                if (val.finalResult) {
+                                  // ── Segment confirmé ──
+                                  // On ajoute ce segment à la session.
+                                  // Sur Windows, val.recognizedWords ne
+                                  // contient QUE les mots de cet utterance
+                                  // (repart de zéro après chaque silence).
+                                  // En accumulant ici, on évite pertes ET
+                                  // doublons quelle que soit la plateforme.
+                                  if (words.isNotEmpty) {
+                                    _speechSessionText =
+                                        _speechSessionText.isEmpty
+                                            ? words
+                                            : "$_speechSessionText $words";
+                                  }
+                                  final display = [
+                                    _speechPreviousText,
+                                    _speechSessionText
+                                  ].where((s) => s.isNotEmpty).join(' ');
+                                  setDialogState(() {
+                                    currentTextCtrl.text = display;
+                                    currentTextCtrl.selection =
+                                        TextSelection.fromPosition(
+                                      TextPosition(offset: display.length),
+                                    );
+                                  });
+                                } else {
+                                  // ── Partiel en cours ── (feedback temps réel)
+                                  if (words.isEmpty) return;
+                                  final sessionSoFar =
+                                      _speechSessionText.isEmpty
+                                          ? words
+                                          : "$_speechSessionText $words";
+                                  final display = [
+                                    _speechPreviousText,
+                                    sessionSoFar
+                                  ].where((s) => s.isNotEmpty).join(' ');
+                                  setDialogState(() {
+                                    currentTextCtrl.text = display;
+                                    currentTextCtrl.selection =
+                                        TextSelection.fromPosition(
+                                      TextPosition(offset: display.length),
+                                    );
+                                  });
+                                }
+                              },
+                            );
+                          } else {
+                            if (!ctx.mounted) return;
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      "Micro non disponible ou accès refusé")),
+                            );
+                          }
+                        } else {
+                          // --- ARRÊT DE L'ÉCOUTE ---
+                          await _speech.stop();
+                          setDialogState(() => _isListening = false);
+                        }
+                      },
+                      icon: Icon(_isListening ? Icons.stop_circle : Icons.mic),
+                      label: Text(_isListening
+                          ? "Arrêter l'écoute"
+                          : (currentTextCtrl.text.isEmpty
+                              ? "Dicter vocalement"
+                              : "Continuer la dictée")),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _isListening ? Colors.red.shade100 : null,
+                        foregroundColor:
+                            _isListening ? Colors.red.shade800 : null,
+                      ),
+                    ),
+                    if (currentTextCtrl.text.isNotEmpty && !_isListening) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () {
+                          setDialogState(() {
+                            currentTextCtrl.clear();
+                            _speechPreviousText = "";
+                            _speechSessionText = "";
+                          });
+                        },
+                        icon: const Icon(Icons.clear, size: 16),
+                        label: const Text("Effacer"),
+                        style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey.shade600),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Annuler")),
-            ElevatedButton(
               onPressed: () {
-                Navigator.pop(ctx, currentTextCtrl.text);
+                if (_isListening) _speech.stop();
+                Navigator.pop(ctx);
               },
-              child: const Text("Générer"),
+              child: const Text("Annuler"),
+            ),
+            ElevatedButton.icon(
+              onPressed: currentTextCtrl.text.trim().isEmpty
+                  ? null
+                  : () {
+                      if (_isListening) _speech.stop();
+                      Navigator.pop(ctx, currentTextCtrl.text);
+                    },
+              icon: const Icon(Icons.auto_awesome, size: 16),
+              label: const Text("Générer avec l'I.A."),
             ),
           ],
         );

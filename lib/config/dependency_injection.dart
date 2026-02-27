@@ -28,28 +28,34 @@ import '../viewmodels/pdf_studio_viewmodel.dart';
 class DependencyInjection {
   static List<SingleChildWidget> get providers {
     return [
+      // AuthViewModel : instancié immédiatement (auth guard du router)
       ChangeNotifierProvider(create: (_) => AuthViewModel()),
-      ChangeNotifierProvider(create: (_) => ClientViewModel()),
-      ChangeNotifierProvider(create: (_) => EntrepriseViewModel()),
-      ChangeNotifierProvider(create: (_) => FactureViewModel()),
-      ChangeNotifierProvider(create: (_) => DevisViewModel()),
-      ChangeNotifierProvider(create: (_) => DepenseViewModel()),
-      ChangeNotifierProvider(create: (_) => DashboardViewModel()),
-      ChangeNotifierProvider(create: (_) => UrssafViewModel()),
-      ChangeNotifierProvider(create: (_) => ArticleViewModel()),
-      ChangeNotifierProvider(create: (_) => PlanningViewModel()),
-      ChangeNotifierProvider(create: (_) => ShoppingViewModel()),
-      ChangeNotifierProvider(create: (_) => GlobalSearchViewModel()),
-      ChangeNotifierProvider(create: (_) => EditorStateProvider()),
-      ChangeNotifierProvider(create: (_) => RelanceViewModel()),
-      ChangeNotifierProvider(create: (_) => CorbeilleViewModel()),
-      ChangeNotifierProvider(create: (_) => FactureRecurrenteViewModel()),
-      ChangeNotifierProvider(create: (_) => TempsViewModel()),
-      ChangeNotifierProvider(create: (_) => RappelViewModel()),
-      ChangeNotifierProvider(create: (_) => RentabiliteViewModel()),
-      ChangeNotifierProvider(create: (_) => SupportViewModel()),
-      ChangeNotifierProvider(create: (_) => AdminViewModel()),
-      ChangeNotifierProvider(create: (_) => PdfStudioViewModel()),
+
+      // Tous les autres providers sont lazy (instanciés au premier accès)
+      ChangeNotifierProvider(lazy: true, create: (_) => ClientViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => EntrepriseViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => FactureViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => DevisViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => DepenseViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => DashboardViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => UrssafViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => ArticleViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => PlanningViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => ShoppingViewModel()),
+      ChangeNotifierProvider(
+          lazy: true, create: (_) => GlobalSearchViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => EditorStateProvider()),
+      ChangeNotifierProvider(lazy: true, create: (_) => RelanceViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => CorbeilleViewModel()),
+      ChangeNotifierProvider(
+          lazy: true, create: (_) => FactureRecurrenteViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => TempsViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => RappelViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => RentabiliteViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => SupportViewModel()),
+      // AdminViewModel : ne lance plus de requêtes en constructeur
+      ChangeNotifierProvider(lazy: true, create: (_) => AdminViewModel()),
+      ChangeNotifierProvider(lazy: true, create: (_) => PdfStudioViewModel()),
     ];
   }
 }

@@ -20,7 +20,6 @@ import '../widgets/app_card.dart';
 import '../widgets/statut_badge.dart';
 import '../utils/format_utils.dart';
 import '../config/theme.dart';
-import '../services/edge_email_service.dart';
 import '../services/email_service.dart';
 
 class ListeDevisView extends StatefulWidget {
@@ -94,12 +93,10 @@ class _ListeDevisViewState extends State<ListeDevisView>
       return;
     }
 
-    // Génération du PDF pour l'attacher à l'email
-    final pdfBytes = await PdfService.generateDocument(d, client, entVM.profil,
-        docType: "DEVIS", isTvaApplicable: entVM.isTvaApplicable);
-
-    final result = await EdgeEmailService.envoyerDevis(
-        devis: d, client: client, profil: entVM.profil, pdfBytes: pdfBytes);
+    // Ouvre le client email natif avec sujet/corps pré-remplis.
+    // Le professionnel joint manuellement le PDF depuis son outil de messagerie.
+    final result = await EmailService.envoyerDevis(
+        devis: d, client: client, profil: entVM.profil);
 
     if (!mounted) return;
 
